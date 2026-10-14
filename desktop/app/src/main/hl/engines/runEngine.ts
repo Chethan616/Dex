@@ -506,7 +506,37 @@ ${opts.prompt}`;
     emitHarnessChanges(watchedHarnessFiles);
   };
 
+  // A file being written changes size many times: record it once it has
+  // settled, not once per write (a 1 MB CSV came out as 38 file cards).
+  const OUTPUT_SETTLE_MS = 600;
+  const outputTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  const emitOutput = (filename: string): void => {
+    outputTimers.delete(filename);
+    const filePath = path.join(outputsDir, filename);
+    let stat;
+    try { stat = fs.statSync(filePath); } catch { return; }
+    if (!stat.isFile() || stat.size === 0 || isScratchFile(filename)) return;
+    if (seenOutputs.get(filename) === stat.size) return;
+    seenOutputs.set(filename, stat.size);
+    opts.onEvent({
+      type: 'file_output',
+      name: filename,
+      path: filePath,
+      size: stat.size,
+      mime: mimeFromExt(filename),
+    });
+  };
+  /** Files still settling when the run ends: recorded now. */
+  const flushOutputs = (): void => {
+    for (const [filename, timer] of [...outputTimers]) {
+      clearTimeout(timer);
+      emitOutput(filename);
+    }
+  };
+
   const closeWatchers = (): void => {
+    for (const timer of outputTimers.values()) clearTimeout(timer);
+    outputTimers.clear();
     try { outputsWatcher?.close(); } catch { /* already closed */ }
     try { harnessWatcher?.close(); } catch { /* already closed */ }
     for (const timer of harnessCheckTimers.values()) clearTimeout(timer);
@@ -516,19 +546,9 @@ ${opts.prompt}`;
   try {
     outputsWatcher = fs.watch(outputsDir, { persistent: false }, (_ev, filename) => {
       if (!filename || typeof filename !== 'string') return;
-      const filePath = path.join(outputsDir, filename);
-      let stat;
-      try { stat = fs.statSync(filePath); } catch { return; }
-      if (!stat.isFile() || stat.size === 0 || isScratchFile(filename)) return;
-      if (seenOutputs.get(filename) === stat.size) return;
-      seenOutputs.set(filename, stat.size);
-      opts.onEvent({
-        type: 'file_output',
-        name: filename,
-        path: filePath,
-        size: stat.size,
-        mime: mimeFromExt(filename),
-      });
+      const pending = outputTimers.get(filename);
+      if (pending) clearTimeout(pending);
+      outputTimers.set(filename, setTimeout(() => emitOutput(filename), OUTPUT_SETTLE_MS));
     });
   } catch (err) {
     engineLogger.warn('engines.run.outputs.watchFailed', { outputsDir, error: (err as Error).message });
@@ -598,7 +618,7 @@ ${opts.prompt}`;
   // close handler doesn't overwrite the completed session with an error.
   let doneEmitted = false;
   const emit = (ev: Parameters<typeof opts.onEvent>[0]): void => {
-    if (ev.type === 'done' || ev.type === 'error') flushHarnessChanges();
+    if (ev.type === 'done' || ev.type === 'error') { flushOutputs(); flushHarnessChanges(); }
     if (ev.type === 'done') doneEmitted = true;
     opts.onEvent(ev);
   };
@@ -652,6 +672,7 @@ ${opts.prompt}`;
       unregisterResourceOwner(child.pid);
       opts.signal?.removeEventListener('abort', onAbort);
       clearAbortKillTimer();
+      flushOutputs();
       flushHarnessChanges();
       closeWatchers();
       engineLogger.info('engines.run.exit', {
@@ -685,6 +706,7 @@ ${opts.prompt}`;
       unregisterResourceOwner(child.pid);
       opts.signal?.removeEventListener('abort', onAbort);
       clearAbortKillTimer();
+      flushOutputs();
       flushHarnessChanges();
       closeWatchers();
       opts.onEvent({ type: 'error', message: `${adapter.id}_spawn_error: ${err.message}` });
