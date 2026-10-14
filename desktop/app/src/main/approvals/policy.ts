@@ -107,6 +107,16 @@ export function startTurn(sessionId: string): void {
   }
 }
 
+/**
+ * Hard to undo, or admin rights (docs/desktop-control/PLAN.md §2.1): each
+ * step is its own answer. "For this task" is never offered, and never kept.
+ */
+const ONCE_ONLY: ReadonlySet<ApprovalCategory> = new Set<ApprovalCategory>(['system-destructive', 'elevation']);
+
+export function isOnceOnly(category: ApprovalCategory): boolean {
+  return ONCE_ONLY.has(category);
+}
+
 /** Records an answer with a lifetime longer than 'once' so future checks in scope skip the prompt. */
 export function recordDecision(
   sessionId: string,
@@ -115,6 +125,7 @@ export function recordDecision(
   lifetime: ApprovalLifetime,
 ): void {
   if (lifetime === 'once') return; // nothing to remember — every call still asks
+  if (ONCE_ONLY.has(category)) return;
   let decisions = sessionDecisions.get(sessionId);
   if (!decisions) {
     decisions = new Map();

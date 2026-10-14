@@ -16,7 +16,23 @@ enum class SessionStatus(val id: String) {
   }
 }
 
-data class PendingConfirmation(val id: String, val title: String, val detail: String)
+/**
+ * An approval the task waits on. [tier] is the Windows tools' kind of step
+ * (docs/desktop-control/PLAN.md §2.1): 2 a reversible change, 3 hard to undo,
+ * 4 needs admin rights. 0 for everything else.
+ */
+data class PendingConfirmation(val id: String, val title: String, val detail: String, val tier: Int = 0, val onceOnly: Boolean = false) {
+  /** Hard to undo or admin: answered inside the app, never from the notification. */
+  val inAppOnly: Boolean get() = tier >= 3
+
+  /** What kind of step it is, in a few words, or null when there's nothing to say. */
+  val tierLabel: String? get() = when (tier) {
+    2 -> "Changes a setting · can be undone"
+    3 -> "Hard to undo"
+    4 -> "Needs admin rights on your PC"
+    else -> null
+  }
+}
 
 data class Session(
   val id: String,

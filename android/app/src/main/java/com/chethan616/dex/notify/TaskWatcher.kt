@@ -52,11 +52,18 @@ object TaskWatcher {
     val confirmation = s.pendingConfirmation
     if (confirmation != null && confirmation.id != before?.confirmationId) {
       // Approvals always notify — even on screen, the banner is easy to miss.
+      // Hard to undo or admin (tier 3, 4): no Approve on the shade; the tap opens DEX to answer.
+      val lines = listOfNotNull(
+        confirmation.tierLabel?.let { if (confirmation.inAppOnly) "$it — open DEX to answer" else it },
+        confirmation.title.ifBlank { null },
+        confirmation.detail.ifBlank { null },
+      )
       Notifications.show(
         context, kind = "approval",
         title = "DEX needs your OK",
-        body = listOf(confirmation.title, confirmation.detail).filter { it.isNotBlank() }.joinToString("\n").ifBlank { title },
+        body = lines.joinToString("\n").ifBlank { title },
         sessionId = s.id, confirmationId = confirmation.id,
+        inlineAnswer = !confirmation.inAppOnly,
       )
       return
     }

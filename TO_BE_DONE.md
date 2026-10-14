@@ -18,6 +18,32 @@
 >
 > Read Part 1 completely before you change anything. Keep this file current as you work: tick items, add findings.
 
+## ▶ RESUME HERE — live work log (keep this block current; newest first)
+
+**2026-10-14, session `baacd51d` (Opus 5.5).** Read this block, then `git log --oneline -8`, then carry on from "In progress".
+
+**Done and pushed (unify == main):**
+- `f6e4f15f` Desktop control Phase 3, part 1: the **Desk tab** (`hub/workspace/DeskView.tsx`, `main/desktop/deskLive.ts`, `deskHelpers.ts`), **Show me / Hand back** (`mcp-servers/windows/host/window.ps1`, one-shot, started by main), plain-words chat labels for `mcp__windows__*` (`shared/deskWords.ts`, `logs/transcript.ts`), **changes with Undo** (`desk_change` event, `hub/chat/DeskChanges.tsx`, server `--undo` mode). Also fixed: parking (SetWindowPos, not SetWindowPlacement, which clamps on-screen), DPI-unaware captures (black band). Live-tested on `scripts/desk-fixture.ps1`.
+- `bce80fac`, `5baf2f78`, `60331561`, `330033de`: P3 Chrome extensions + web profile (see `docs/unify/P3.md`).
+
+**In progress (uncommitted when this was written):**
+1. Approvals carry **tier** (Windows tools: 2 reversible, 3 hard to undo, 4 admin) and **onceOnly** (`approvals/policy.ts` `ONCE_ONLY` = system-destructive, elevation: never remembered). Card shows the tier and "Just this step" (`PreviewDeck.tsx` ConfirmationCard). Bridge's `pendingConfirmation` sends `tier`/`onceOnly`. Server asks admin changes as tier 4 and answers `elevation_not_set_up` *before* asking. Tests added (policy, windowsServer). **Desktop part done, tests green.**
+2. Android: `PendingConfirmation(tier, onceOnly)`, `tierLabel`, `inAppOnly` (tier ≥ 3: no Approve/Deny on the notification — owner Q7 still open, PLAN default). Compiles. Not yet built as an APK or screenshotted.
+3. Phone Undo for changes: **not done.** Needs a new command type (`undo_change`), and `firebase/firestore.rules` allowlists command types → a rules deploy needs the owner's OK. For now the phone may show change rows read-only (bridge `serializeBlock` has no `change` case yet).
+
+**Owner's requests of 2026-10-14 (this session), in order:**
+- [ ] Pause from the workspace toolbar chip ("DEX is working — you can use the page too · Pause") must **keep the page in front**, not jump to Chat. Only that path; everything else unchanged.
+- [ ] Home page: the **Recents** section must scroll.
+- [ ] Top bar **settings (gear) icon** beside the Grid View icon is lopsided (left side squashed): redraw symmetric.
+- [ ] Extensions icon: the **exact Chrome puzzle-piece**, in DEX's toolbar style.
+- [ ] Then finish Phase 3: Settings › Desktop control (on/off, blocked apps, ask-first apps, first-use toggle, journal link), PLAN/TO_BE_DONE write-up, commit + push.
+
+**Still after that (the plan order):** rest of P2 (Tools row: Terminal, Review, shortcuts; .pptx; code colours) → P1 leftovers (address-bar suggestions, per-site policy) → P4 → P5 → more widgets.
+
+**Live-test recipe used this session:** dev build `Start-Process -WindowStyle Hidden cmd /c "set AGB_CDP_PORT=9222&& npx electron-forge start > %TEMP%\dex-devN.log 2>&1"` from `desktop/app`; drive the hub with the scratchpad `cdp.mjs` (`eval`/`shot`); a desktop task: `node scripts/run-task.mjs --engine claude-code --json "<prompt>"`; follow-ups `window.electronAPI.sessions.resume(id, prompt)`; the test window `scripts/desk-fixture.ps1` (keep its stdin open: `sleep 1800 | powershell -File …`). Only open windows when `GetLastInputInfo` idle > 2 min. Bash heredocs here collapse `\\` → `\`: edit backslash-bearing code with the Edit tool.
+
+---
+
 Written 2026-10-01 by the Claude session that built P0–P2 (Opus 5.5).
 Branch `unify` of `github.com/Chethan616/Dex`.
 The repo is **public**.

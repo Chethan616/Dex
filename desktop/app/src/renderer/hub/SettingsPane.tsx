@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useLayoutEffect, useMemo, useR
 import { ConnectionsPane, type SettingsProviderFocusRequest } from './ConnectionsPane';
 import { PhoneCard } from './PhoneCard';
 import { ExtensionsSection } from './ExtensionsSection';
+import { PuzzleIcon } from './icons/PuzzleIcon';
 import { MARKET_ITEMS, Mark, type MarketItem } from './connectors/Marketplace';
 import type { ActionId, KeyBinding } from './keybindings';
 import { fallbackShortcutPlatform, keyboardEventToShortcut } from '../../shared/hotkeys';
@@ -1360,7 +1361,7 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
                 aria-current={activeSection === tab.id ? 'true' : undefined}
                 title={tab.label}
               >
-                <RailIcon d={tab.icon} />
+                {tab.id === 'settings-extensions' ? <PuzzleIcon size={16} /> : <RailIcon d={tab.icon} />}
                 <span>{tab.label}</span>
               </button>
               {tab.isNew && <NewBadge scale={0.72} />}

@@ -46,7 +46,9 @@ function formatElapsed(createdAt: number): string {
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes}m`;
   const hours = Math.floor(minutes / 60);
-  return `${hours}h`;
+  if (hours < 24) return `${hours}h`;
+  // Days past a day, like the sidebar ("7d", not "170h").
+  return `${Math.floor(hours / 24)}d`;
 }
 
 interface SparklineProps {
@@ -120,7 +122,8 @@ export function Dashboard({ sessions, onSwitchToGrid, onSelectSession, onSubmitT
   const idleSeries = useMemo(() => buildStatusSeries(sessions, 'idle', DAY), [sessions]);
   const totalSeries = useMemo(() => buildTotalSeries(sessions, 7 * DAY), [sessions]);
 
-  const recentSessions = sessions.slice(0, 6);
+  // Every task, newest first; the list scrolls (a cap keeps the DOM small).
+  const recentSessions = sessions.slice(0, 100);
 
   const taskInputRef = useRef<TaskInputHandle>(null);
   const [isDragging, setIsDragging] = useState(false);

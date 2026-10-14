@@ -10,6 +10,7 @@ import {
   isRiskyPath,
   isRiskyCommand,
   clearSession,
+  isOnceOnly,
 } from '../../../src/main/approvals/policy';
 
 const SID = 's1';
@@ -128,6 +129,19 @@ describe('approvals/policy — new categories follow session mode', () => {
 
 describe('approvals/policy — approval lifetimes', () => {
   beforeEach(() => clearSession(SID));
+
+  it('never remembers an answer for a hard-to-undo or admin step, whatever lifetime it came with', () => {
+    setSessionMode(SID, 'auto');
+    for (const category of ['system-destructive', 'elevation'] as const) {
+      expect(isOnceOnly(category)).toBe(true);
+      recordDecision(SID, category, true, 'session');
+      expect(needsPrompt({ sessionId: SID, category })).toBe(true);
+    }
+    // A reversible change can still be approved for the task.
+    expect(isOnceOnly('system-change')).toBe(false);
+    recordDecision(SID, 'system-change', true, 'session');
+    expect(needsPrompt({ sessionId: SID, category: 'system-change' })).toBe(false);
+  });
 
   it('"once" is not remembered — the very next check still prompts', () => {
     setSessionMode(SID, 'ask');

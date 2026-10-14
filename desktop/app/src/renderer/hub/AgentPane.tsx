@@ -1176,7 +1176,9 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
             onSelect: () => setPaneOverride('subagents'),
           }}
           agentActive={session.status === 'running'}
-          onPause={onPause ? () => onPause(session.id) : undefined}
+          // Paused from the page's own toolbar: you're doing something on the
+          // page, so it stays in front (a paused task otherwise shows the chat).
+          onPause={onPause ? () => { setPaneOverride('page'); onPause(session.id); } : undefined}
           chat={{
             active: chatActive,
             unread: chatUnread,

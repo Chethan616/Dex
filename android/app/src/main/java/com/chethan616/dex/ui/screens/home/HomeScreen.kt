@@ -564,6 +564,9 @@ private fun ApprovalCard(session: Session, onOpen: () -> Unit, onAnswer: (Boolea
         Text("DEX needs your OK", style = MaterialTheme.typography.titleMedium, color = scheme.onTertiaryContainer)
       }
       Text(pc.title, style = MaterialTheme.typography.bodyLarge, color = scheme.onTertiaryContainer)
+      pc.tierLabel?.let {
+        Text(it, style = MaterialTheme.typography.labelMedium, color = if (pc.inAppOnly) scheme.error else scheme.onTertiaryContainer.copy(alpha = 0.7f))
+      }
       if (pc.detail.isNotBlank()) {
         Text(pc.detail, style = MaterialTheme.typography.bodySmall, color = scheme.onTertiaryContainer.copy(alpha = 0.75f), maxLines = 3, overflow = TextOverflow.Ellipsis)
       }

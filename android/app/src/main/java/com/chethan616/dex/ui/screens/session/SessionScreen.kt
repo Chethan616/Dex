@@ -260,7 +260,7 @@ fun SessionScreen(
           exit = shrinkVertically() + fadeOut(),
         ) {
           session?.pendingConfirmation?.let { pc ->
-            ApprovalBanner(pc.title, pc.detail) { ok ->
+            ApprovalBanner(pc.title, pc.detail, pc.tierLabel, pc.inAppOnly) { ok ->
               if (ok) haptics.confirm() else haptics.reject()
               vm.answer(ok)
             }
@@ -519,7 +519,7 @@ private fun SessionTopBar(
 }
 
 @Composable
-private fun ApprovalBanner(title: String, detail: String, onAnswer: (Boolean) -> Unit) {
+private fun ApprovalBanner(title: String, detail: String, tierLabel: String?, strong: Boolean, onAnswer: (Boolean) -> Unit) {
   val scheme = MaterialTheme.colorScheme
   Surface(
     shape = RoundedCornerShape(28.dp),
@@ -533,6 +533,10 @@ private fun ApprovalBanner(title: String, detail: String, onAnswer: (Boolean) ->
         Column(Modifier.weight(1f)) {
           Text("Approve this?", style = MaterialTheme.typography.titleSmall, color = scheme.onTertiaryContainer)
           Text(title, style = MaterialTheme.typography.bodyMedium, color = scheme.onTertiaryContainer)
+          // What kind of step (the Windows tools' tier): hard to undo and admin steps stand out.
+          tierLabel?.let {
+            Text(it, style = MaterialTheme.typography.labelMedium, color = if (strong) scheme.error else scheme.onTertiaryContainer.copy(alpha = 0.7f))
+          }
         }
       }
       if (detail.isNotBlank()) {

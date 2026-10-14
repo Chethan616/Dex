@@ -3372,8 +3372,12 @@ button:focus:not(:focus-visible) {
 .dashboard__recent-list {
   display: flex;
   flex-direction: column;
-  max-height: 320px;
+  /* About eight and a half rows: the half row says there's more below. */
+  max-height: 296px;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--highlight-rgb), 0.18) transparent;
 }
 
 .dashboard__recent-row {
@@ -5993,6 +5997,21 @@ button:focus:not(:focus-visible) {
   border-radius: var(--radius-full);
   background-color: var(--color-status-warning);
   animation: pulse-glow 1.8s var(--ease-in-out) infinite;
+}
+
+.deck-confirm__tier {
+  display: inline-block;
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-fg-secondary);
+}
+.deck-confirm__tier--strong { color: var(--color-status-warning); }
+
+.deck-confirm__once {
+  align-self: center;
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-tertiary);
 }
 
 .deck-confirm__detail {

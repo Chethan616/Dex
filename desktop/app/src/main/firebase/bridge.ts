@@ -216,6 +216,16 @@ function serializeBlock(block: Block): Record<string, unknown> {
       return { ...base, name: block.title, text: clip(block.markdown, MAX_TEXT) };
     case 'artifact':
       return { ...base, name: block.title, text: clip(block.note, 1000) ?? null, count: block.count, items: block.items.map((i) => ({ label: clip(i.label, 300), detail: clip(i.detail, 300) ?? null })) };
+    // A change to the PC: a quiet row on the phone (Undo stays on the PC for
+    // now — a phone command for it needs a new type in the Firestore rules).
+    case 'change':
+      return {
+        ...base,
+        kind: 'notice',
+        level: 'info',
+        text: clip(`${block.undone ? 'Undone' : 'Changed on your PC'}: ${block.title}`, 400),
+        detail: clip(block.reason, 1000) ?? null,
+      };
     // The spec as JSON: the phone renders the same kit (Widgets.kt).
     case 'widget':
       return { ...base, name: block.widget.type, text: clip(widgetLine(block.widget), 300), widget: JSON.stringify(block.widget) };
@@ -276,11 +286,18 @@ function openQuestion(t: Transcript): { title: string; replies: string[] } | nul
   return null;
 }
 
-function pendingConfirmation(session: AgentSession): { id: string; title: string | undefined; detail: string | undefined } | null {
+/**
+ * The approval the task waits on. `tier` (the Windows tools' 1–4) lets the
+ * phone say what kind of step it is, and keep Approve for hard-to-undo and
+ * admin steps (3, 4) inside the app, off the notification.
+ */
+function pendingConfirmation(session: AgentSession): { id: string; title: string | undefined; detail: string | undefined; tier: number; onceOnly: boolean } | null {
   const output = session.output ?? [];
   for (let i = output.length - 1; i >= 0; i -= 1) {
     const e = output[i] as HlEvent;
-    if (e.type === 'confirmation') return e.status === 'pending' ? { id: e.id, title: clip(e.title, 300), detail: clip(e.detail, 1000) } : null;
+    if (e.type === 'confirmation') {
+      return e.status === 'pending' ? { id: e.id, title: clip(e.title, 300), detail: clip(e.detail, 1000), tier: e.tier ?? 0, onceOnly: e.onceOnly === true } : null;
+    }
   }
   return null;
 }

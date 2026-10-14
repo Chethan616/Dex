@@ -16,7 +16,8 @@ export type HlEvent =
   | { type: 'task_state'; state: TaskState }
   | { type: 'artifact'; kind: 'files' | 'reading'; title: string; note?: string; total?: number; body?: string; file?: string; items: ArtifactItem[] }
   | { type: 'screenshot'; path: string; caption?: string; mode: 'raw' | 'uia'; at: number }
-  | { type: 'confirmation'; id: string; title: string; detail: string; status: 'pending' | 'approved' | 'denied'; at: number }
+  | { type: 'confirmation'; id: string; title: string; detail: string; status: 'pending' | 'approved' | 'denied'; at: number; category?: string; tier?: number; onceOnly?: boolean }
+  | { type: 'desk_change'; entry: string; title: string; reason?: string; undoable: boolean; undone?: boolean; undoes?: string; restartNeeded?: boolean; at?: number }
   | { type: 'canvas'; title: string; markdown: string; at: number }
   | { type: 'subagent_start'; id: string; name: string; subagentType?: string; prompt: string }
   | { type: 'subagent_step'; id: string; kind: 'tool_call' | 'tool_result'; name?: string; preview?: string; ok?: boolean; ms?: number }
@@ -181,9 +182,9 @@ export function adaptSession(session: AgentSession): {
   // a plan and a result card belong in a panel you can look at, not in a
   // scrolling transcript, and the terminal already gets a one-line summary of
   // each from streamToTerm.
-  const HIDDEN_FROM_LOG = new Set(['turn_usage', 'task_state', 'artifact', 'screenshot', 'confirmation', 'canvas']);
+  const HIDDEN_FROM_LOG = new Set(['turn_usage', 'task_state', 'artifact', 'screenshot', 'confirmation', 'canvas', 'desk_change']);
   const visibleOutput = session.output.filter(
-    (e): e is Exclude<HlEvent, { type: 'turn_usage' | 'task_state' | 'artifact' | 'screenshot' | 'confirmation' | 'canvas' }> =>
+    (e): e is Exclude<HlEvent, { type: 'turn_usage' | 'task_state' | 'artifact' | 'screenshot' | 'confirmation' | 'canvas' | 'desk_change' }> =>
       !HIDDEN_FROM_LOG.has(e.type),
   );
 

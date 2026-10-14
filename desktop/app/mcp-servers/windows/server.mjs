@@ -225,12 +225,18 @@ export async function callTool(name, args = {}) {
   const verdict = classify(name, args, win);
   if (verdict.refused) return errorResult('refused', verdict.refused, 'Tell the user what you needed instead of working around it.');
 
+  // An admin change with no admin helper: say so now, before asking the user to approve something that can't run.
+  if (verdict.admin && !readFile(path.join(home, 'elevated.secret'))) {
+    return errorResult('elevation_not_set_up', 'Admin changes aren’t set up on this PC yet.', 'Tell the user: Settings › Agent approval › Admin changes › Set up (one Windows prompt). Until then, say what you would change.');
+  }
+
   if (verdict.tier >= 1) {
     if (win?.takenOver) return errorResult('held', 'The user took this window to use it themselves.', 'Leave it alone until they hand it back; ask if you need it.');
     const held = await waitForGate();
     if (held) return errorResult('held', 'The user paused DEX, so it isn’t touching their apps right now.', 'Wait for them to resume; don’t retry around it.');
     if (control.reachable()) {
-      const approved = await control.confirm({ title: verdict.title, detail: verdict.detail, category: verdict.category, subject: verdict.subject, tier: verdict.tier });
+      // Tier 4 = needs admin rights (PLAN §2.1), whatever the change's own tier.
+      const approved = await control.confirm({ title: verdict.title, detail: verdict.detail, category: verdict.category, subject: verdict.subject, tier: verdict.admin ? 4 : verdict.tier });
       if (!approved) return errorResult('denied', 'The user said no to that.', 'Don’t try it another way; ask what they’d like instead.');
     } else if (verdict.tier >= 3) {
       return errorResult('denied', "DEX isn't reachable to approve a change like this.", null);

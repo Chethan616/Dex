@@ -341,7 +341,10 @@ private fun DocumentSnapshot.toSession(): Session? {
     tokens = long("tokens"),
     blockCount = long("blockCount").toInt(),
     pendingConfirmation = pc?.let {
-      PendingConfirmation(it["id"]?.toString() ?: "", it["title"]?.toString() ?: "", it["detail"]?.toString() ?: "")
+      PendingConfirmation(
+        it["id"]?.toString() ?: "", it["title"]?.toString() ?: "", it["detail"]?.toString() ?: "",
+        tier = (it["tier"] as? Number)?.toInt() ?: 0, onceOnly = it["onceOnly"] == true,
+      )
     },
     deviceName = getString("deviceName"),
     reactions = (get("reactions") as? Map<*, *>)?.entries?.associate { (k, v) ->

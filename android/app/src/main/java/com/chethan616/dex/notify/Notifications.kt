@@ -143,7 +143,11 @@ object Notifications {
       PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
-  fun show(context: Context, kind: String, title: String, body: String, sessionId: String, confirmationId: String?, choices: List<String> = emptyList()) {
+  /**
+   * [inlineAnswer] false: an approval with no Approve / Deny on the
+   * notification — a hard-to-undo or admin step is answered inside the app.
+   */
+  fun show(context: Context, kind: String, title: String, body: String, sessionId: String, confirmationId: String?, choices: List<String> = emptyList(), inlineAnswer: Boolean = true) {
     if (Build.VERSION.SDK_INT >= 33 &&
       ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
     ) return
@@ -173,7 +177,7 @@ object Notifications {
           .build(),
       )
     }
-    if (approval) {
+    if (approval && inlineAnswer) {
       builder.addAction(0, "Approve", answer(context, sessionId, confirmationId, true))
       builder.addAction(0, "Deny", answer(context, sessionId, confirmationId, false))
     }

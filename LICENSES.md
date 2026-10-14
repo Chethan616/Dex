@@ -36,6 +36,7 @@ Checked on 2026-10-07. Re-run the dependency scan with `yarn licenses:scan` in
 | Bot avatars (Libraries.dev) | `android/…/ui/avatar/BotShapes.kt`, desktop avatars | MIT | Credited in the phone's Settings › About |
 | `<model-viewer>` | `android/app/src/main/assets/viewer` | Apache-2.0 | `LICENSE-model-viewer.txt` beside it |
 | Material Symbols (Rounded) | `android/app/src/main/res/drawable/ic_task_*.xml` | Apache-2.0 | |
+| Material Symbols (Outlined) "extension" | `desktop/app/src/renderer/hub/icons/PuzzleIcon.tsx` (the puzzle piece Chrome's toolbar uses) | Apache-2.0 | Path data only |
 | Simple Icons | `desktop/app/src/renderer/assets/brand-logos/*.svg` (most of the Marketplace logos) | CC0-1.0 | Path data only, in each brand's colour |
 | material-3-expressive-catalog (meticha) | patterns adapted in the phone's UI | Apache-2.0 | Credited in Settings › About |
 

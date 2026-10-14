@@ -30,6 +30,8 @@ class DexMessagingService : FirebaseMessagingService() {
       body = message.notification?.body ?: "",
       sessionId = sessionId,
       confirmationId = message.data["confirmationId"],
+      // Hard to undo or admin (tier 3, 4): answered in the app, not from the shade.
+      inlineAnswer = (message.data["tier"]?.toIntOrNull() ?: 0) < 3,
     )
   }
 }

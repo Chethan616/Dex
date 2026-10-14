@@ -291,6 +291,7 @@ const pendingConfirmations = new Map<string, {
   title: string;
   detail: string;
   category: ApprovalCategory;
+  tier?: number;
 }>();
 const CONFIRMATION_TIMEOUT_MS = 10 * 60 * 1000;
 
@@ -314,6 +315,9 @@ function resolveConfirmation(id: string, approved: boolean, lifetime: ApprovalLi
       detail: pending.detail,
       status: approved ? 'approved' : 'denied',
       at: Date.now(),
+      category: pending.category,
+      tier: pending.tier,
+      onceOnly: approvalPolicy.isOnceOnly(pending.category) || undefined,
     });
   }
   pending.resolve(approved);
@@ -331,6 +335,8 @@ function requestConfirmation(
   detail: string,
   category: ApprovalCategory,
   subject?: string,
+  /** The Windows tools' tier (docs/desktop-control/PLAN.md §2.1): the phone says it, and asks in the app for 3 and 4. */
+  tier?: number,
 ): Promise<{ approved: boolean }> {
   if (!approvalPolicy.needsPrompt({ sessionId, category, subject })) {
     return Promise.resolve({ approved: true });
@@ -338,8 +344,9 @@ function requestConfirmation(
 
   const id = randomUUID();
   const session = sessionManager.getSession(sessionId);
+  const onceOnly = approvalPolicy.isOnceOnly(category) || undefined;
   if (session) {
-    sessionManager.appendOutput(sessionId, { type: 'confirmation', id, title, detail, status: 'pending', at: Date.now() });
+    sessionManager.appendOutput(sessionId, { type: 'confirmation', id, title, detail, status: 'pending', at: Date.now(), category, tier, onceOnly });
     // Suspend AFTER appendOutput, which just reset it — otherwise the very
     // next line's clear would have nothing to undo and the timer stays
     // armed for a wait that can run minutes.
@@ -355,6 +362,7 @@ function requestConfirmation(
       title,
       detail,
       category,
+      tier,
       resolve: (approved) => {
         clearTimeout(timeout);
         resolve({ approved });
@@ -2363,14 +2371,15 @@ app.whenReady().then(async () => {
         } catch {
           throw new Error('request body must be JSON');
         }
-        const body = (parsed ?? {}) as { sessionId?: unknown; title?: unknown; detail?: unknown; category?: unknown; subject?: unknown };
+        const body = (parsed ?? {}) as { sessionId?: unknown; title?: unknown; detail?: unknown; category?: unknown; subject?: unknown; tier?: unknown };
         const sessionId = assertString(body.sessionId, 'sessionId', 100);
         const title = assertString(body.title, 'title', 200);
         const detail = assertString(body.detail, 'detail', 4000);
         const category = normalizeApprovalCategory(body.category);
         const subject = typeof body.subject === 'string' ? body.subject.slice(0, 4000) : undefined;
+        const tier = Number.isInteger(body.tier) && (body.tier as number) >= 0 && (body.tier as number) <= 4 ? (body.tier as number) : undefined;
 
-        return requestConfirmation(sessionId, title, detail, category, subject);
+        return requestConfirmation(sessionId, title, detail, category, subject, tier);
       },
 
       // dex-sh's session subcommands — a long-lived PTY (src/main/hl/

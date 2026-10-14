@@ -5,12 +5,7 @@
  * under its button (drawn by main above the page), right-click its menu.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-
-const PUZZLE = (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-    <path d="M3 5H5.7a1.55 1.55 0 1 1 3.1 0h2.7v2.7a1.55 1.55 0 1 1 0 3.1v2.7H3Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" strokeLinecap="round" />
-  </svg>
-);
+import { PuzzleIcon } from '../icons/PuzzleIcon';
 
 function anchorOf(el: Element): ExtensionAnchor {
   const r = el.getBoundingClientRect();
@@ -63,7 +58,7 @@ export function ExtensionsBar({ sessionId, activeTabId }: { sessionId: string; a
         aria-label="Extensions"
         onClick={(e) => { void api.menu(sessionId, anchorOf(e.currentTarget)); }}
       >
-        {PUZZLE}
+        <PuzzleIcon size={18} />
       </button>
     </div>
   );

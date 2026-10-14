@@ -210,6 +210,23 @@ describe('the Windows server', () => {
     expect(await undo(body.entry)).toMatchObject({ ok: false, error: 'nothing_to_undo' });
   }, 20_000);
 
+  it('says admin changes aren’t set up before asking the user to approve one', async () => {
+    const c = await fakeControl();
+    const { tool } = await start({ DEX_CONTROL_FILE: c.file, DEX_DESK_HOME: c.dir });
+    const { body } = await tool('system_change', { action: 'dns_set', args: { adapter: 'Wi-Fi', servers: ['1.1.1.1'] }, reason: 'lookups time out' });
+    expect(body.error).toBe('elevation_not_set_up');
+    expect(c.heard.some((h) => h.path === '/dex/confirm')).toBe(false);
+  });
+
+  it('asks about an admin change as tier 4', async () => {
+    const c = await fakeControl({ approve: false });
+    fs.writeFileSync(path.join(c.dir, 'elevated.secret'), 'x');
+    const { tool } = await start({ DEX_CONTROL_FILE: c.file, DEX_DESK_HOME: c.dir });
+    const { body } = await tool('system_change', { action: 'dns_set', args: { adapter: 'Wi-Fi', servers: ['1.1.1.1'] }, reason: 'lookups time out' });
+    expect(body.error).toBe('denied');
+    expect(c.heard.find((h) => h.path === '/dex/confirm')!.body).toMatchObject({ category: 'elevation', tier: 4 });
+  });
+
   it('reports nothing for a call it refused', async () => {
     const c = await fakeControl();
     const { tool } = await start({ DEX_CONTROL_FILE: c.file, DEX_DESK_HOME: c.dir });

@@ -516,6 +516,14 @@ function ActivityCard({ session }: { session: AgentSession }): React.ReactElemen
  */
 type ApprovalLifetimeChoice = 'once' | 'turn' | 'session';
 
+/** What kind of step a Windows tool asks about (docs/desktop-control/PLAN.md §2.1). */
+function tierLabel(tier: number | undefined): string | null {
+  if (tier === 2) return 'Changes a setting · can be undone';
+  if (tier === 3) return 'Hard to undo';
+  if (tier === 4) return 'Needs admin rights';
+  return null;
+}
+
 export function ConfirmationCard({ sessionId, event }: { sessionId: string; event: ConfirmationEvent }): React.ReactElement {
   const [answering, setAnswering] = useState<'approve' | 'deny' | null>(null);
   const [lifetime, setLifetime] = useState<ApprovalLifetimeChoice>('once');
@@ -523,7 +531,7 @@ export function ConfirmationCard({ sessionId, event }: { sessionId: string; even
   const answer = (approved: boolean) => {
     if (answering) return; // one click; a slow IPC round trip shouldn't double-fire
     setAnswering(approved ? 'approve' : 'deny');
-    window.electronAPI?.dex?.confirmAnswer(sessionId, event.id, approved, approved ? lifetime : 'once').catch(() => {
+    window.electronAPI?.dex?.confirmAnswer(sessionId, event.id, approved, approved && !event.onceOnly ? lifetime : 'once').catch(() => {
       setAnswering(null);
     });
   };
@@ -537,6 +545,7 @@ export function ConfirmationCard({ sessionId, event }: { sessionId: string; even
       <header className="deck-card__header">
         <span className="deck-card__title">{event.title}</span>
       </header>
+      {tierLabel(event.tier) && <span className={`deck-confirm__tier${(event.tier ?? 0) >= 3 ? ' deck-confirm__tier--strong' : ''}`}>{tierLabel(event.tier)}</span>}
       <p className="deck-card__body deck-confirm__detail">{event.detail}</p>
       <div className="deck-confirm__actions">
         <button
@@ -546,18 +555,23 @@ export function ConfirmationCard({ sessionId, event }: { sessionId: string; even
         >
           {answering === 'deny' ? 'Denying…' : 'Deny'}
         </button>
-        <Segmented<ApprovalLifetimeChoice>
-          className="deck-confirm__lifetime"
-          size="sm"
-          label="Remember this approval for"
-          value={lifetime}
-          onChange={setLifetime}
-          options={[
-            { value: 'once', label: 'Once', disabled: answering != null },
-            { value: 'turn', label: 'This turn', disabled: answering != null },
-            { value: 'session', label: 'Session', disabled: answering != null },
-          ]}
-        />
+        {event.onceOnly ? (
+          // Hard to undo or admin: each step is its own answer (approvals/policy.ts ONCE_ONLY).
+          <span className="deck-confirm__once">Just this step</span>
+        ) : (
+          <Segmented<ApprovalLifetimeChoice>
+            className="deck-confirm__lifetime"
+            size="sm"
+            label="Remember this approval for"
+            value={lifetime}
+            onChange={setLifetime}
+            options={[
+              { value: 'once', label: 'Once', disabled: answering != null },
+              { value: 'turn', label: 'This turn', disabled: answering != null },
+              { value: 'session', label: 'Session', disabled: answering != null },
+            ]}
+          />
+        )}
         <button
           className="deck-confirm__btn deck-confirm__btn--approve"
           onClick={() => answer(true)}
