@@ -24,3 +24,4 @@
 - [Channels](channels.md) — Settings › Channels order: phone, WhatsApp, Telegram, Advanced; Telegram = own @BotFather bot, pairing link
 - [Keep the resume log](keep-resume-log.md) — update the RESUME HERE block atop TO_BE_DONE.md at every milestone; read it first after a reset
 - [Workflows & routines](workflows-and-routines.md) — owner spec 2026-10-14: NL create/edit routines, /workflow gen-UI cards, View = n8n-style graph, phone too; order in TO_BE_DONE RESUME block
+- [Second PC](second-pc.md) — srira PC: unify worktree at D:\Projects\Dex-unify (D:\Projects\DEX is a RUST clone with its own uncommitted work); no signing keys → no releases there
