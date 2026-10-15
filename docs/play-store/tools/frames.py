@@ -180,23 +180,24 @@ BLUE, BLUE_TOP, BLUE_ACC = (0x2F, 0x6F, 0xDB), (0x13, 0x2C, 0x57), (0x9C, 0xCA, 
 VIOLET, VIOLET_TOP, VIOLET_ACC = (0x7B, 0x5C, 0xD6), (0x2A, 0x1E, 0x4F), (0xD8, 0xBD, 0xF6)
 TEAL = (0x1F, 0xA2, 0xA8)
 
-frame('01-home.png', '1-home.png',
-      [("Your PC's AI agent,", False), ('in your pocket', True)],
-      'Start tasks from anywhere. Watch them happen.',
-      BLUE_TOP, BLUE, VIOLET, BLUE_ACC, wordmark=True)
-frame('02-answers.png', '2-flights.png',
-      [('Ask in plain words.', False), ('Tap the answer.', True)],
-      'Flights, hotels and places, as cards you can tap.',
-      VIOLET_TOP, VIOLET, BLUE, VIOLET_ACC, lift=(48, 1040, 1128, 1610, 22))
-frame('03-approve.png', '3-approval.png',
-      [('Nothing risky', False), ('without your OK', True)],
-      'DEX asks first. Approve from the notification.',
-      BLUE_TOP, BLUE, TEAL, BLUE_ACC, lift=(36, 1212, 1140, 1728, 28))
-frame('04-routines.png', '4b-routine-graph.png',
-      [('Routines that', False), ('run themselves', True)],
-      'Say “every morning”. DEX takes it from there.',
-      VIOLET_TOP, VIOLET, TEAL, VIOLET_ACC)
-frame('05-live.png', '5-live.png',
-      [('Watch every step,', False), ('and steer it', True)],
-      'See what DEX does on your PC as it happens.',
-      BLUE_TOP, BLUE, VIOLET, BLUE_ACC)
+if __name__ == '__main__':
+    frame('01-home.png', '1-home.png',
+          [("Your PC's AI agent,", False), ('in your pocket', True)],
+          'Start tasks from anywhere. Watch them happen.',
+          BLUE_TOP, BLUE, VIOLET, BLUE_ACC, wordmark=True)
+    frame('02-answers.png', '2-flights.png',
+          [('Ask in plain words.', False), ('Tap the answer.', True)],
+          'Flights, hotels and places, as cards you can tap.',
+          VIOLET_TOP, VIOLET, BLUE, VIOLET_ACC, lift=(48, 1040, 1128, 1610, 22))
+    frame('03-approve.png', '3-approval.png',
+          [('Nothing risky', False), ('without your OK', True)],
+          'DEX asks first. Approve from the notification.',
+          BLUE_TOP, BLUE, TEAL, BLUE_ACC, lift=(36, 1212, 1140, 1728, 28))
+    frame('04-routines.png', '4b-routine-graph.png',
+          [('Routines that', False), ('run themselves', True)],
+          'Say “every morning”. DEX takes it from there.',
+          VIOLET_TOP, VIOLET, TEAL, VIOLET_ACC)
+    frame('05-live.png', '5-live.png',
+          [('Watch every step,', False), ('and steer it', True)],
+          'See what DEX does on your PC as it happens.',
+          BLUE_TOP, BLUE, VIOLET, BLUE_ACC)

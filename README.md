@@ -8,7 +8,9 @@
 
 **An open-source AI agent that does real work on your Windows PC — in your browser, your files, your apps and your accounts — while you keep using it. Hand it tasks from your desk, your phone, WhatsApp or Telegram.**
 
-![DEX finding flights: the answer, then cards with Select and Open](docs/images/chat-cards.png)
+<p align="center">
+  <img src="docs/images/readme/hero.png" alt="DEX on a Windows PC answering a flight search with cards, and DEX for Android in front of it with an approval waiting">
+</p>
 
 Tell DEX what you want in plain words:
 
@@ -22,6 +24,29 @@ anything risky. Answers come back as things you can act on — flight cards with
 **Select** and **Open**, a date picker when it needs a date — not walls of text.
 
 **[⬇ Download for Windows](https://github.com/Chethan616/Dex/releases/latest)** · **[Android app](https://github.com/Chethan616/Dex/releases/latest)** · free and open source (Apache-2.0)
+
+## See it
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/readme/desktop-answers.png" alt="Ask in plain words, tap the answer: flight results as cards with Select and Open"></td>
+    <td width="50%"><img src="docs/images/readme/desktop-approve.png" alt="Nothing risky without your OK: an approval that says what kind of step it is, with Once, This turn and Session"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/readme/desktop-routines.png" alt="Routines that run themselves: a morning briefing shown as a step-by-step graph"></td>
+    <td width="50%"><img src="docs/images/readme/desktop-connectors.png" alt="50+ connectors, one sign-in each: the Marketplace with Google, GitHub, Notion and more"></td>
+  </tr>
+</table>
+
+**On your phone** ([DEX for Android](https://github.com/Chethan616/Dex/releases/latest)):
+
+<p align="center">
+  <img src="docs/play-store/screenshots/01-home.png" width="19%" alt="Home: what needs you, what's running and what's done">
+  <img src="docs/play-store/screenshots/02-answers.png" width="19%" alt="Flight results as cards you can tap">
+  <img src="docs/play-store/screenshots/03-approve.png" width="19%" alt="Approve or deny a risky step">
+  <img src="docs/play-store/screenshots/04-routines.png" width="19%" alt="A routine as a step-by-step graph">
+  <img src="docs/play-store/screenshots/05-live.png" width="19%" alt="Watch a task step by step and steer it">
+</p>
 
 ## What DEX can do
 
@@ -39,6 +64,9 @@ anything risky. Answers come back as things you can act on — flight cards with
   background without taking your mouse: play music, check what's wrong with
   the Wi-Fi, fix it (with undo). If it ever has to borrow your mouse, it lets
   go the moment you move.
+- **Run routines.** Say "every morning" or "every Sunday" and DEX saves it as
+  a routine, runs it on its schedule, and shows it as a step-by-step graph.
+  Type `/workflow` to see them all.
 - **Make and open files.** PDFs, Word, Excel, CSV, Markdown, code, images,
   video and 3D models open right inside the task, and reload as DEX edits them.
   It can even build 3D scenes in Blender.
@@ -73,8 +101,7 @@ anything risky. Answers come back as things you can act on — flight cards with
 Then type a task. A good first one: *"What's on my calendar this week? Find a free hour for a gym session and book it."*
 
 <p align="center">
-  <img src="docs/images/marketplace.png" alt="The Marketplace: 50+ connectors with one sign-in each" width="49%">
-  <img src="docs/images/channels.png" alt="Settings › Channels: your phone, WhatsApp, Telegram" width="49%">
+  <img src="docs/images/readme/desktop-dashboard.png" alt="The dashboard: what's running, what's waiting for you, and everything DEX finished">
 </p>
 
 ## Help build it
