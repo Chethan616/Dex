@@ -36,9 +36,26 @@ android {
     applicationId = "com.chethan616.dex"
     minSdk = 26
     targetSdk = 36
-    versionCode = 37
-    versionName = "2.0.0"
+    versionCode = 38
+    versionName = "2.0.1"
     buildConfigField("boolean", "HAS_FIREBASE", hasFirebaseConfig.toString())
+  }
+
+  // Two ways DEX reaches a phone, one build each. github: the APK on GitHub
+  // Releases, which updates itself from there (update/AppUpdater.kt). play:
+  // the bundle for Google Play, which does the updating; Play allows no other
+  // updater, so that build has none and never asks to install apps
+  // (src/play/AndroidManifest.xml).
+  flavorDimensions += "store"
+  productFlavors {
+    create("github") {
+      dimension = "store"
+      buildConfigField("boolean", "SELF_UPDATE", "true")
+    }
+    create("play") {
+      dimension = "store"
+      buildConfigField("boolean", "SELF_UPDATE", "false")
+    }
   }
 
   buildTypes {

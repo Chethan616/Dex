@@ -2,10 +2,12 @@ package com.chethan616.dex.data
 
 import android.content.Context
 import com.google.firebase.Firebase
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.auth
+import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -55,6 +57,30 @@ class AuthRepository(@Suppress("unused") private val appContext: Context) {
   }.friendly()
 
   fun signOut() = auth.signOut()
+
+  /**
+   * Settings › Delete account. Firebase only deletes an account that signed in
+   * just now, so the password comes first; then [deleteData] (everything
+   * synced for it), then the account itself. If the data can't all go, the
+   * account stays, so trying again finishes the job.
+   */
+  suspend fun deleteAccount(password: String, deleteData: suspend () -> Unit): Result<Unit> = runCatching {
+    val user = requireNotNull(auth.currentUser) { "You’re already signed out." }
+    val email = requireNotNull(user.email) { "This account has no email to confirm with." }
+    try {
+      user.reauthenticate(EmailAuthProvider.getCredential(email, password)).await()
+    } catch (e: FirebaseAuthException) {
+      if (e.errorCode == "ERROR_WRONG_PASSWORD" || e.errorCode == "ERROR_INVALID_CREDENTIAL") throw IllegalStateException("That password isn’t right.")
+      throw e
+    }
+    try {
+      deleteData()
+    } catch (e: FirebaseFirestoreException) {
+      throw IllegalStateException("Couldn’t delete everything. Check your connection and try again; your account is still there.")
+    }
+    user.delete().await()
+    Unit
+  }.friendly()
 
   private fun FirebaseUser.toAccount() = Account(uid, email, displayName, photoUrl?.toString())
 

@@ -20,6 +20,18 @@
 
 ## ▶ RESUME HERE — live work log (keep this block current; newest first)
 
+**2026-10-15, owner's PC, session `baacd51d` (Opus 5.5): Google Play.** The owner asked for a signed AAB and a Play Store release. Done:
+- The phone now has two flavors. `github` is the APK on GitHub Releases, with the self-updater. `play` is the bundle for Play: no updater and no `REQUEST_INSTALL_PACKAGES`, because Play forbids self-updating.
+- Settings › **Delete account** (Play requires it for apps that create accounts): `AuthRepository.deleteAccount` + `DexRepository.deleteEverything`.
+- Removed the unused `RECORD_AUDIO`.
+- Phone **2.0.1 / versionCode 38**.
+- Signed `android/release/DEX-android-2.0.1-play.aab` (and `DEX-android-2.0.1.apk`, the GitHub flavor) built and verified: release key `2f727fa5…`, 16 KB native libs, target API 36.
+- `PRIVACY.md`, `docs/delete-account.md`, and `docs/play-store/` (listing copy, form answers, icon, feature graphic, steps).
+
+**Owner's steps left:** the Play Console account and app, the app-signing choice (recommended: upload the existing key with PEPK), screenshots, a test account, and the testing track. Personal accounts need a 12-tester, 14-day closed test before production.
+
+**Open:** the Report action on AI replies, and `users/{uid}` delete in the rules; both need a rules deploy with the owner's OK (see the README's "Open points"). The GitHub 2.0.1 release (desktop + APK) is still separate and not done.
+
 **2026-10-15, second PC (user `srira`, Opus 5.5).** The THIRD batch was carried on from a collaborator's Windows 11 PC: `unify` is a worktree at `D:\Projects\Dex-unify` there (memory note `second-pc`). Items 4 and 5 are done and pushed (`7533df5a`, `8963092f`, `de842ac8`). Item 6 (the release) was done by the owner on their PC (v2.0.0, `931b17db`), on purpose ahead of items 4 and 5, so **4 and 5 ship in the next release: 2.0.1** (desktop `package.json` 2.0.1, phone versionName above 2.0.0, e.g. 2.0.1 / versionCode 38), made on the owner's PC (the second PC has no signing keys). Next: that release when the owner wants it, then the plan order below.
 - Item 4 (troubleshooting): checked through the host's line protocol on the second PC (every new read topic, the refusals, the startup switch on a throwaway Run entry). Not yet run as a whole task through DEX; the admin actions need the elevated helper re-set-up ("Needs an update").
 - Item 5 (workflows): **seen live on desktop** on the second PC's dev build: `dex-workflow create/list/get/delete` against the real control server, `/workflow` cards in a task, View's graph in dark and light, Run now opening a real Claude Code run, and the scheduler starting a daily workflow by itself within 30 s. The phone compiled and was rendered with Robolectric (cards and graph, light and dark); not seen on a device. Not built: Settings UI for workflows (they're managed in words and through the cards), branching steps (deliberately linear).
@@ -981,7 +993,7 @@ machine is busy (e.g. a Gradle build running); they pass on their own.
 
 **Release (Android only, no new tag):**
 1. Bump `versionCode` / `versionName` in `android/app/build.gradle.kts`.
-2. `cd android && ./gradlew :app:assembleRelease`. Signing comes from `~/.gradle/gradle.properties` `DEX_RELEASE_*`. **Never print or commit those.**
+2. `cd android && ./gradlew :app:assembleGithubRelease` (the GitHub flavor, which updates itself; the APK lands in `app/build/outputs/apk/github/release/`). For Google Play it's `:app:bundlePlayRelease` instead: see `docs/play-store/README.md`. Signing comes from `~/.gradle/gradle.properties` `DEX_RELEASE_*`. **Never print or commit those.**
 3. Verify:
    - `apksigner verify --print-certs`: the cert SHA-256 starts `2f727fa5`;
    - `zipalign -c -P 16 4`;

@@ -7,10 +7,12 @@ import android.provider.Settings
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.auth
+import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.firestore.Source
 import com.google.firebase.firestore.firestore
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.channels.awaitClose
@@ -313,7 +315,41 @@ class DexRepository(private val appContext: Context) {
     if (Firebase.auth.currentUser == null) return
     user().collection("devices").document(deviceId).set(mapOf("fcmToken" to token), SetOptions.merge()).await()
   }
+
+  /**
+   * Settings › Delete account: every document kept for this account, read
+   * from the server so nothing only in the cache is missed. The account's own
+   * document is deleted if the rules allow it; today they only let the owner
+   * write its profile, so then it's emptied instead.
+   */
+  suspend fun deleteEverything() {
+    val me = user()
+    for ((name, children) in ACCOUNT_TREE) deleteCollection(me.collection(name), children)
+    if (me.get(Source.SERVER).await().exists()) {
+      runCatching { me.delete().await() }.onFailure { me.set(mapOf("profile" to mapOf("bot" to ""))).await() }
+    }
+  }
+
+  private suspend fun deleteCollection(collection: CollectionReference, children: List<String>) {
+    while (true) {
+      val page = collection.limit(250).get(Source.SERVER).await()
+      if (page.isEmpty) return
+      for (doc in page.documents) for (child in children) deleteCollection(doc.reference.collection(child), emptyList())
+      val batch = db.batch()
+      page.documents.forEach { batch.delete(it.reference) }
+      batch.commit().await()
+    }
+  }
 }
+
+/** users/{uid}'s collections, each with the collections its documents hold (firebase/firestore.rules). */
+private val ACCOUNT_TREE: List<Pair<String, List<String>>> = listOf(
+  "devices" to emptyList(),
+  "sessions" to listOf("blocks", "subagents"),
+  "commands" to emptyList(),
+  "transfers" to listOf("chunks"),
+  "uploads" to listOf("chunks"),
+)
 
 /* ── Parsing ─────────────────────────────────────────────────────────── */
 

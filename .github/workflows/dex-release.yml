@@ -130,6 +130,8 @@ jobs:
           echo "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" | base64 -d > android/app/google-services.json
           echo "sdk.dir=$ANDROID_HOME" > android/local.properties
 
+      # The GitHub build (it updates itself from here); the Play build is a
+      # bundle uploaded to Google Play by hand: ./gradlew :app:bundlePlayRelease
       - name: Build release APK
         if: env.HAS_SIGNING == 'true'
         working-directory: android
@@ -140,9 +142,9 @@ jobs:
           ORG_GRADLE_PROJECT_DEX_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           chmod +x gradlew
-          ./gradlew :app:assembleRelease --no-configuration-cache
+          ./gradlew :app:assembleGithubRelease --no-configuration-cache
           ver=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
-          mkdir -p dist && cp app/build/outputs/apk/release/app-release.apk "dist/DEX-android-$ver.apk"
+          mkdir -p dist && cp app/build/outputs/apk/github/release/app-github-release.apk "dist/DEX-android-$ver.apk"
 
       - uses: actions/upload-artifact@v5
         if: env.HAS_SIGNING == 'true'

@@ -8,7 +8,8 @@
     <!-- Android 16 live updates: the status-bar pill for a task you started here. -->
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- No RECORD_AUDIO: voice input is Android's own speech screen
+         (RecognizerIntent), which has the microphone, not DEX. -->
     <!-- A quiet ongoing notification while a PC task runs (notify/TaskWatchService). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />

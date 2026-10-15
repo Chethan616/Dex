@@ -31,6 +31,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Computer
 import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Code
@@ -313,9 +314,18 @@ fun SettingsScreen(
       }
     }
 
-    // Like the desktop's: checks GitHub Releases, downloads in the app, installs over this one.
+    // The GitHub build: like the desktop's, checks GitHub Releases, downloads in
+    // the app, installs over this one. The Play build: Google Play does that.
     Group("Updates") {
-      com.chethan616.dex.update.UpdateRow { RowIcon(Icons.Rounded.SystemUpdate) }
+      if (BuildConfig.SELF_UPDATE) {
+        com.chethan616.dex.update.UpdateRow { RowIcon(Icons.Rounded.SystemUpdate) }
+      } else {
+        val uri = androidx.compose.ui.platform.LocalUriHandler.current
+        SettingRow(Icons.Rounded.SystemUpdate, "Version ${BuildConfig.VERSION_NAME}", "Google Play keeps DEX up to date") {
+          haptics.click()
+          runCatching { uri.openUri("https://play.google.com/store/apps/details?id=${context.packageName}") }
+        }
+      }
     }
 
     Group("About") {
@@ -371,9 +381,80 @@ fun SettingsScreen(
       Spacer(Modifier.size(8.dp))
       Text("Sign out")
     }
+    var deleteOpen by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    androidx.compose.material3.TextButton(
+      onClick = { haptics.click(); deleteOpen = true },
+      colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+      modifier = Modifier.fillMaxWidth(),
+    ) { Text("Delete account") }
+    if (deleteOpen) {
+      DeleteAccountDialog(
+        email = account.email.orEmpty(),
+        onDismiss = { deleteOpen = false },
+        onDelete = { password -> container.auth.deleteAccount(password) { container.repo.deleteEverything() } },
+      )
+    }
     Spacer(Modifier.size(24.dp))
   }
   }
+}
+
+/**
+ * Deleting the account, which Google Play asks every app that creates one to
+ * offer. The password confirms it's you (Firebase wants a fresh sign-in).
+ * On success the account is gone, so the app goes back to sign-in by itself.
+ */
+@Composable
+private fun DeleteAccountDialog(email: String, onDismiss: () -> Unit, onDelete: suspend (String) -> Result<Unit>) {
+  val haptics = LocalHaptics.current
+  val scope = rememberCoroutineScope()
+  var password by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+  var busy by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+  var error by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+  androidx.compose.material3.AlertDialog(
+    onDismissRequest = { if (!busy) onDismiss() },
+    icon = { Icon(Icons.Rounded.DeleteForever, null) },
+    title = { Text("Delete your DEX account?") },
+    text = {
+      Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+          "This deletes ${email.ifEmpty { "your account" }} and everything DEX synced for it: your PCs and phones, your tasks and their chats, and files on their way between them. It can’t be undone.\n\nDEX on your PC keeps the tasks and files saved on the PC.",
+          style = MaterialTheme.typography.bodyMedium,
+        )
+        androidx.compose.material3.OutlinedTextField(
+          value = password,
+          onValueChange = { password = it; error = null },
+          label = { Text("Password") },
+          singleLine = true,
+          enabled = !busy,
+          isError = error != null,
+          supportingText = error?.let { { Text(it) } },
+          visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+          keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password),
+          modifier = Modifier.fillMaxWidth(),
+        )
+      }
+    },
+    confirmButton = {
+      androidx.compose.material3.TextButton(
+        enabled = password.isNotEmpty() && !busy,
+        onClick = {
+          haptics.reject()
+          busy = true
+          scope.launch {
+            onDelete(password).onFailure {
+              error = it.message ?: "Couldn’t delete the account. Try again."
+              busy = false
+            }
+          }
+        },
+        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+      ) { Text(if (busy) "Deleting…" else "Delete") }
+    },
+    dismissButton = {
+      androidx.compose.material3.TextButton(enabled = !busy, onClick = onDismiss) { Text("Cancel") }
+    },
+  )
 }
 
 @Composable

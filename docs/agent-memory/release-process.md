@@ -15,7 +15,7 @@ DEX's first public GitHub release was **v3.1.0**, on 2026-09-29: https://github.
   - Builds the Squirrel installer: `dex-setup.exe`, `RELEASES` and `.nupkg`. The installed app auto-updates from `releases/latest/download/RELEASES`.
   - Publishes the release with auto-generated notes.
 - **Android is local.** CI has no Android signing secrets, so the Android job skips.
-  - Build: `cd android && ./gradlew :app:assembleRelease`. Signing comes from `~/.gradle/gradle.properties` `DEX_RELEASE_*`.
+  - Build: `cd android && ./gradlew :app:assembleGithubRelease` (since 2026-10-15 there are two flavors: `github` self-updates from Releases; `play` has no updater). The APK is at `app/build/outputs/apk/github/release/app-github-release.apk`. Signing comes from `~/.gradle/gradle.properties` `DEX_RELEASE_*`.
   - Copy the APK to `android/release/DEX-android-<ver>.apk` (gitignored).
   - Upload: `gh release upload <tag> …`. The name must match what `ReleaseChecker.kt` looks for.
   - The cert SHA-256 starts `2f727fa5…`. Verify it with `apksigner verify --print-certs`.
@@ -37,3 +37,9 @@ DEX's first public GitHub release was **v3.1.0**, on 2026-09-29: https://github.
 **How to apply:** Follow these steps for the next release. Bump `versionCode`/`versionName` in `android/app/build.gradle.kts` and the desktop `package.json` first.
 
 **2026-10-15:** the owner released **v2.0.0** (desktop 2.0.0, Android versionName 2.0.0, versionCode 37) from their PC (`931b17db`). Troubleshooting (`7533df5a`) and workflows (`8963092f`, `de842ac8`) came after it, so the next release is 2.0.1 with phone versionName > 2.0.0.
+
+**Google Play (from 2026-10-15):**
+- Play gets the `play` flavor bundle: `./gradlew :app:bundlePlayRelease`, copied to `android/release/DEX-android-<ver>-play.aab`. It's uploaded in Play Console by the owner; there's no API access.
+- Everything for Play is in `docs/play-store/README.md`: listing copy, form answers, icon, feature graphic, and the steps.
+- The privacy policy is `PRIVACY.md`; the deletion page is `docs/delete-account.md`.
+- Every Play upload needs a new `versionCode`. The first Play bundle was 2.0.1 / 38.

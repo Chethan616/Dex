@@ -56,8 +56,9 @@ object AppUpdater {
   /** Sent to "allow installs from DEX": install once you're back, if you allowed it. */
   private var installWhenAllowed = false
 
-  /** Ask GitHub. Skipped if it answered in the last 10 minutes, unless `force`. */
+  /** Ask GitHub. Skipped if it answered in the last 10 minutes, unless `force`; never in the Play build. */
   fun check(context: Context, force: Boolean = false) {
+    if (!BuildConfig.SELF_UPDATE) return
     val s = _state.value
     if (s is UpdateState.Checking || s is UpdateState.Downloading || s is UpdateState.Ready) return
     if (!force && System.currentTimeMillis() - lastChecked < 10 * 60_000 && (s is UpdateState.UpToDate || s is UpdateState.Available)) return
@@ -90,6 +91,7 @@ object AppUpdater {
   fun canInstall(context: Context): Boolean = context.packageManager.canRequestPackageInstalls()
 
   private fun download(context: Context, update: AppUpdate) {
+    if (!BuildConfig.SELF_UPDATE) return
     val app = context.applicationContext
     job = scope.launch {
       _state.value = UpdateState.Downloading(update, -1f)
@@ -109,6 +111,8 @@ object AppUpdater {
 
   /** Opens Android's installer (or, the first time, the setting that allows it). Returns false for the latter. */
   fun install(context: Context, file: File): Boolean {
+    // The Play build never installs anything itself (Google Play updates it).
+    if (!BuildConfig.SELF_UPDATE) return false
     if (!canInstall(context)) {
       installWhenAllowed = true
       runCatching {
