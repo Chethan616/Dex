@@ -416,7 +416,7 @@ internal fun widgetsLast(blocks: List<Block>): List<Block> {
 
 /** Nothing visibly moving at the tail — show what the agent is doing. */
 /** Consecutive tool blocks become one group; every other block stands alone. */
-private fun groupTools(blocks: List<Block>): List<List<Block>> {
+internal fun groupTools(blocks: List<Block>): List<List<Block>> {
   val out = mutableListOf<MutableList<Block>>()
   for (b in blocks) {
     if (b.kind == "tool" && out.lastOrNull()?.first()?.kind == "tool") out.last() += b
@@ -425,10 +425,10 @@ private fun groupTools(blocks: List<Block>): List<List<Block>> {
   return out
 }
 
-private fun Block?.isQuiet(): Boolean = this == null || !(kind == "tool" && result == null)
+internal fun Block?.isQuiet(): Boolean = this == null || !(kind == "tool" && result == null)
 
 @Composable
-private fun LiveLine(last: Block?) {
+internal fun LiveLine(last: Block?) {
   val label = when (last?.kind) {
     "text" -> "Writing…"
     "user" -> "Reading your message…"
@@ -456,7 +456,7 @@ private fun LiveLine(last: Block?) {
 }
 
 @Composable
-private fun SessionTopBar(
+internal fun SessionTopBar(
   session: Session?,
   sessionId: String,
   mood: BotMood,
@@ -519,7 +519,7 @@ private fun SessionTopBar(
 }
 
 @Composable
-private fun ApprovalBanner(title: String, detail: String, tierLabel: String?, strong: Boolean, onAnswer: (Boolean) -> Unit) {
+internal fun ApprovalBanner(title: String, detail: String, tierLabel: String?, strong: Boolean, onAnswer: (Boolean) -> Unit) {
   val scheme = MaterialTheme.colorScheme
   Surface(
     shape = RoundedCornerShape(28.dp),
@@ -551,7 +551,7 @@ private fun ApprovalBanner(title: String, detail: String, tierLabel: String?, st
 }
 
 @Composable
-private fun Composer(
+internal fun Composer(
   session: Session?,
   sending: Boolean,
   attach: com.chethan616.dex.ui.attach.AttachmentState,

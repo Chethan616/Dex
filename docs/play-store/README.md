@@ -91,15 +91,12 @@ Both are signed with the same release key (certificate SHA-256 `2f727fa5…`), f
 **Graphics:**
 - App icon: `icon-512.png` (512×512, from the launcher icon; Play rounds the corners).
 - Feature graphic: `feature-graphic-1024x500.png` (the DEX wordmark, centred, with "The AI agent on your PC, in your pocket.").
-- Phone screenshots: at least 2 and up to 8, taken on the phone (Power + Volume down). In order:
-  1. Home with a few tasks;
-  2. a task with result cards (flights or hotels);
-  3. an approval (the banner, or the notification with Approve / Deny);
-  4. the live update in the status bar;
-  5. `/workflow` cards, or a routine's graph;
-  6. Settings.
-
-  Use **dark mode** for all of them, so they match the graphics.
+- Phone screenshots: `screenshots/01-home.png` … `05-live.png` (1080×1920, 9:16).
+  - Each one is the app's real screen with sample data, rendered on the PC by `tools/StoreShots.kt` (Robolectric).
+  - Each is set in a phone with a headline by `tools/frames.py`.
+  - Upload them in order: 01 to 05.
+  - To redo them after a UI change, follow the steps at the top of `tools/frames.py`.
+  - Routines (04) need DEX 2.0.1 on the PC.
 
 **Category:** Productivity. **Tags:** AI assistant, Productivity, Remote control.
 **Contact details:** your developer email. **Website:** `https://github.com/Chethan616/Dex`
