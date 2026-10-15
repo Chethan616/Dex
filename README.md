@@ -36,16 +36,20 @@ anything risky. Answers come back as things you can act on — flight cards with
     <td width="50%"><img src="docs/images/readme/desktop-routines.png" alt="Routines that run themselves: a morning briefing shown as a step-by-step graph"></td>
     <td width="50%"><img src="docs/images/readme/desktop-connectors.png" alt="50+ connectors, one sign-in each: the Marketplace with Google, GitHub, Notion and more"></td>
   </tr>
+  <tr>
+    <td colspan="2"><img src="docs/images/readme/desktop-3d.png" alt="Design in 3D from a sentence: a reading nook DEX modelled and rendered in Blender, open in the task's 3D viewer"></td>
+  </tr>
 </table>
 
 **On your phone** ([DEX for Android](https://github.com/Chethan616/Dex/releases/latest)):
 
 <p align="center">
-  <img src="docs/play-store/screenshots/01-home.png" width="19%" alt="Home: what needs you, what's running and what's done">
-  <img src="docs/play-store/screenshots/02-answers.png" width="19%" alt="Flight results as cards you can tap">
-  <img src="docs/play-store/screenshots/03-approve.png" width="19%" alt="Approve or deny a risky step">
-  <img src="docs/play-store/screenshots/04-routines.png" width="19%" alt="A routine as a step-by-step graph">
-  <img src="docs/play-store/screenshots/05-live.png" width="19%" alt="Watch a task step by step and steer it">
+  <img src="docs/play-store/screenshots/01-home.png" width="15.5%" alt="Home: what needs you, what's running and what's done">
+  <img src="docs/play-store/screenshots/02-answers.png" width="15.5%" alt="Flight results as cards you can tap">
+  <img src="docs/play-store/screenshots/03-approve.png" width="15.5%" alt="Approve or deny a risky step">
+  <img src="docs/play-store/screenshots/06-3d.png" width="15.5%" alt="A 3D scene DEX made in Blender, rendered on the PC">
+  <img src="docs/play-store/screenshots/04-routines.png" width="15.5%" alt="A routine as a step-by-step graph">
+  <img src="docs/play-store/screenshots/05-live.png" width="15.5%" alt="Watch a task step by step and steer it">
 </p>
 
 ## What DEX can do

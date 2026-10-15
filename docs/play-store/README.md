@@ -91,10 +91,10 @@ Both are signed with the same release key (certificate SHA-256 `2f727fa5…`), f
 **Graphics:**
 - App icon: `icon-512.png` (512×512, from the launcher icon; Play rounds the corners).
 - Feature graphic: `feature-graphic-1024x500.png` (the DEX wordmark, centred, with "The AI agent on your PC, in your pocket.").
-- Phone screenshots: `screenshots/01-home.png` … `05-live.png` (1080×1920, 9:16).
+- Phone screenshots: `screenshots/01-home.png` … `06-3d.png` (1080×1920, 9:16). Upload order: 01, 02, 03, 06 (3D), 04, 05.
   - Each one is the app's real screen with sample data, rendered on the PC by `tools/StoreShots.kt` (Robolectric).
   - Each is set in a phone with a headline by `tools/frames.py`.
-  - Upload them in order: 01 to 05.
+  - The 3D scene (06) is `tools/nook.py`, built and rendered in Blender (Cycles): `blender -b --python tools/nook.py -- <out> 1400 96` writes the .png, .glb and .blend.
   - To redo them after a UI change, follow the steps at the top of `tools/frames.py`.
   - Routines (04) need DEX 2.0.1 on the PC.
 

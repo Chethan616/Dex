@@ -225,4 +225,37 @@ class StoreShots {
       tool("run", "Exported", "Exporting", "Lease summary.pdf", null),
     ))
   }
+
+  /** The 3D task's files: the Cycles render, its thumbnail and the GLB (DEX_SAMPLE_FILES, made by nook.py). */
+  private val sampleFiles = File(System.getenv("DEX_SAMPLE_FILES") ?: "build/sample")
+
+  @Test fun model() = shoot("6-model") {
+    seq = 0
+    val thumb = java.util.Base64.getEncoder().encodeToString(File(sampleFiles, "reading-nook-thumb.jpg").readBytes())
+    val s = session("s6", "Make a cozy isometric reading nook in Blender and render it", SessionStatus.Idle, "", 11)
+    SessionLayout(s, listOf(
+      user("Make a cozy isometric reading nook in Blender and render it"),
+      tool("mcp", "Built the scene", "Building the scene", "Blender · 96 objects", 4200),
+      tool("mcp", "Rendered", "Rendering", "Cycles · 1400 × 1400", 61000),
+      Block(seq++, "image", at = now - 12 * MIN, name = "reading-nook.png", path = "C:/Users/Alex/Documents/DEX/reading-nook.png", size = 2149091, mime = "image/png", thumb = thumb),
+      text("Here's your reading nook: a mustard armchair under a floor lamp, a full bookshelf on a deep blue wall, a terracotta rug and a plant by the window. The .blend and a 3D model are saved next to it."),
+    ))
+  }
+
+  /** Blender's scene viewer on the phone: the PC's render, with Render / 3D. */
+  @Test fun sceneViewer() {
+    rule.mainClock.autoAdvance = false
+    rule.setContent {
+      DexTheme(ThemeMode.Dark, dynamicColor = false) {
+        CompositionLocalProvider(LocalHaptics provides rememberHaptics { false }) {
+          com.chethan616.dex.ui.viewer.SceneViewerDialog(
+            com.chethan616.dex.data.SceneFiles(sampleFiles, File(sampleFiles, "render.jpg"), File(sampleFiles, "reading-nook.glb"), null, emptyMap()),
+            name = "reading-nook.blend", onShare = {}, onDismiss = {},
+          )
+        }
+      }
+    }
+    rule.mainClock.advanceTimeBy(3000)
+    save("6b-scene", rule.onNode(isDialog()).captureToImage().asAndroidBitmap())
+  }
 }

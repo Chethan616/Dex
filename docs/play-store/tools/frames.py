@@ -197,6 +197,10 @@ if __name__ == '__main__':
           [('Routines that', False), ('run themselves', True)],
           'Say “every morning”. DEX takes it from there.',
           VIOLET_TOP, VIOLET, TEAL, VIOLET_ACC)
+    frame('06-3d.png', '6-model.png',
+          [('Design in 3D,', False), ('from a sentence', True)],
+          'DEX models and renders it in Blender on your PC.',
+          VIOLET_TOP, VIOLET, BLUE, VIOLET_ACC, lift=(48, 654, 1128, 1926, 24), lift_scale=1.06)
     frame('05-live.png', '5-live.png',
           [('Watch every step,', False), ('and steer it', True)],
           'See what DEX does on your PC as it happens.',

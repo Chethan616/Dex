@@ -4,6 +4,7 @@
   const MIN = 60_000;
   const at = (m) => now - m * MIN;
   const id = (n) => `00000000-0000-4000-8000-00000000000${n}`;
+  const DOCS = 'C:\\Users\\Alex\\Documents\\DEX\\';
 
   const flightsCards = {
     type: 'cards', title: 'Hyderabad → Goa · Fri 17 Oct · 2 adults', icon: 'flight',
@@ -79,6 +80,22 @@
       ],
     },
     {
+      id: id(6), prompt: 'Make a cozy isometric reading nook in Blender and render it', status: 'idle', engine: 'claude-code', hasBrowser: false,
+      createdAt: at(14), lastActivityAt: at(11),
+      output: [
+        { type: 'user_input', text: 'Make a cozy isometric reading nook in Blender and render it', at: at(14) },
+        { type: 'tool_call', name: 'mcp__blender__execute_blender_code', args: { code: '# The room: floor, two walls, a window, a rug\n# An armchair, a floor lamp, a bookshelf, a side table, a plant' }, iteration: 1, at: at(14) },
+        { type: 'tool_result', name: 'mcp__blender__execute_blender_code', ok: true, preview: 'Built 96 objects', ms: 4200, at: at(13) },
+        { type: 'tool_call', name: 'mcp__blender__execute_blender_code', args: { code: '# Cycles, 96 samples, denoised; AgX Punchy\nbpy.ops.render.render(write_still=True)' }, iteration: 2, at: at(13) },
+        { type: 'tool_result', name: 'mcp__blender__execute_blender_code', ok: true, preview: 'Rendered reading-nook.png, 1400 × 1400', ms: 61000, at: at(12) },
+        { type: 'file_output', name: 'reading-nook.png', path: `${DOCS}reading-nook.png`, size: 2149091, mime: 'image/png', at: at(12) },
+        { type: 'file_output', name: 'reading-nook.glb', path: `${DOCS}reading-nook.glb`, size: 889536, mime: 'model/gltf-binary', at: at(12) },
+        { type: 'file_output', name: 'reading-nook.blend', path: `${DOCS}reading-nook.blend`, size: 270350, mime: 'application/x-blender', at: at(12) },
+        { type: 'thinking', text: "Here's your reading nook: a mustard armchair under a floor lamp, a full bookshelf against a deep blue wall, a terracotta rug, and a plant by the window. It's rendered in Cycles, and the model is open so you can turn it around.", at: at(11) },
+        { type: 'done', summary: 'Built and rendered a cozy isometric reading nook: reading-nook.png, .glb and .blend in Documents.', iterations: 3, at: at(11) },
+      ],
+    },
+    {
       id: id(5), prompt: 'Book a table for 4 at a rooftop place on Saturday', status: 'idle', engine: 'claude-code', hasBrowser: false,
       createdAt: at(260), lastActivityAt: at(250),
       output: [
@@ -88,8 +105,19 @@
     },
   ];
 
+  // The 3D task's files, served by capture.mjs from DEX_SAMPLE_FILES at /__sample/.
+  const nookDoc = (name, size) => ({ id: `doc-${name}`, path: `${DOCS}${name}`, name, openedBy: 'user', openedAt: Date.now(), size, mtimeMs: at(12) });
+  const overrides = {
+    'workspace.docs': async (sid) => (sid === id(6) && window.__DEX_OPEN_DOC__ ? [nookDoc(window.__DEX_OPEN_DOC__, 889536)] : []),
+    'sessions.readFile': async (_sid, p) => {
+      const res = await fetch(`/__sample/${p.slice(DOCS.length)}`);
+      return { bytes: new Uint8Array(await res.arrayBuffer()) };
+    },
+  };
+
   window.__DEX_SAMPLE__ = {
     sessions,
+    overrides,
     defaults: {
       'memory.list': [],
       'settings.connectors.list': [

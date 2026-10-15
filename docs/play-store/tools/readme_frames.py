@@ -152,5 +152,7 @@ if __name__ == '__main__':
                'Say "every morning" or "every Sunday". DEX saves it, runs it, and shows it as a graph.', F.VIOLET_TOP, F.VIOLET, F.TEAL)
     desk_frame('desktop-connectors.png', 'marketplace.png', [('50+ connectors, ', (255, 255, 255)), ('one sign-in each', F.BLUE_ACC)],
                'Google, GitHub, Notion, Slack, Canva and more. DEX uses their APIs, not their web pages.', F.BLUE_TOP, F.BLUE, F.VIOLET)
+    desk_frame('desktop-3d.png', 'model.png', [('Design in 3D, ', (255, 255, 255)), ('from a sentence', F.VIOLET_ACC)],
+               'DEX models and renders in Blender on your PC, then opens the model right in the task.', F.VIOLET_TOP, F.VIOLET, F.TEAL)
     desk_frame('desktop-dashboard.png', 'dashboard.png', [('Every task ', (255, 255, 255)), ('at a glance', F.BLUE_ACC)],
                'What is running, what is waiting for you, and everything DEX finished.', F.VIOLET_TOP, F.VIOLET, F.BLUE)

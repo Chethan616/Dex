@@ -19,10 +19,19 @@ const only = process.argv.slice(2);
 
 const browser = await chromium.launch({ channel: 'msedge', headless: true });
 
-async function open() {
+async function open(openDoc = null) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, colorScheme: 'dark' });
   page.on('pageerror', (e) => console.log('pageerror:', e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/Query data cannot be undefined|Failed to load resource/.test(m.text())) console.log('console:', m.text().slice(0, 400)); });
+  // The sample task's files (the 3D model, the render), from DEX_SAMPLE_FILES.
+  const files = process.env.DEX_SAMPLE_FILES;
+  if (files) await page.route('**/__sample/**', (route) => {
+    const name = decodeURIComponent(new URL(route.request().url()).pathname.split('/').pop());
+    const file = path.join(files, name);
+    if (!fs.existsSync(file)) return route.fulfill({ status: 404 });
+    route.fulfill({ body: fs.readFileSync(file), contentType: name.endsWith('.glb') ? 'model/gltf-binary' : 'image/png' });
+  });
+  if (openDoc) await page.addInitScript((d) => { window.__DEX_OPEN_DOC__ = d; }, openDoc);
   await page.addInitScript(init);
   // No keyboard-hint bar in the shots.
   await page.addInitScript(() => {
@@ -96,6 +105,21 @@ const shots = {
     await page.getByRole('button', { name: /^View/ }).first().click();
     await page.waitForTimeout(1500);
   },
+  async model(page) {
+    await page.getByText('Make a cozy isometric', { exact: false }).first().click();
+    // The model, turned to the render's angle, still.
+    await page.waitForFunction(() => document.querySelector('model-viewer')?.loaded === true, null, { timeout: 30000 });
+    await page.evaluate(() => {
+      const mv = document.querySelector('model-viewer');
+      mv.removeAttribute('auto-rotate');
+      mv.setAttribute('camera-orbit', '45deg 60deg 150%');
+      mv.setAttribute('camera-target', 'auto 0.75m auto');
+      mv.setAttribute('field-of-view', '36deg');
+      mv.jumpCameraToGoal?.();
+    });
+    await page.mouse.move(700, 880);
+    await page.waitForTimeout(2500);
+  },
   async marketplace(page) {
     await page.evaluate(() => window.dispatchEvent(new CustomEvent('dex:open-marketplace')));
     await page.waitForTimeout(2000);
@@ -104,7 +128,7 @@ const shots = {
 
 for (const [name, run] of Object.entries(shots)) {
   if (only.length && !only.includes(name)) continue;
-  const page = await open();
+  const page = await open(name === 'model' ? 'reading-nook.glb' : null);
   try {
     await run(page);
     await page.screenshot({ path: path.join(OUT, `${name}.png`) });
@@ -115,5 +139,8 @@ for (const [name, run] of Object.entries(shots)) {
   }
   await page.close();
 }
-fs.writeFileSync(path.join(OUT, 'boxes.json'), JSON.stringify(boxes, null, 1));
+// Merge: a run of some shots keeps the other shots' boxes.
+const boxesFile = path.join(OUT, 'boxes.json');
+const prior = fs.existsSync(boxesFile) ? JSON.parse(fs.readFileSync(boxesFile, 'utf8')) : {};
+fs.writeFileSync(boxesFile, JSON.stringify({ ...prior, ...boxes }, null, 1));
 await browser.close();
