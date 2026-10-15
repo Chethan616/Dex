@@ -124,7 +124,7 @@ describe('ChatView', () => {
     const first = el.querySelector('.cx-turn')!;
     act(() => (first.querySelector('.cx-worked') as HTMLButtonElement).click());
     const steps = [...first.querySelectorAll('.cx-step-row__verb')].map((s) => s.textContent);
-    expect(steps).toEqual(['Ran', 'Used the browser']);
+    expect(steps).toEqual(['Used git', 'Used the browser']);
     expect(first.querySelector('.cx-note')?.textContent).toContain('Checking the repo first.');
   });
 

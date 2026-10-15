@@ -122,8 +122,33 @@ const VERBS: Record<string, [string, string]> = {
   query: ['Querying', 'Queried'], print: ['Printing', 'Printed'], dismiss: ['Dismissing', 'Dismissed'], accept: ['Accepting', 'Accepted'],
   expand: ['Expanding', 'Expanded'], return: ['Returning', 'Returned'], build: ['Building', 'Built'], render: ['Rendering', 'Rendered'],
   convert: ['Converting', 'Converted'], send: ['Sending', 'Sent'], upload: ['Uploading', 'Uploaded'], view: ['Viewing', 'Viewed'],
-  navigating: ['Going', 'Went'],
+  parse: ['Parsing', 'Parsed'], decode: ['Decoding', 'Decoded'], encode: ['Encoding', 'Encoded'],
+  generate: ['Generating', 'Generated'], analyze: ['Analysing', 'Analysed'], analyse: ['Analysing', 'Analysed'],
+  summarize: ['Summarising', 'Summarised'], summarise: ['Summarising', 'Summarised'], calculate: ['Calculating', 'Calculated'],
+  format: ['Formatting', 'Formatted'], resize: ['Resizing', 'Resized'], crop: ['Cropping', 'Cropped'], export: ['Exporting', 'Exported'],
+  import: ['Importing', 'Imported'], merge: ['Merging', 'Merged'], split: ['Splitting', 'Split'], sort: ['Sorting', 'Sorted'],
+  filter: ['Filtering', 'Filtered'], schedule: ['Scheduling', 'Scheduled'], launch: ['Launching', 'Launched'],
+  kill: ['Closing', 'Closed'], restart: ['Restarting', 'Restarted'], enable: ['Turning on', 'Turned on'], disable: ['Turning off', 'Turned off'],
+  toggle: ['Toggling', 'Toggled'], play: ['Playing', 'Played'], pause: ['Pausing', 'Paused'], record: ['Recording', 'Recorded'],
+  edit: ['Editing', 'Edited'], fix: ['Fixing', 'Fixed'], change: ['Changing', 'Changed'], rename: ['Renaming', 'Renamed'],
+  replace: ['Replacing', 'Replaced'], review: ['Reviewing', 'Reviewed'], prepare: ['Preparing', 'Prepared'], draft: ['Drafting', 'Drafted'],
+  reply: ['Replying', 'Replied'], book: ['Booking', 'Booked'], order: ['Ordering', 'Ordered'], share: ['Sharing', 'Shared'],
+  sync: ['Syncing', 'Synced'], confirm: ['Confirming', 'Confirmed'], detect: ['Detecting', 'Detected'],
+  measure: ['Measuring', 'Measured'], match: ['Matching', 'Matched'], map: ['Mapping', 'Mapped'], mark: ['Marking', 'Marked'],
+  note: ['Noting', 'Noted'], post: ['Posting', 'Posted'], reset: ['Resetting', 'Reset'], resume: ['Resuming', 'Resumed'],
+  load: ['Loading', 'Loaded'], explore: ['Exploring', 'Explored'], 
 };
+// "Navigate main tab to example.com": not "Went main tab to…".
+VERBS.navigate = ['Navigating', 'Navigated'];
+
+/** "Go to VTOP and take a screenshot" → "…and took a screenshot": the verbs after and/then/, too. */
+function tenseRest(rest: string, which: 0 | 1): string {
+  return rest.replace(/((?:,\s*)?\b(?:and|then)\s+|,\s+)([A-Za-z]+)\b/g, (whole, joint: string, word: string) => {
+    const v = VERBS[word.toLowerCase()];
+    if (!v) return whole;
+    return joint + v[which].charAt(0).toLowerCase() + v[which].slice(1);
+  });
+}
 
 /** "Click on Academics menu" → { active: "Clicking on Academics menu", done: "Clicked on Academics menu" }. */
 export function stepPhrase(text: string): { active: string; done: string } | null {
@@ -135,7 +160,7 @@ export function stepPhrase(text: string): { active: string; done: string } | nul
     const same = t.charAt(0).toUpperCase() + t.slice(1);
     return { active: same, done: same };
   }
-  return { active: verb[0] + m[2], done: verb[1] + m[2] };
+  return { active: verb[0] + tenseRest(m[2], 0), done: verb[1] + tenseRest(m[2], 1) };
 }
 
 const hostIn = (url: string): string => {
@@ -154,12 +179,72 @@ const DEX_CLI: Record<string, [string, string]> = {
   'dex-fill': ['Filling a form', 'Filled a form'], 'dex-registry': ['Checking Windows settings', 'Checked Windows settings'],
 };
 
+/**
+ * The command inside a shell wrapper. Codex runs every command as
+ * `"…\powershell.exe" -Command "<script>"` on Windows (`bash -lc '<script>'`
+ * elsewhere), which is all a step showed: the script is what it does.
+ */
+export function unwrapShell(command: string): string {
+  let c = command.trim();
+  // Layer by layer: PowerShell's or bash's -c, then DEX's own `dex-sh <shell> "<script>" [seconds]`.
+  for (let layer = 0; layer < 3; layer += 1) {
+    const shell = /^(?:"[^"]*(?:powershell|pwsh)(?:\.exe)?"|\S*(?:powershell|pwsh)(?:\.exe)?)\s+(?:-(?:NoProfile|NonInteractive|NoLogo|ExecutionPolicy\s+\S+)\s+)*-Command\s+([\s\S]+)$/i.exec(c)
+      ?? /^(?:\/(?:usr\/)?bin\/)?(?:ba|z)?sh\s+-l?c\s+([\s\S]+)$/.exec(c);
+    if (shell) {
+      c = shell[1].trim();
+      if (c.length >= 2 && ((c.startsWith('"') && c.endsWith('"')) || (c.startsWith("'") && c.endsWith("'")))) c = c.slice(1, -1);
+      continue;
+    }
+    const dexSh = /^['"]?dex-sh\s+(?:bash|sh|powershell|pwsh|cmd)\s+([\s\S]+)$/i.exec(c);
+    if (dexSh) {
+      c = dexSh[1].trim().replace(/\s+\d+\s*$/, '').replace(/^[\\"']+|[\\"']+$/g, '').trim();
+      continue;
+    }
+    break;
+  }
+  return c;
+}
+
+const fileName = (p: string): string => p.replace(/^['"]|['"]$/g, '').split(/[\\/]/).pop() || p;
+
+/** Everyday commands, in words — for an engine that doesn't describe its calls (Codex). */
+function everydayCommand(command: string): { active: string; done: string; kind: ToolKind } | null {
+  const c = command.trim();
+  const say = (active: string, done: string, kind: ToolKind = 'run') => ({ active, done, kind });
+  if (/\bAGENTS\.md\b|\bSKILL\.md\b|dex-tools[\\/][\w.-]+\.md|domain-skills|interaction-skills/i.test(c)) return say('Reading its instructions', 'Read its instructions', 'read');
+  if (/DEX_SITE_MEMORY_DIR|site-memory/i.test(c)) {
+    const site = /([a-z0-9-]+(?:\.[a-z0-9-]+)+)\.md\b/i.exec(c)?.[1];
+    return say(site ? `Checking its notes on ${site}` : 'Checking its notes', site ? `Checked its notes on ${site}` : 'Checked its notes', 'read');
+  }
+  const url = /\b(?:curl|wget|Invoke-WebRequest|Invoke-RestMethod|iwr|irm)\b[^\n]*?(https?:\/\/[^\s'"`]+)/i.exec(c)?.[1];
+  if (url) return say(`Fetching ${hostIn(url) || 'a page'}`, `Fetched ${hostIn(url) || 'a page'}`, 'search');
+  const read = /^(?:Get-Content|gc|cat|type|more|head|tail|less)\b(?:\s+-\w+(?:\s+\d+)?)*\s+(['"]?[^'"\s|;]+['"]?)/i.exec(c)?.[1];
+  if (read) return say(`Reading ${fileName(read)}`, `Read ${fileName(read)}`, 'read');
+  if (/^(?:Get-ChildItem|gci|ls|dir|tree)\b|^find\s/i.test(c)) return say('Looking through files', 'Looked through files', 'read');
+  if (/^(?:rg|grep|Select-String|sls|findstr)\b/i.test(c)) return say('Searching files', 'Searched files', 'read');
+  if (/\b(?:npm|yarn|pnpm|bun|pip3?|winget|choco|scoop)\s+(?:install|add|i)\b/i.test(c)) return say('Installing what it needs', 'Installed what it needs');
+  if (/^(?:python3?|py|node|bun|deno|npx|tsx)\b/i.test(c)) return say('Running a script', 'Ran a script');
+  if (/^git\b/i.test(c)) return say('Using git', 'Used git');
+  if (/^(?:Copy-Item|cp|copy|robocopy)\b/i.test(c)) return say('Copying files', 'Copied files', 'write');
+  if (/^(?:Move-Item|mv|move|Rename-Item|ren)\b/i.test(c)) return say('Moving files', 'Moved files', 'write');
+  if (/^(?:Remove-Item|rm|del|rmdir|rd)\b/i.test(c)) return say('Deleting files', 'Deleted files', 'write');
+  if (/^(?:mkdir|md|New-Item)\b/i.test(c)) return say('Making files', 'Made files', 'write');
+  if (/^(?:Start-Process|start)\s+['"]?ms-settings:/i.test(c)) return say('Opening Settings', 'Opened Settings', 'desktop');
+  if (/^(?:Start-Process|start)\b/i.test(c)) return say('Opening an app', 'Opened an app', 'desktop');
+  if (/^(?:Get-PnpDevice|pnputil|Get-CimInstance\s+Win32_PnP)/i.test(c)) return say('Checking devices', 'Checked devices', 'desktop');
+  if (/^(?:Get-NetAdapter|netsh|ipconfig|Test-NetConnection|ping|Get-NetIPAddress)\b/i.test(c)) return say('Checking the network', 'Checked the network', 'desktop');
+  if (/^(?:Get-Service|sc\s+query)\b/i.test(c)) return say('Checking services', 'Checked services', 'desktop');
+  if (/^(?:Get-ItemProperty|reg\s+query)\b/i.test(c)) return say('Checking Windows settings', 'Checked Windows settings', 'desktop');
+  if (/^(?:Get-Process|tasklist|ps)\b/i.test(c)) return say('Checking what’s running', 'Checked what’s running', 'desktop');
+  return null;
+}
+
 /** A shell call in plain words, or null to keep the default ("Ran …"). */
 function shellMeta(args: unknown): ToolMeta | null {
   if (!args || typeof args !== 'object') return null;
   const a = args as Record<string, unknown>;
   const raw = a.command ?? a.cmd;
-  const command = Array.isArray(raw) ? raw.map(String).join(' ') : typeof raw === 'string' ? raw : '';
+  const command = unwrapShell(Array.isArray(raw) ? raw.map(String).join(' ') : typeof raw === 'string' ? raw : '');
   const description = typeof a.description === 'string' ? a.description : '';
   const browse = (active: string, done: string): ToolMeta => ({ kind: 'browse', active, done, orb: KIND_META.browse.orb, display: '' });
   const plain = (p: { active: string; done: string }, kind: ToolKind): ToolMeta => ({ kind, ...p, orb: KIND_META[kind].orb, display: '' });
@@ -168,18 +253,22 @@ function shellMeta(args: unknown): ToolMeta | null {
     const comment = /^\s*\/\/\s*(.+)$/m.exec(command)?.[1];
     const said = (comment && stepPhrase(comment)) || (description && stepPhrase(description));
     if (said) return plain(said, 'browse');
-    if (/connectToAssignedTarget/.test(command)) return browse('Opening its browser tab', 'Opened its browser tab');
     const url = /navigate\(\s*\{\s*url:\s*['"`]([^'"`]+)['"`]/.exec(command)?.[1];
     if (url) return browse(`Opening ${hostIn(url) || 'a page'}`, `Opened ${hostIn(url) || 'a page'}`);
     if (/dispatchMouseEvent|\.click\(/.test(command)) return browse('Clicking on the page', 'Clicked on the page');
     if (/insertText|dispatchKeyEvent/.test(command)) return browse('Typing on the page', 'Typed on the page');
     if (/captureScreenshot/.test(command)) return browse('Looking at the page', 'Looked at the page');
+    if (/connectToAssignedTarget/.test(command)) return browse('Opening its browser tab', 'Opened its browser tab');
     return browse('Reading the page', 'Read the page');
   }
   const cli = /(?:^|[\s;&|(])((?:dex-[a-z0-9]+))(?=\s|$)/.exec(command)?.[1];
   if (cli && DEX_CLI[cli]) return plain({ active: DEX_CLI[cli][0], done: DEX_CLI[cli][1] }, 'run');
   const said = description && stepPhrase(description);
-  return said ? plain(said, 'run') : null;
+  if (said) return plain(said, 'run');
+  const everyday = everydayCommand(command);
+  if (everyday) return plain(everyday, everyday.kind);
+  // Never a raw command line on its own: the row opens to show it.
+  return command ? plain({ active: 'Running a command', done: 'Ran a command' }, 'run') : null;
 }
 
 /** A Read of a screenshot the agent took: it's looking at the page, not reading a file. */
@@ -200,7 +289,10 @@ export function classifyTool(name: string, args?: unknown): ToolMeta {
     const meta = shellMeta(args);
     if (meta) return meta;
   }
-  if (name === 'Read') {
+  // A Codex connector call from before its server and tool were recorded.
+  if (name === 'MCP') return { kind: 'mcp', active: 'Using a connector', done: 'Used a connector', orb: KIND_META.mcp.orb, display: '' };
+  // Claude Code's Read, and Codex's view_image, of a picture.
+  if (name === 'Read' || /^view_?image$/i.test(name)) {
     const meta = readMeta(args);
     if (meta) return meta;
   }

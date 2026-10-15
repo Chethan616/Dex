@@ -52,6 +52,17 @@ const DISPLAY = 'Codex';
 const BIN = 'codex';
 const BYPASS_APPROVALS_FLAG = '--dangerously-bypass-approvals-and-sandbox';
 
+/**
+ * Codex's own versions of things DEX does, off inside DEX's tasks (as Claude
+ * Code's scheduler and skills are): its automations would take a "do this
+ * every morning" away from dex-workflow, where /workflow can't see it; its
+ * browser and computer use would work outside the browser you share with DEX
+ * and the background Windows tools, unseen and without DEX's approvals. Set
+ * with `-c features.<name>=false`, which a Codex that lacks one ignores
+ * (`--disable` refuses to start on an unknown name).
+ */
+const CODEX_FEATURES_OFF = ['in_app_local_automation', 'browser_use', 'browser_use_external', 'in_app_browser', 'computer_use'];
+
 function codexAuthFilePath(): string {
   const home = process.env.CODEX_HOME || path.join(os.homedir(), '.codex');
   return path.join(home, 'auth.json');
@@ -67,6 +78,12 @@ function normalizeItemArgs(item: Record<string, unknown>): Record<string, unknow
   if (typeof item.file_path === 'string') out.file_path = item.file_path;
   if (typeof item.text === 'string' && !out.command) out.text = (item.text as string).slice(0, 500);
   if (typeof item.url === 'string') out.url = item.url;
+  // An MCP call's own arguments (the query, the dates…), as Claude Code's carry them.
+  if (item.arguments && typeof item.arguments === 'object' && !Array.isArray(item.arguments)) {
+    for (const [k, v] of Object.entries(item.arguments as Record<string, unknown>).slice(0, 20)) {
+      if (!(k in out)) out[k] = v;
+    }
+  }
   // A file_change says which files it added, changed or deleted (not the
   // text): the hub's Review tab lists them.
   if (Array.isArray(item.changes)) {
@@ -87,6 +104,19 @@ function itemTypeToToolName(t: string): string {
   if (t === 'mcp_tool_call') return 'MCP';
   if (t === 'web_search') return 'WebSearch';
   return t;
+}
+
+/**
+ * The tool name for an item: an MCP call as `mcp__<server>__<tool>`, like
+ * Claude Code's, so the chat and the phone say which connector it used
+ * ("Kiwi.com flights · search flight") instead of "Used MCP".
+ */
+function itemToolName(item: Record<string, unknown>): string {
+  const itype = typeof item.type === 'string' ? item.type : 'unknown';
+  if (itype === 'mcp_tool_call' && typeof item.server === 'string' && typeof item.tool === 'string' && item.server && item.tool) {
+    return `mcp__${item.server}__${item.tool}`;
+  }
+  return itemTypeToToolName(itype);
 }
 
 function isNarrativeItem(t: string | undefined): boolean {
@@ -184,10 +214,11 @@ const codexAdapter: EngineAdapter = {
     // Connected services (Gmail, GitHub, …). Without these Codex had no such
     // tools at all and did every "check my mail" in the browser.
     const mcp = codexMcpOverrides(ctx);
+    const own = [...mcp, ...CODEX_FEATURES_OFF.flatMap((f) => ['-c', `features.${f}=false`])];
     if (ctx.resumeSessionId) {
-      return [...mcp, 'exec', 'resume', '--json', BYPASS_APPROVALS_FLAG, ...model, ctx.resumeSessionId, '-'];
+      return [...own, 'exec', 'resume', '--json', BYPASS_APPROVALS_FLAG, ...model, ctx.resumeSessionId, '-'];
     }
-    return [...mcp, 'exec', '--json', BYPASS_APPROVALS_FLAG, ...model, '-'];
+    return [...own, 'exec', '--json', BYPASS_APPROVALS_FLAG, ...model, '-'];
   },
 
   getStdinPayload(_ctx: SpawnContext, wrappedPrompt: string): string {
@@ -249,7 +280,7 @@ const codexAdapter: EngineAdapter = {
       const itype = item.type as string | undefined;
       const id = item.id as string | undefined;
       if (!id || isNarrativeItem(itype)) return { events };
-      const name = itemTypeToToolName(itype ?? 'unknown');
+      const name = itemToolName(item);
       const args = normalizeItemArgs(item);
       ctx.pendingTools.set(id, { name, startedAt: Date.now(), iter: ctx.iter });
       events.push({
@@ -293,7 +324,7 @@ const codexAdapter: EngineAdapter = {
         const status = item.status as string | undefined;
         const ok = status !== 'failed' && status !== 'error';
         const ms = match ? Date.now() - match.startedAt : 0;
-        const name = match?.name ?? itemTypeToToolName(itype ?? 'unknown');
+        const name = match?.name ?? itemToolName(item);
         events.push({ type: 'tool_result', name, ok, preview: String(resultText).slice(0, 2000), ms });
         ctx.pendingTools.delete(id);
       }

@@ -28,7 +28,14 @@ describe('codex adapter spawn args', () => {
     const ctx = spawnContext();
     const wrappedPrompt = adapter.wrapPrompt(ctx);
 
+    // Codex's own automations, browser and computer use are off in DEX's
+    // tasks, with -c (which an older Codex ignores) rather than --disable.
     expect(adapter.buildSpawnArgs(ctx, wrappedPrompt)).toEqual([
+      '-c', 'features.in_app_local_automation=false',
+      '-c', 'features.browser_use=false',
+      '-c', 'features.browser_use_external=false',
+      '-c', 'features.in_app_browser=false',
+      '-c', 'features.computer_use=false',
       'exec',
       '--json',
       '--dangerously-bypass-approvals-and-sandbox',
@@ -43,6 +50,11 @@ describe('codex adapter spawn args', () => {
     const wrappedPrompt = adapter.wrapPrompt(ctx);
 
     expect(adapter.buildSpawnArgs(ctx, wrappedPrompt)).toEqual([
+      '-c', 'features.in_app_local_automation=false',
+      '-c', 'features.browser_use=false',
+      '-c', 'features.browser_use_external=false',
+      '-c', 'features.in_app_browser=false',
+      '-c', 'features.computer_use=false',
       'exec',
       'resume',
       '--json',

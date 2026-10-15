@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildTranscript, classifyTool, stepPhrase } from '../../../src/renderer/logs/transcript';
+import { buildTranscript, classifyTool, stepPhrase, unwrapShell } from '../../../src/renderer/logs/transcript';
 import { expandSlashCommand } from '../../../src/shared/slashCommands';
 
 // The steps of a real task (a university portal, then the timetable), as the
@@ -33,7 +33,9 @@ describe('steps in plain words', () => {
     expect(classifyTool('Bash', { command: 'dex-ui choose "Which one?" "A" "B"' }).active).toBe('Asking you');
     expect(classifyTool('Bash', { command: "dex-workflow create <<'EOF'\n{}\nEOF" }).done).toBe('Updated your routines');
     expect(classifyTool('Bash', { command: 'ls -la', description: 'List files in the current directory' }).active).toBe('Listing files in the current directory');
-    expect(classifyTool('Bash', { command: 'ls -la' }).kind).toBe('run');
+    expect(classifyTool('Bash', { command: 'ls -la' }).active).toBe('Looking through files');
+    expect(classifyTool('Bash', { command: 'Get-Process | Sort-Object CPU' }).done).toBe('Checked what’s running');
+    expect(classifyTool('Bash', { command: 'whoami /all' })).toMatchObject({ kind: 'run', done: 'Ran a command', display: '' });
   });
 
   it('keeps words it has no tense for as they are', () => {
@@ -46,5 +48,47 @@ describe('a command task in the chat', () => {
   it('shows what the user typed as the first message', () => {
     const t = buildTranscript(expandSlashCommand('/workflow').prompt, []);
     expect(t.blocks[0]).toMatchObject({ kind: 'user', text: '/workflow' });
+  });
+});
+
+// Codex runs every command through PowerShell (bash -lc elsewhere) and never
+// describes its calls; these are the shapes from a real Codex task.
+describe('Codex steps', () => {
+  const ps = (script: string) => ({ command: `"C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "${script}"` });
+
+  it('sees through the shell wrapper', () => {
+    expect(unwrapShell(ps('Get-Content -Raw .\\AGENTS.md').command)).toBe('Get-Content -Raw .\\AGENTS.md');
+    expect(unwrapShell("/bin/bash -lc 'ls -la'")).toBe('ls -la');
+    expect(unwrapShell('"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -NoProfile -Command "git status"')).toBe('git status');
+  });
+
+  it('says what the step does', () => {
+    expect(classifyTool('Bash', ps('Get-Content -Raw .\\AGENTS.md')).done).toBe('Read its instructions');
+    expect(classifyTool('Bash', ps("$p = Join-Path $env:DEX_SITE_MEMORY_DIR 'github.com.md'; if (Test-Path $p) { Get-Content -Raw $p }")).active).toBe('Checking its notes on github.com');
+    expect(classifyTool('Bash', ps("browser-harness-js 'await connectToAssignedTarget()'")).done).toBe('Opened its browser tab');
+    expect(classifyTool('Bash', ps("browser-harness-js <<'EOF'\nawait connectToAssignedTarget()\nawait session.Page.navigate({url:'https://github.com/search?q=author%3AChethan616'})")).active).toBe('Opening github.com');
+    expect(classifyTool('Bash', ps('Get-Content -Raw C:\\Users\\Alex\\notes.txt')).done).toBe('Read notes.txt');
+    expect(classifyTool('Bash', ps('git status')).active).toBe('Using git');
+  });
+
+  it('sees through dex-sh too (a touchpad task)', () => {
+    expect(classifyTool('Bash', ps('dex-sh powershell "Get-PnpDevice -Class HIDClass | Format-Table Status,FriendlyName -AutoSize" 20')).done).toBe('Checked devices');
+    expect(classifyTool('Bash', ps("dex-sh bash \"dex-state plan 'Restore touchpad gestures' 'Inspect the touchpad'\"")).active).toBe('Updating its plan');
+    expect(classifyTool('Bash', ps("dex-sh powershell \"Start-Process 'ms-settings:devices-touchpad'\"")).done).toBe('Opened Settings');
+    expect(classifyTool('MCP', {}).done).toBe('Used a connector');
+  });
+
+  it('calls a connector by name and a picture what it is', () => {
+    expect(classifyTool('mcp__kiwi__search-flight', {}).display).toContain('search flight');
+    expect(classifyTool('view_image', { path: 'C:\\Users\\Alex\\AppData\\Local\\Temp\\shot.png' }).active).toBe('Looking at the page');
+  });
+});
+
+
+describe('tense across a sentence', () => {
+  it('turns every verb, not just the first', () => {
+    expect(stepPhrase('Go to VTOP and take a screenshot')).toEqual({ active: 'Going to VTOP and taking a screenshot', done: 'Went to VTOP and took a screenshot' });
+    expect(stepPhrase('Navigate main tab to example.com and get title')?.done).toBe('Navigated main tab to example.com and got title');
+    expect(stepPhrase('Parse JSON output, then decode the image')?.done).toBe('Parsed JSON output, then decoded the image');
   });
 });
