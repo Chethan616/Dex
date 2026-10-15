@@ -48,7 +48,7 @@ object TaskWatcher {
   }
 
   private fun notifyChange(context: Context, before: Seen?, s: Session) {
-    val title = s.prompt.lineSequence().firstOrNull().orEmpty().take(80).ifBlank { "Your task" }
+    val title = s.heading.take(80).ifBlank { "Your task" }
     val confirmation = s.pendingConfirmation
     if (confirmation != null && confirmation.id != before?.confirmationId) {
       // Approvals always notify — even on screen, the banner is easy to miss.

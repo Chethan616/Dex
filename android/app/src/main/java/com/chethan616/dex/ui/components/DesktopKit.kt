@@ -237,6 +237,8 @@ fun PromptBar(
       if (attachments != null) {
         com.chethan616.dex.ui.attach.AttachmentStrip(attachments, Modifier.padding(bottom = 10.dp))
       }
+      // Type `/` for a command, `@` to mention (CommandMenu.kt).
+      CommandMenu(text, { text = it }, Modifier.padding(end = 8.dp, bottom = 12.dp))
       BasicTextField(
         value = text,
         onValueChange = { text = it },

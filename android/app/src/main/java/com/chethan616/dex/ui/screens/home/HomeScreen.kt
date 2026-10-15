@@ -578,7 +578,7 @@ private fun ApprovalCard(session: Session, onOpen: () -> Unit, onAnswer: (Boolea
       if (pc.detail.isNotBlank()) {
         Text(pc.detail, style = MaterialTheme.typography.bodySmall, color = scheme.onTertiaryContainer.copy(alpha = 0.75f), maxLines = 3, overflow = TextOverflow.Ellipsis)
       }
-      Text(session.prompt, style = MaterialTheme.typography.labelMedium, color = scheme.onTertiaryContainer.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+      Text(session.heading, style = MaterialTheme.typography.labelMedium, color = scheme.onTertiaryContainer.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis)
       Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         FilledTonalButton(onClick = { onAnswer(false) }, shapes = ButtonDefaults.shapes(), modifier = Modifier.weight(1f)) { Text("Deny") }
         Button(onClick = { onAnswer(true) }, shapes = ButtonDefaults.shapes(), modifier = Modifier.weight(1f)) { Text("Approve") }
@@ -608,7 +608,7 @@ private fun RunningCard(session: Session, onClick: () -> Unit) {
         )
         Spacer(Modifier.size(12.dp))
         Column(Modifier.weight(1f)) {
-          Text(session.prompt, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+          Text(session.heading, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
           // The wavy bar below says it's working; this says who and for how long.
           Text(
             listOfNotNull(ENGINE_NAMES[session.engine] ?: session.engine, relativeTime(session.createdAt).takeIf { it.isNotEmpty() && it != "now" }?.let { "started $it ago" }).joinToString(" · "),
@@ -669,7 +669,7 @@ private fun SessionRow(
       )
       Spacer(Modifier.size(12.dp))
       Column(Modifier.weight(1f)) {
-        Text(session.prompt, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(session.heading, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(
           session.summary?.lineSequence()?.firstOrNull()?.takeIf { it.isNotBlank() } ?: session.lastLine.ifBlank { session.error.orEmpty() },
           style = MaterialTheme.typography.bodySmall,

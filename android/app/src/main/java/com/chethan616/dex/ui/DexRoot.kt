@@ -141,7 +141,15 @@ private fun SignedInApp(
     }
   }
   val profile = (profileState as ProfileState.Loaded).profile ?: defaultProfileFor(account.uid)
-  androidx.compose.runtime.CompositionLocalProvider(LocalDexProfile provides profile) {
+  // The `/` and `@` menus offer what the PC understands (its device row), else the phone's own list.
+  val desktopsFlow = androidx.compose.runtime.remember { container.repo.desktops() }
+  val desktops by desktopsFlow.collectAsStateWithLifecycle(initialValue = emptyList())
+  val commands = androidx.compose.runtime.remember(desktops) {
+    val pc = desktops.firstOrNull { it.isReachable && it.commands.isNotEmpty() } ?: desktops.firstOrNull { it.commands.isNotEmpty() }
+    if (pc == null) com.chethan616.dex.ui.components.DEFAULT_COMMANDS
+    else com.chethan616.dex.ui.components.DexCommands(pc.commands, pc.mentions.ifEmpty { com.chethan616.dex.ui.components.DEFAULT_COMMANDS.mentions })
+  }
+  androidx.compose.runtime.CompositionLocalProvider(LocalDexProfile provides profile, com.chethan616.dex.ui.components.LocalDexCommands provides commands) {
     SignedInNav(container, account, openSession, shared)
   }
 }

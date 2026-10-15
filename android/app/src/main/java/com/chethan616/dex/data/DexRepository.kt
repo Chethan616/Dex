@@ -365,6 +365,7 @@ private fun DocumentSnapshot.toSession(): Session? {
   return Session(
     id = id,
     prompt = getString("prompt") ?: "",
+    title = getString("title"),
     status = SessionStatus.from(getString("status")),
     engine = getString("engine"),
     model = getString("model"),
@@ -481,5 +482,17 @@ private fun DocumentSnapshot.toDevice(): Device {
     lastSeenMs = long("lastSeen"),
     engines = engines,
     approvalMode = getString("approvalMode"),
+    commands = (get("commands") as? List<*>)?.mapNotNull { c ->
+      (c as? Map<*, *>)?.let {
+        val name = it["name"]?.toString() ?: return@let null
+        CommandSpec(name, it["label"]?.toString() ?: name, it["usage"]?.toString() ?: "/$name", it["summary"]?.toString() ?: "", it["requiresArg"] == true)
+      }
+    } ?: emptyList(),
+    mentions = (get("mentions") as? List<*>)?.mapNotNull { m ->
+      (m as? Map<*, *>)?.let {
+        val name = it["name"]?.toString() ?: return@let null
+        MentionSpec(name, it["label"]?.toString() ?: "@$name", it["summary"]?.toString() ?: "")
+      }
+    } ?: emptyList(),
   )
 }

@@ -56,7 +56,14 @@ data class Session(
   val reactions: Map<String, List<Reaction>> = emptyMap(),
   /** A widget question DEX is waiting on (bridge.ts's openQuestion), with quick replies when it has ready answers. */
   val ask: OpenQuestion? = null,
-)
+  /** The PC's name for it (shared/slashCommands.ts taskTitle): "Your routines", not a command's instructions. */
+  val title: String? = null,
+) {
+  /** What lists, the top bar and the live update call the task. */
+  val heading: String
+    get() = title?.trim()?.takeIf { it.isNotEmpty() }
+      ?: prompt.lineSequence().map { it.trim() }.firstOrNull { it.isNotEmpty() }.orEmpty()
+}
 
 data class OpenQuestion(val title: String, val replies: List<String>)
 
@@ -151,11 +158,20 @@ data class Device(
   val engines: List<Engine>,
   /** The desktop's agent-approval policy: ask | auto | full. */
   val approvalMode: String? = null,
+  /** What its `/` and `@` menus offer (empty from a DEX that doesn't say: the phone's own list is used). */
+  val commands: List<CommandSpec> = emptyList(),
+  val mentions: List<MentionSpec> = emptyList(),
 ) {
   /** The desktop heartbeats every minute; three missed beats means gone. */
   val isReachable: Boolean
     get() = online && System.currentTimeMillis() - lastSeenMs < 3 * 60_000
 }
+
+/** A `/command` the PC understands (desktop/app/src/shared/slashCommands.ts). */
+data class CommandSpec(val name: String, val label: String, val usage: String, val summary: String, val requiresArg: Boolean)
+
+/** An `@mention` the PC understands (desktop/app/src/renderer/hub/mentions.ts). */
+data class MentionSpec(val name: String, val label: String, val summary: String)
 
 enum class CommandType(val id: String) {
   NewTask("new_task"),

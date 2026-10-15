@@ -193,6 +193,9 @@ fun NewTaskSheet(
 
       if (attachments != null) com.chethan616.dex.ui.attach.AttachmentStrip(attachments)
 
+      // Type `/` for a command, `@` to mention (CommandMenu.kt).
+      com.chethan616.dex.ui.components.CommandMenu(text, { text = it })
+
       Surface(shape = MaterialTheme.shapes.large, color = scheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(start = 18.dp, end = 10.dp, top = 16.dp, bottom = 10.dp)) {
           BasicTextField(

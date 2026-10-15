@@ -100,7 +100,7 @@ object LiveUpdate {
 
   fun glyphOf(s: Session): Int = GLYPHS.firstOrNull { (re, _) -> re.containsMatchIn(s.prompt) }?.second ?: R.drawable.ic_notification
 
-  private fun titleOf(s: Session) = s.prompt.lineSequence().firstOrNull().orEmpty().trim().take(80).ifBlank { "Your task" }
+  private fun titleOf(s: Session) = s.heading.take(80).ifBlank { "Your task" }
 
   /** The task's bot as the tracker; working, it hops: every other step it's up and leaning in. */
   private fun tracker(context: Context, s: Session, mood: BotMood): IconCompat {

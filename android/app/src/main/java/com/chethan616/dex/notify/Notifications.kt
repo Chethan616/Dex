@@ -66,7 +66,7 @@ object Notifications {
     val first = running.firstOrNull()
     val title = when {
       first == null -> "DEX"
-      running.size == 1 -> first.prompt.lineSequence().firstOrNull().orEmpty().take(80)
+      running.size == 1 -> first.heading.take(80)
       else -> "${running.size} tasks running on your PC"
     }
     val body = first?.lastLine?.takeIf { it.isNotBlank() } ?: "Working on your PC…"

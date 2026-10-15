@@ -489,7 +489,7 @@ internal fun SessionTopBar(
       )
       Spacer(Modifier.size(10.dp))
       Column(Modifier.weight(1f)) {
-        Text(session?.prompt.orEmpty(), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(session?.heading.orEmpty(), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Row(verticalAlignment = Alignment.CenterVertically) {
           session?.let { StatusPill(it.status, label = com.chethan616.dex.ui.components.sessionStatusLabel(it.status, it.error)) }
           Spacer(Modifier.size(8.dp))
@@ -578,6 +578,8 @@ internal fun Composer(
   val pickers = com.chethan616.dex.ui.attach.rememberAttachPickers(attach)
   var attachMenu by remember { mutableStateOf(false) }
   val hasFiles = attach.items.isNotEmpty()
+  // Type `/` for a command, `@` to mention (CommandMenu.kt): just above the box.
+  com.chethan616.dex.ui.components.CommandMenu(text, { text = it }, Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp))
   Surface(
     shape = RoundedCornerShape(32.dp),
     color = scheme.surfaceContainerHigh,
