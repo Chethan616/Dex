@@ -25,6 +25,7 @@
 - **Phone commands:** slash commands now live in `src/shared/slashCommands.ts`, and main expands them for phone tasks and follow-ups. Before this, "/workflow" sent from the phone reached the agent as bare text.
 - **Titles:** `taskTitle()` and `typedCommand()` give command tasks titles like "Your routines" and show what was typed as the first message. The bridge sends `title`. The phone shows `Session.heading`.
 - **Plain-words steps:** in `transcript.ts` (`stepPhrase`, `shellMeta`, `readMeta`), used by the chat and the phone's live update.
+- **Codex too:** its own automations, browser and computer use are off, via `-c features.X=false` (not `--disable`, which refuses to start on unknown names). Its PowerShell- and `dex-sh`-wrapped steps get plain words (`unwrapShell`, `everydayCommand`). Its MCP calls are named `mcp__server__tool`.
 - **Follow-ups stay in the chat:** AgentPane `browsingThisTurn`.
 - **New DEX cursor:** in `main/workspace/agentCursor.ts`.
 - **Phone `/` and `@` menus:** `ui/components/CommandMenu.kt`. The list comes from the PC's device row (`commands`, `mentions`).

@@ -26,4 +26,4 @@ The owner asked (2026-10-14) for workflows and daily routines in DEX:
 - Fixed in `942efa59`: DEX's Claude Code runs get `--disable-slash-commands` plus `--disallowedTools CronCreate,CronDelete,CronList,RemoteTrigger,ScheduleWakeup`.
 - Phone-sent `/workflow` is now expanded in main (`shared/slashCommands.ts`).
 - If a routine still doesn't save, check the task's events in `%APPDATA%/DEX/sessions.db` (`session_events`) for which tool the agent used.
-
+- **Codex equivalent:** `in_app_local_automation` and Codex's own `browser_use`, `in_app_browser` and `computer_use` are off in DEX's tasks via `-c features.X=false`. Don't use `--disable`: it errors on a feature name an older Codex lacks.
