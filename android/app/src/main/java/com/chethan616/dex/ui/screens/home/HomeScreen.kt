@@ -463,8 +463,16 @@ private fun Header(account: Account, desktop: Device?, loading: Boolean, onOpenS
     }
     Spacer(Modifier.size(Space.m))
     Column(Modifier.weight(1f)) {
-      Text(greeting + ",", style = MaterialTheme.typography.titleMedium, color = scheme.onSurfaceVariant)
-      Text(account.firstName, style = MaterialTheme.typography.headlineLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+      // The name you gave your DEX (Settings › Appearance, or the PC), as in
+      // Settings' account card; never one made up from the email address.
+      val name = com.chethan616.dex.ui.profile.LocalDexProfile.current?.name?.takeIf { it.isNotBlank() }
+        ?: account.name?.takeIf { it.isNotBlank() }
+      if (name != null) {
+        Text("$greeting,", style = MaterialTheme.typography.titleMedium, color = scheme.onSurfaceVariant)
+        Text(name, style = MaterialTheme.typography.headlineLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+      } else {
+        Text(greeting, style = MaterialTheme.typography.headlineLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+      }
       DeviceLine(desktop, loading)
     }
     FilledTonalIconButton(

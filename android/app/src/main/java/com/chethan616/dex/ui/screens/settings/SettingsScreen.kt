@@ -129,7 +129,7 @@ fun SettingsScreen(
         }
         Spacer(Modifier.size(12.dp))
         Column(Modifier.weight(1f)) {
-          Text(profile?.name ?: account.displayName, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
+          Text(profile?.name?.takeIf { it.isNotBlank() } ?: account.name?.takeIf { it.isNotBlank() } ?: "Your DEX account", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
           Text(account.email.orEmpty(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f))
         }
       }

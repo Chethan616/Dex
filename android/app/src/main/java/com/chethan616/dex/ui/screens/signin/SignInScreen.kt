@@ -17,6 +17,13 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.requiredHeight
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -119,127 +126,180 @@ fun SignInScreen(container: AppContainer) {
   }
 
   val scheme = MaterialTheme.colorScheme
+  val density = LocalDensity.current
   Box(
     Modifier
       .fillMaxSize()
       .background(Brush.verticalGradient(listOf(scheme.primaryContainer.copy(alpha = 0.55f), scheme.surface, scheme.surface))),
   ) {
-    Column(
-      Modifier
-        .fillMaxSize()
-        .statusBarsPadding()
-        .navigationBarsPadding()
-        .imePadding()
-        .verticalScroll(rememberScrollState())
-        .padding(horizontal = 24.dp),
-      horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-      Spacer(Modifier.height(12.dp))
-      BotCluster(Modifier.fillMaxWidth().height(230.dp))
-
-      AnimatedVisibility(step >= 1, enter = fadeIn(tween(500)) + slideInVertically(tween(500)) { it / 3 }) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-          Text("Your PC, in your pocket", style = MaterialTheme.typography.displaySmall, textAlign = TextAlign.Center)
-          Spacer(Modifier.height(8.dp))
-          Text(
-            "Use the same email and password as DEX on your PC — that’s all it takes to pair.",
-            style = MaterialTheme.typography.bodyLarge,
-            color = scheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-          )
-        }
-      }
-
-      Spacer(Modifier.height(24.dp))
-
-      AnimatedVisibility(step >= 2, enter = fadeIn(tween(500)) + expandVertically(tween(500))) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-          Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween), modifier = Modifier.fillMaxWidth()) {
-            listOf(Mode.SignIn to "Sign in", Mode.Create to "Create account").forEachIndexed { i, (m, label) ->
-              ToggleButton(
-                checked = mode == m,
-                onCheckedChange = { haptics.tick(); mode = m; error = null },
-                shapes = if (i == 0) ButtonGroupDefaults.connectedLeadingButtonShapes() else ButtonGroupDefaults.connectedTrailingButtonShapes(),
-                modifier = Modifier.weight(1f),
-              ) { Text(label) }
-            }
-          }
-
-          OutlinedTextField(
-            value = email,
-            onValueChange = { email = it; error = null },
-            label = { Text("Email") },
-            leadingIcon = { Icon(Icons.Rounded.AlternateEmail, null) },
-            singleLine = true,
-            shape = RoundedCornerShape(20.dp),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
-            modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.EmailAddress },
-          )
-          OutlinedTextField(
-            value = password,
-            onValueChange = { password = it; error = null },
-            label = { Text("Password") },
-            leadingIcon = { Icon(Icons.Rounded.Lock, null) },
-            trailingIcon = {
-              IconButton(onClick = { haptics.tick(); showPassword = !showPassword }) {
-                Icon(if (showPassword) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility, if (showPassword) "Hide password" else "Show password")
+    // The form keeps its size; the bots and the words above it get the height
+    // that's left, and give it up first when the keyboard opens (imePadding
+    // shrinks this box). So the page doesn't scroll while it fits, and the
+    // fields and the button stay above the keyboard. Only a form taller than
+    // the room left (a small phone with the keyboard up) scrolls.
+    BoxWithConstraints(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
+      var formPx by remember { mutableIntStateOf(0) }
+      val heroPx = (constraints.maxHeight - formPx - with(density) { BOTTOM_GAP.roundToPx() }).coerceAtLeast(0)
+      Column(
+        Modifier
+          .fillMaxSize()
+          .verticalScroll(rememberScrollState(), enabled = heroPx == 0)
+          .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+      ) {
+        Hero(showWords = step >= 1, modifier = Modifier.fillMaxWidth().height(with(density) { heroPx.toDp() }))
+        AnimatedVisibility(
+          step >= 2,
+          enter = fadeIn(tween(500)) + expandVertically(tween(500)),
+          modifier = Modifier.onSizeChanged { formPx = it.height },
+        ) {
+          Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween), modifier = Modifier.fillMaxWidth()) {
+              listOf(Mode.SignIn to "Sign in", Mode.Create to "Create account").forEachIndexed { i, (m, label) ->
+                ToggleButton(
+                  checked = mode == m,
+                  onCheckedChange = { haptics.tick(); mode = m; error = null },
+                  shapes = if (i == 0) ButtonGroupDefaults.connectedLeadingButtonShapes() else ButtonGroupDefaults.connectedTrailingButtonShapes(),
+                  modifier = Modifier.weight(1f),
+                ) { Text(label) }
               }
-            },
-            supportingText = { if (mode == Mode.Create) Text("At least 6 characters") },
-            singleLine = true,
-            shape = RoundedCornerShape(20.dp),
-            visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { submit() }),
-            modifier = Modifier.fillMaxWidth().semantics {
-              contentType = if (mode == Mode.Create) ContentType.NewPassword else ContentType.Password
-            },
-          )
-
-          AnimatedVisibility(error != null || notice != null, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
-            val isError = error != null
-            Card(
-              colors = CardDefaults.cardColors(containerColor = if (isError) scheme.errorContainer else scheme.secondaryContainer),
-              modifier = Modifier.fillMaxWidth(),
-            ) {
-              Text(
-                error ?: notice.orEmpty(),
-                Modifier.padding(14.dp),
-                color = if (isError) scheme.onErrorContainer else scheme.onSecondaryContainer,
-                style = MaterialTheme.typography.bodyMedium,
-              )
             }
-          }
 
-          Button(
-            onClick = ::submit,
-            enabled = canSubmit,
-            shapes = ButtonDefaults.shapes(),
-            modifier = Modifier.fillMaxWidth().height(60.dp),
-          ) {
-            AnimatedContent(busy to mode, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "cta") { (loading, m) ->
-              if (loading) LoadingIndicator(Modifier.size(28.dp), color = scheme.onPrimary)
-              else Text(if (m == Mode.SignIn) "Sign in" else "Create account", style = MaterialTheme.typography.titleMedium)
-            }
-          }
-
-          if (mode == Mode.SignIn) {
-            TextButton(
-              onClick = {
-                haptics.tick()
-                if (!email.contains('@')) { error = "Type your email first, then tap Forgot password."; return@TextButton }
-                scope.launch {
-                  container.auth.sendPasswordReset(email)
-                    .onSuccess { error = null; notice = "Check $email for a link to reset your password." }
-                    .onFailure { error = it.message }
+            OutlinedTextField(
+              value = email,
+              onValueChange = { email = it; error = null },
+              label = { Text("Email") },
+              leadingIcon = { Icon(Icons.Rounded.AlternateEmail, null) },
+              singleLine = true,
+              shape = RoundedCornerShape(20.dp),
+              keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+              modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.EmailAddress },
+            )
+            OutlinedTextField(
+              value = password,
+              onValueChange = { password = it; error = null },
+              label = { Text("Password") },
+              leadingIcon = { Icon(Icons.Rounded.Lock, null) },
+              trailingIcon = {
+                IconButton(onClick = { haptics.tick(); showPassword = !showPassword }) {
+                  Icon(if (showPassword) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility, if (showPassword) "Hide password" else "Show password")
                 }
               },
-              modifier = Modifier.align(Alignment.CenterHorizontally),
-            ) { Text("Forgot password?") }
+              supportingText = { if (mode == Mode.Create) Text("At least 6 characters") },
+              singleLine = true,
+              shape = RoundedCornerShape(20.dp),
+              visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+              keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+              keyboardActions = KeyboardActions(onDone = { submit() }),
+              modifier = Modifier.fillMaxWidth().semantics {
+                contentType = if (mode == Mode.Create) ContentType.NewPassword else ContentType.Password
+              },
+            )
+
+            AnimatedVisibility(error != null || notice != null, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+              val isError = error != null
+              Card(
+                colors = CardDefaults.cardColors(containerColor = if (isError) scheme.errorContainer else scheme.secondaryContainer),
+                modifier = Modifier.fillMaxWidth(),
+              ) {
+                Text(
+                  error ?: notice.orEmpty(),
+                  Modifier.padding(14.dp),
+                  color = if (isError) scheme.onErrorContainer else scheme.onSecondaryContainer,
+                  style = MaterialTheme.typography.bodyMedium,
+                )
+              }
+            }
+
+            Button(
+              onClick = ::submit,
+              enabled = canSubmit,
+              shapes = ButtonDefaults.shapes(),
+              modifier = Modifier.fillMaxWidth().height(60.dp),
+            ) {
+              AnimatedContent(busy to mode, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "cta") { (loading, m) ->
+                if (loading) LoadingIndicator(Modifier.size(28.dp), color = scheme.onPrimary)
+                else Text(if (m == Mode.SignIn) "Sign in" else "Create account", style = MaterialTheme.typography.titleMedium)
+              }
+            }
+
+            if (mode == Mode.SignIn) {
+              TextButton(
+                onClick = {
+                  haptics.tick()
+                  if (!email.contains('@')) { error = "Type your email first, then tap Forgot password."; return@TextButton }
+                  scope.launch {
+                    container.auth.sendPasswordReset(email)
+                      .onSuccess { error = null; notice = "Check $email for a link to reset your password." }
+                      .onFailure { error = it.message }
+                  }
+                },
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+              ) { Text("Forgot password?") }
+            }
+          }
+        }
+        Spacer(Modifier.height(BOTTOM_GAP))
+      }
+    }
+  }
+}
+
+private val BOTTOM_GAP = 24.dp
+
+private enum class HeroFit { None, Title, Words, Full }
+
+/**
+ * The top of the page, fitted to the height it's given: the bots and the
+ * words when there's room (the bots shrink to 60% first), then the words,
+ * then the title alone, then nothing.
+ */
+@Composable
+private fun Hero(showWords: Boolean, modifier: Modifier) {
+  BoxWithConstraints(modifier.clipToBounds(), contentAlignment = Alignment.Center) {
+    val h = maxHeight
+    val fit = when {
+      h >= 340.dp -> HeroFit.Full
+      h >= 200.dp -> HeroFit.Words
+      h >= 64.dp -> HeroFit.Title
+      else -> HeroFit.None
+    }
+    val scale = ((h - 200.dp) / 230.dp).coerceIn(0.6f, 1f)
+    AnimatedContent(fit, transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(150)) }, label = "hero") { f ->
+      Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.fillMaxWidth().wrapContentHeight(Alignment.Bottom, unbounded = true).padding(bottom = BOTTOM_GAP),
+      ) {
+        if (f == HeroFit.Full) {
+          // Laid out at full size and drawn smaller, so nothing inside re-measures.
+          Box(Modifier.fillMaxWidth().height(230.dp * scale), contentAlignment = Alignment.Center) {
+            BotCluster(Modifier.fillMaxWidth().requiredHeight(230.dp).graphicsLayer { scaleX = scale; scaleY = scale })
+          }
+          Spacer(Modifier.height(8.dp))
+        }
+        if (f != HeroFit.None) {
+          AnimatedVisibility(showWords, enter = fadeIn(tween(500)) + slideInVertically(tween(500)) { it / 3 }) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+              Text(
+                "Your PC, in your pocket",
+                style = if (f == HeroFit.Title) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.displaySmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+                maxLines = if (f == HeroFit.Title) 1 else 2,
+              )
+              if (f != HeroFit.Title) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                  "Use the same email and password as DEX on your PC — that’s all it takes to pair.",
+                  style = MaterialTheme.typography.bodyLarge,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+                  textAlign = TextAlign.Center,
+                )
+              }
+            }
           }
         }
       }
-      Spacer(Modifier.height(24.dp))
     }
   }
 }

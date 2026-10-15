@@ -13,15 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
-data class Account(val uid: String, val email: String?, val name: String?, val photoUrl: String?) {
-  /** "chethankrishna2022@…" → "Chethankrishna" when there's no profile name. */
-  val displayName: String
-    get() = name?.takeIf { it.isNotBlank() }
-      ?: email?.substringBefore('@')?.takeWhile { it.isLetter() }?.replaceFirstChar { it.uppercase() }?.takeIf { it.isNotBlank() }
-      ?: "there"
-
-  val firstName: String get() = displayName.substringBefore(' ')
-}
+data class Account(val uid: String, val email: String?, val name: String?, val photoUrl: String?)
 
 /**
  * Signing in *is* pairing. DEX on the PC signs in to Firebase with an email

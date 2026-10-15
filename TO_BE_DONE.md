@@ -24,7 +24,7 @@
 - The phone now has two flavors. `github` is the APK on GitHub Releases, with the self-updater. `play` is the bundle for Play: no updater and no `REQUEST_INSTALL_PACKAGES`, because Play forbids self-updating.
 - Settings › **Delete account** (Play requires it for apps that create accounts): `AuthRepository.deleteAccount` + `DexRepository.deleteEverything`.
 - Removed the unused `RECORD_AUDIO`.
-- Phone **2.0.1 / versionCode 38**.
+- Phone **2.0.1 / versionCode 38**, uploaded to Play. Then **39** (same 2.0.1) with the owner's fixes: the Home greeting uses the DEX's name, never one made from the email; sign-in fits the screen and keeps the fields above the keyboard. Bundle: `android/release/DEX-android-2.0.1-39-play.aab` + its native-debug-symbols zip.
 - Signed `android/release/DEX-android-2.0.1-play.aab` (and `DEX-android-2.0.1.apk`, the GitHub flavor) built and verified: release key `2f727fa5…`, 16 KB native libs, target API 36.
 - `PRIVACY.md`, `docs/delete-account.md`, and `docs/play-store/` (listing copy, form answers, icon, feature graphic, steps).
 
