@@ -21,3 +21,9 @@ The owner asked (2026-10-14) for workflows and daily routines in DEX:
 **How to apply:** the full request and its order (pause/resume chip first, app pickers, troubleshooting, then workflows, then a release) is the "THIRD batch" in the RESUME HERE block of `TO_BE_DONE.md`. Read it before starting. Related: [[keep-resume-log]], [[desktop-control-plan]].
 
 **Built 2026-10-15 (second PC):** `src/shared/workflows.ts` (schema, triggerText, isDue with a 3 h catch-up, the run prompt), `main/workflows/store.ts` (`<userData>/workflows.json`) + `scheduler.ts` (30 s tick, records the run before starting), control route `POST /dex/workflow`, CLI `dex-tools/dex-workflow` + `workflows.md`, widget type `workflows` (each item is a whole workflow), hub `hub/workflows/` (cards, `WorkflowGraph` snake layout, pan/zoom written straight to the DOM), `/workflow` bare in a task = local via `SlashCommand.inTask` (no agent turn), phone `ui/components/WorkflowGraph.kt` (Run now = a reply message, so no Firestore rules change). Steps are linear on purpose. Desktop seen live; phone only rendered with Robolectric.
+
+**2026-10-15 evening:** the owner's first real try failed. Asked to "add that to the workflow", the agent (Claude Code, Haiku) used Claude Code's own `schedule` skill and made a cloud routine instead of using `dex-workflow`, so `/workflow` stayed empty.
+- Fixed in `942efa59`: DEX's Claude Code runs get `--disable-slash-commands` plus `--disallowedTools CronCreate,CronDelete,CronList,RemoteTrigger,ScheduleWakeup`.
+- Phone-sent `/workflow` is now expanded in main (`shared/slashCommands.ts`).
+- If a routine still doesn't save, check the task's events in `%APPDATA%/DEX/sessions.db` (`session_events`) for which tool the agent used.
+

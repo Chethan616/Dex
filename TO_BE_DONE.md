@@ -20,6 +20,18 @@
 
 ## ▶ RESUME HERE — live work log (keep this block current; newest first)
 
+**2026-10-15 evening, owner's PC, session `baacd51d`: the owner's fourth batch** (from trying 2.0.1 on the phone). Done and pushed: `942efa59` (desktop) and `5a3f1553` (phone).
+- **Workflows didn't save:** the agent used Claude Code's own `schedule` skill (a cloud routine) instead of `dex-workflow`. Claude Code runs now get `--disable-slash-commands` and `--disallowedTools CronCreate,CronDelete,CronList,RemoteTrigger,ScheduleWakeup`.
+- **Phone commands:** slash commands now live in `src/shared/slashCommands.ts`, and main expands them for phone tasks and follow-ups. Before this, "/workflow" sent from the phone reached the agent as bare text.
+- **Titles:** `taskTitle()` and `typedCommand()` give command tasks titles like "Your routines" and show what was typed as the first message. The bridge sends `title`. The phone shows `Session.heading`.
+- **Plain-words steps:** in `transcript.ts` (`stepPhrase`, `shellMeta`, `readMeta`), used by the chat and the phone's live update.
+- **Follow-ups stay in the chat:** AgentPane `browsingThisTurn`.
+- **New DEX cursor:** in `main/workspace/agentCursor.ts`.
+- **Phone `/` and `@` menus:** `ui/components/CommandMenu.kt`. The list comes from the PC's device row (`commands`, `mentions`).
+- **Still to do:**
+  - Release 2.0.1 so these reach the owner's PC and phone. The next Play upload must be **versionCode 40**: 39 is in Play, and the phone code changed since.
+  - None of this has been seen live on the desktop yet; the phone menu was rendered with Robolectric.
+
 **2026-10-15, owner's PC, session `baacd51d` (Opus 5.5): Google Play.** The owner asked for a signed AAB and a Play Store release. Done:
 - The phone now has two flavors. `github` is the APK on GitHub Releases, with the self-updater. `play` is the bundle for Play: no updater and no `REQUEST_INSTALL_PACKAGES`, because Play forbids self-updating.
 - Settings › **Delete account** (Play requires it for apps that create accounts): `AuthRepository.deleteAccount` + `DexRepository.deleteEverything`.

@@ -26,3 +26,4 @@
 - [Workflows & routines](workflows-and-routines.md) — built 2026-10-15: dex-workflow CLI, /workflow cards (local in a task), n8n-style snake graph, scheduler; phone rendered only
 - [Second PC](second-pc.md) — srira PC: unify worktree at D:\Projects\Dex-unify (D:\Projects\DEX is a RUST clone with its own uncommitted work); no signing keys → no releases there
 - [Desktop UI, headless](desktop-ui-headless-render.md) — render the hub with sample data in headless Edge (Vite + electronAPI mock), no window; README images
+- [Plain words for steps](plain-words-steps.md) — owner wants live island/chat steps and titles in plain words, never raw commands or /tmp paths
