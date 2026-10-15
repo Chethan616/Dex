@@ -168,7 +168,7 @@ import { TelegramAdapter } from './channels/TelegramAdapter';
 import { ChannelRouter } from './channels/ChannelRouter';
 import { WorkflowStore } from './workflows/store';
 import { startWorkflowScheduler } from './workflows/scheduler';
-import { workflowPrompt, type Workflow } from '../shared/workflows';
+import { workflowCalledFor, workflowPrompt, type Workflow } from '../shared/workflows';
 import { expandSlashCommand } from '../shared/slashCommands';
 import { registerChannelHandlers, unregisterChannelHandlers } from './channels/ipc';
 // Auto-updater
@@ -1883,6 +1883,16 @@ app.whenReady().then(async () => {
   webSes.on('will-download', onWillDownload);
   electronSession.defaultSession.on('will-download', onWillDownload);
 
+  /**
+   * A request that only names a saved workflow ("execute order 66", "run my
+   * morning routine"): the task becomes that workflow's run, its steps as the
+   * prompt and its engine, as Run now does (shared/workflows.ts workflowCalledFor).
+   */
+  function namedWorkflowRun(prompt: string): { prompt: string; workflow: Workflow } | null {
+    const workflow = workflowCalledFor(prompt, workflowStore.list());
+    return workflow ? { prompt: workflowPrompt(workflow, 'user'), workflow } : null;
+  }
+
   // A workflow's run: a task of its own, like one from the task box, with the
   // steps as its prompt and the engine the workflow was made with.
   async function startWorkflowRun(workflow: Workflow, by: 'schedule' | 'user', show = false): Promise<string> {
@@ -2612,9 +2622,12 @@ app.whenReady().then(async () => {
       modelId,
       attachmentMeta: attachments.map((a) => ({ name: a.name, mime: a.mime, size: a.bytes.byteLength })),
     });
-    const id = sessionManager.createSession(validatedPrompt);
-    sessionManager.setSessionEngine(id, engineId);
-    if (modelId) sessionManager.setSessionModel(id, modelId);
+    // "execute order 66": a request that only names a saved workflow is its run.
+    const named = attachments.length === 0 ? namedWorkflowRun(validatedPrompt) : null;
+    const id = sessionManager.createSession(named?.prompt ?? validatedPrompt);
+    sessionManager.setSessionEngine(id, named?.workflow.engine ?? engineId);
+    if (named?.workflow.model ?? modelId) sessionManager.setSessionModel(id, (named?.workflow.model ?? modelId)!);
+    if (named) workflowStore.recordRun(named.workflow.id, { at: Date.now(), by: 'user', sessionId: id });
     if (attachments.length > 0) {
       const turnIndex = sessionManager.getNextAttachmentTurnIndex(id);
       for (const a of attachments) {
@@ -3201,9 +3214,13 @@ app.whenReady().then(async () => {
         // Same limits as the desktop's own task box (shared/attachments.ts).
         const attachments = assertAttachments(phoneFiles ?? []);
         const engineId = engine ? assertString(engine, 'engine', 50) : DEFAULT_ENGINE_ID;
-        const id = sessionManager.createSession(validatedPrompt, { originChannel: 'android' });
-        sessionManager.setSessionEngine(id, engineId);
-        if (model) sessionManager.setSessionModel(id, assertString(model, 'model', 100));
+        // "execute order 66" from the phone runs that saved workflow, as on the PC.
+        const named = attachments.length === 0 ? namedWorkflowRun(validatedPrompt) : null;
+        const id = sessionManager.createSession(named?.prompt ?? validatedPrompt, { originChannel: 'android' });
+        sessionManager.setSessionEngine(id, named?.workflow.engine ?? engineId);
+        if (named?.workflow.model) sessionManager.setSessionModel(id, named.workflow.model);
+        else if (model) sessionManager.setSessionModel(id, assertString(model, 'model', 100));
+        if (named) workflowStore.recordRun(named.workflow.id, { at: Date.now(), by: 'user', sessionId: id });
         if (attachments.length > 0) {
           const turnIndex = sessionManager.getNextAttachmentTurnIndex(id);
           for (const a of attachments) sessionManager.saveAttachment(id, a, turnIndex);

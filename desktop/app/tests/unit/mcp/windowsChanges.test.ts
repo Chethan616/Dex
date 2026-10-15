@@ -37,6 +37,21 @@ describe('the changes DEX may make', () => {
     expect(classify('system_change', { action: 'dns_set', args: { adapter: 'Wi-Fi' } }).refused).toMatch(/don't fit/);
   });
 
+  it('cleans up and frees memory, but never closes Windows, DEX or a protected app', () => {
+    expect(categoryOf('temp_clean')).toBe('system-change');
+    expect(categoryOf('recycle_bin_empty')).toBe('system-destructive');
+    expect(ACTIONS.app_close.check({ name: 'OneDrive' })).toBe(true);
+    expect(ACTIONS.app_close.check({ name: 'Teams.exe' })).toBe(true);
+    for (const name of ['explorer', 'lsass.exe', 'csrss', 'svchost', 'dwm.exe', 'DEX', 'electron', 'powershell', 'node', 'MsMpEng', '1Password', 'bitwarden.exe', 'Claude']) {
+      expect(ACTIONS.app_close.check({ name })).toBe(false);
+    }
+    expect(ACTIONS.app_close.check({ name: 'C:\\Windows\\notepad.exe' })).toBe(false);
+    expect(ACTIONS.app_close.check({ name: 'note*' })).toBe(false);
+    expect(classify('system_change', { action: 'app_close', args: { name: 'OneDrive.exe' }, reason: 'free up memory' }))
+      .toMatchObject({ tier: 2, title: 'Close OneDrive', detail: 'free up memory' });
+    expect(classify('system_change', { action: 'app_close', args: { name: 'winlogon' } }).refused).toBeTruthy();
+  });
+
   it('switches only a startup app by its name, never a path', () => {
     expect(ACTIONS.startup_disable.check({ name: 'Steam' })).toBe(true);
     expect(ACTIONS.startup_enable.check({ name: 'Mathworks Service Host' })).toBe(true);

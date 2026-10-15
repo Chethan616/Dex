@@ -196,6 +196,7 @@ const codexAdapter: EngineAdapter = {
       `A result whose *shape* is part of the answer — a report, a comparison table, a structured summary, anything with real headings and sections — is \`dex-canvas show "<title>"\` (markdown piped via stdin), rendered as a document in the app itself. That is different from "produce a file": only use \`./outputs/${ctx.sessionId}/\` for something the user will download, attach, or open outside the app (a CSV export, a screenshot, a transcript) — not for a report meant to be read right here.`,
       `Mention the filename in your final answer for anything actually saved to ./outputs/.`,
       ...deliveryBriefing(ctx),
+      ...(ctx.memoryBriefing ?? []),
       '',
       `Task: ${ctx.prompt}`,
     );

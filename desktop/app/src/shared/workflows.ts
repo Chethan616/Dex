@@ -219,6 +219,26 @@ export function clockText(hhmm: string): string {
 }
 
 /** "Every day at 7:30 am", "Weekdays at 9:00 am", "Mon, Wed at 6:00 pm", "When you run it". */
+/**
+ * The saved workflow a request names, when running it is the whole request:
+ * "execute order 66", "run my morning routine", "start Weekly tidy-up",
+ * "Order 66". Null for anything else — a longer request goes to the agent,
+ * which can still run one with `dex-workflow run`.
+ */
+export function workflowCalledFor(prompt: string, workflows: Array<Pick<Workflow, 'name'>>): Workflow | null {
+  const text = prompt.trim().toLowerCase().replace(/[“”"'`]/g, '').replace(/[.!?\s]+$/, '');
+  if (!text || text.length > 120 || text.includes('\n')) return null;
+  const said = text
+    .replace(/^(?:(?:hey\s+)?dex[,:]?\s+)?(?:please\s+|pls\s+)?/, '')
+    .replace(/^(?:run|execute|exec|start|do|begin|launch|trigger|kick\s+off|go)\s+/, '')
+    .replace(/^(?:my|the)\s+/, '')
+    .replace(/\s+(?:now|please)$/, '')
+    .trim();
+  const names = new Set([said, said.replace(/\s+(?:workflow|routine)$/, '')]);
+  const hits = workflows.filter((w) => names.has(w.name.trim().toLowerCase().replace(/[“”"'`]/g, '')));
+  return hits.length === 1 ? (hits[0] as Workflow) : null;
+}
+
 export function triggerText(t: Trigger): string {
   if (t.kind === 'manual') return 'When you run it';
   if (t.kind === 'daily') return `Every day at ${clockText(t.time)}`;

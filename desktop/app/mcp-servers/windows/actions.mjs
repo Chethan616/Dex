@@ -7,6 +7,8 @@
  * Tiers: 2 reversible, 3 hard to undo. Categories follow approvals/policy.ts.
  */
 
+import { BLOCKED_PROCESSES } from './policy.mjs';
+
 const str = (v, max = 200) => typeof v === 'string' && v.length > 0 && v.length <= max;
 const NAME = /^[\w .()&'-]{1,80}$/u;                       // adapter, service, profile names
 const INSTANCE = /^[A-Za-z0-9\\&_.#{}-]{3,200}$/;          // device instance ids
@@ -16,6 +18,25 @@ const WINGET_ID = /^[A-Za-z0-9][\w.+-]{1,120}$/;
 const STARTUP_NAME = /^[^\\/:*?"<>|\x00-\x1f]{1,120}$/;
 // A Store package's name ("5319275A.WhatsAppDesktop") or family name (…_cv1g1gvanyjgm).
 const PACKAGE = /^[A-Za-z0-9][A-Za-z0-9.-]{2,99}(_[a-z0-9]{13})?$/;
+// A process to close, by name ("OneDrive", "Teams.exe"): no path, no wildcard.
+const PROCESS = /^[\w .()&+-]{1,80}$/;
+
+/**
+ * What app_close never closes: Windows itself (closing these logs you out,
+ * crashes the desktop or stops security), DEX and the engines and shells it
+ * runs on, and every app DEX won't touch at all (policy.mjs).
+ */
+const NEVER_CLOSE = new Set([
+  'system', 'idle', 'registry', 'memory compression', 'smss', 'csrss', 'wininit', 'winlogon', 'services', 'lsass', 'lsaiso',
+  'svchost', 'dwm', 'explorer', 'fontdrvhost', 'sihost', 'ctfmon', 'taskhostw', 'dllhost', 'conhost', 'runtimebroker',
+  'searchhost', 'searchindexer', 'startmenuexperiencehost', 'shellexperiencehost', 'textinputhost', 'audiodg', 'spoolsv',
+  'wmiprvse', 'msmpeng', 'nissrv', 'securityhealthservice', 'securityhealthsystray', 'smartscreen', 'wudfhost',
+  'dex', 'electron', 'node', 'bun', 'powershell', 'pwsh', 'cmd', 'git', 'bash', 'uv', 'uvx', 'python', 'blender',
+]);
+export function isProtectedProcess(name) {
+  const base = String(name).toLowerCase().replace(/\.exe$/, '').trim();
+  return NEVER_CLOSE.has(base) || BLOCKED_PROCESSES.has(`${base}.exe`);
+}
 
 /** HKCU\…\PrecisionTouchPad values DEX may set, and what each number means. */
 export const GESTURE_KEYS = {
@@ -45,6 +66,12 @@ export const ACTIONS = {
   startup_disable: { tier: 2, admin: false, title: (a) => `Stop ${a.name} from starting with Windows`, check: (a) => str(a.name, 120) && STARTUP_NAME.test(a.name) },
   startup_enable: { tier: 2, admin: false, title: (a) => `Let ${a.name} start with Windows`, check: (a) => str(a.name, 120) && STARTUP_NAME.test(a.name) },
   app_reset: { tier: 3, admin: false, title: (a) => `Reset the app ${a.package} (its data is cleared and you sign in again)`, check: (a) => PACKAGE.test(a.package ?? '') },
+  // Cleaning up and freeing memory ("speed up my PC", routines): temporary
+  // files are made to be thrown away, so this is a tier-2 step; the Recycle
+  // Bin is the user's last chance to get a file back, so emptying it isn't.
+  temp_clean: { tier: 2, admin: false, title: () => 'Clear temporary files (yours, older than a day, none in use)', check: () => true },
+  recycle_bin_empty: { tier: 3, admin: false, title: () => 'Empty the Recycle Bin (its files can’t be brought back)', check: () => true },
+  app_close: { tier: 2, admin: false, title: (a) => `Close ${String(a.name).replace(/\.exe$/i, '')}`, check: (a) => str(a.name, 80) && PROCESS.test(a.name) && !isProtectedProcess(a.name) },
 
   ip_renew: { tier: 2, admin: true, title: (a) => `Renew the IP address of ${a.adapter ?? 'every adapter'}`, check: (a) => a.adapter === undefined || NAME.test(a.adapter) },
   adapter_restart: { tier: 2, admin: true, title: (a) => `Restart the network adapter ${a.name}`, check: (a) => str(a.name, 80) && NAME.test(a.name) },

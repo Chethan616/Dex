@@ -22,7 +22,8 @@ function findBash(): string | undefined {
 }
 const BASH = findBash();
 
-describe.runIf(Boolean(BASH))('dex-workflow', () => {
+// Each case runs the real bash script against a stub server: slow when the whole suite runs at once.
+describe.runIf(Boolean(BASH))('dex-workflow', { timeout: 20_000 }, () => {
   let server: http.Server;
   let control: string;
   const bodies: Array<Record<string, unknown>> = [];

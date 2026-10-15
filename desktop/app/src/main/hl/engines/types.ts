@@ -60,6 +60,8 @@ export interface SpawnContext {
   originChannel?: string;
   /** List of attachment paths (relative to harnessDir) the adapter may mention in wrappedPrompt. */
   attachmentRefs: Array<{ relPath: string; mime: string; size: number }>;
+  /** What DEX remembers for the user (engines/memory.ts): the same lines for every engine. */
+  memoryBriefing?: string[];
 }
 
 export interface ParseContext {

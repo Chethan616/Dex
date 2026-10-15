@@ -278,8 +278,18 @@ ${opts.prompt}`;
     engineLogger.warn('engines.run.mcpConfig.failed', { error: (err as Error).message });
   }
 
+  // DEX's own memory (sites, logins saved, routines), the same for every engine.
+  let memoryLines: string[] = [];
+  try {
+    const { app } = await import('electron');
+    memoryLines = await (await import('./memory')).memoryBriefing(path.join(app.getPath('userData'), 'workflows.json'));
+  } catch (err) {
+    engineLogger.warn('engines.run.memory.failed', { error: (err as Error).message });
+  }
+
   // 4. Build spawn context + let adapter compose args/env/prompt.
   const spawnCtx: SpawnContext = {
+    memoryBriefing: memoryLines,
     mcpConfigPath,
     mcpBriefing,
     mcpServers,

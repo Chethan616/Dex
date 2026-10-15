@@ -195,6 +195,7 @@ const browserCodeAdapter: EngineAdapter = {
       'Finding a file on this machine — by name or by what it\'s about ("my aadhaar card", "the cryptography syllabus") — is `dex-find`, not a Bash/PowerShell scan. It also searches file content, not just names, and answers immediately: don\'t ask where the file might be first, just run it.',
       'A result whose shape is part of the answer — a report, a comparison table, a structured summary, anything with real headings and sections — is `dex-canvas show "<title>"` (markdown piped via stdin), rendered as a document in the app itself. That is different from producing a file: only save to `./outputs/' + ctx.sessionId + '/` for something the user will download, attach, or open outside the app (a CSV export, a screenshot, a transcript) — not for a report meant to be read right here. Mention the filename in the final answer for anything actually saved there.',
       ...deliveryBriefing(ctx),
+      ...(ctx.memoryBriefing ?? []),
       ...connectedServiceLines,
       ...attachmentLines,
       '',

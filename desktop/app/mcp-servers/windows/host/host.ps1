@@ -157,6 +157,39 @@ function Invoke-Change($a) {
       return @{ done = $true; filesRemoved = $removed; freedMB = [math]::Round($freed / 1MB, 1); stillInUse = $left.Count
         note = 'Windows makes the thumbnails and icons again as folders are opened, so the first visit to a big folder is a little slower.' }
     }
+    'temp_clean' {
+      # The user's own temp folder: files older than a day that nothing holds open.
+      $cutoff = (Get-Date).AddDays(-1)
+      $freed = 0; $removed = 0; $inUse = 0
+      foreach ($f in @(Get-ChildItem -LiteralPath $env:TEMP -Recurse -File -Force -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -lt $cutoff })) {
+        try { $len = $f.Length; Remove-Item -LiteralPath $f.FullName -Force -ErrorAction Stop; $freed += $len; $removed += 1 } catch { $inUse += 1 }
+      }
+      # Folders left empty, deepest first.
+      foreach ($d in @(Get-ChildItem -LiteralPath $env:TEMP -Recurse -Directory -Force -ErrorAction SilentlyContinue | Sort-Object { $_.FullName.Length } -Descending)) {
+        if (-not (Get-ChildItem -LiteralPath $d.FullName -Force -ErrorAction SilentlyContinue)) { Remove-Item -LiteralPath $d.FullName -Force -ErrorAction SilentlyContinue }
+      }
+      return @{ done = $true; filesRemoved = $removed; freedMB = [math]::Round($freed / 1MB, 1); inUse = $inUse
+        note = 'Apps make temporary files again as they need them.' }
+    }
+    'recycle_bin_empty' {
+      $items = 0
+      try { $items = @((New-Object -ComObject Shell.Application).Namespace(10).Items()).Count } catch {}
+      Clear-RecycleBin -Force -ErrorAction SilentlyContinue
+      return @{ done = $true; itemsRemoved = $items }
+    }
+    'app_close' {
+      $name = "$($p.name)" -replace '\.exe$', ''
+      $mine = (Get-Process -Id $PID).SessionId
+      $procs = @(Get-Process -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.SessionId -eq $mine })
+      if (-not $procs.Count) { throw [System.Exception]::new("not_running|$name is not running.|Look up the exact name with system_info processes.") }
+      # Asked nicely first (its window closes as if you had), then made to.
+      foreach ($pr in $procs) { try { if ($pr.MainWindowHandle -ne [IntPtr]::Zero) { [void]$pr.CloseMainWindow() } } catch {} }
+      Start-Sleep -Milliseconds 1500
+      $closed = 0
+      foreach ($pr in $procs) { try { $pr.Refresh(); if (-not $pr.HasExited) { Stop-Process -Id $pr.Id -Force -ErrorAction Stop }; $closed += 1 } catch {} }
+      return @{ done = $true; name = $name; closed = $closed
+        note = 'It can be opened again any time. If it starts with Windows, startup_disable stops that.' }
+    }
     { $_ -in 'startup_disable', 'startup_enable' } {
       $on = "$($a.action)" -eq 'startup_enable'
       $name = "$($p.name)"
