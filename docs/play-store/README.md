@@ -90,7 +90,7 @@ Both are signed with the same release key (certificate SHA-256 `2f727fa5…`), f
 
 **Graphics:**
 - App icon: `icon-512.png` (512×512, from the launcher icon; Play rounds the corners).
-- Feature graphic: `feature-graphic-1024x500.png`.
+- Feature graphic: `feature-graphic-1024x500.png` (the DEX wordmark, centred, with "The AI agent on your PC, in your pocket.").
 - Phone screenshots: at least 2 and up to 8, taken on the phone (Power + Volume down). In order:
   1. Home with a few tasks;
   2. a task with result cards (flights or hotels);
