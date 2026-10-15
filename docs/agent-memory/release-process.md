@@ -43,3 +43,5 @@ DEX's first public GitHub release was **v3.1.0**, on 2026-09-29: https://github.
 - Everything for Play is in `docs/play-store/README.md`: listing copy, form answers, icon, feature graphic, and the steps.
 - The privacy policy is `PRIVACY.md`; the deletion page is `docs/delete-account.md`.
 - Every Play upload needs a new `versionCode`. The first Play bundle was 2.0.1 / 38.
+- `bundlePlayRelease` also writes `native-debug-symbols.zip` (task `zipPlayReleaseNativeSymbols`). Upload it per version in App bundle explorer › Downloads to clear Play's "no debug symbols" warning.
+- AGP's `debugSymbolLevel` can't help: the only native libs are AndroidX's (graphics-path, datastore), shipped already stripped.

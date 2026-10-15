@@ -11,7 +11,15 @@ cd android
 ./gradlew :app:bundlePlayRelease
 ```
 
-The output is `app/build/outputs/bundle/playRelease/app-play-release.aab`. A copy of each release is kept in `android/release/` as `DEX-android-<version>-play.aab`. That folder is gitignored, and the bundle never goes into the repo.
+The output is `app/build/outputs/bundle/playRelease/app-play-release.aab`. The same command also writes `app/build/outputs/native-debug-symbols/playRelease/native-debug-symbols.zip`.
+
+A copy of each release is kept in `android/release/` as `DEX-android-<version>-play.aab` and `DEX-android-<version>-play-native-debug-symbols.zip`. That folder is gitignored, and neither file goes into the repo.
+
+**Native debug symbols.** Play warns: "This App Bundle contains native code, and you've not uploaded debug symbols."
+- DEX's only native code is two AndroidX libraries: Compose's path helper and DataStore's shared counter.
+- Google ships both already stripped, so there are no symbols for the build to put in the bundle.
+- The zip holds them as they are, keeping their exported entry points, which is what Play can use. It isn't a full symbol file.
+- Upload it with every bundle: Play Console › **Test and release › App bundle explorer** › pick the version › **Downloads** › *Native debug symbols* › **Upload**. The warning goes away, and native crashes show those function names.
 
 ### How the Play build differs from the GitHub APK (`assembleGithubRelease`)
 

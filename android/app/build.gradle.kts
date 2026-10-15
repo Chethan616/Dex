@@ -63,6 +63,9 @@ android {
       if (releaseSigning) signingConfig = signingConfigs.getByName("release")
       isMinifyEnabled = true
       isShrinkResources = true
+      // Symbol tables go into the bundle for any native library that has them.
+      // Today's two don't (see zipPlayReleaseNativeSymbols below).
+      ndk { debugSymbolLevel = "SYMBOL_TABLE" }
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
     }
   }
@@ -77,6 +80,21 @@ android {
     targetCompatibility = JavaVersion.VERSION_17
   }
 }
+
+// Play warns when a bundle with native code comes without debug symbols. DEX's
+// native code is AndroidX's (Compose's path helper, DataStore's shared counter),
+// shipped already stripped, so debugSymbolLevel has nothing to extract. What
+// they keep is their dynamic symbol table, the JNI entry points. This zips the
+// libraries as Play Console's "Native debug symbols" upload wants them (one
+// folder per ABI), next to every Play bundle; upload it with the bundle
+// (App bundle explorer › the version › Downloads).
+val zipPlayReleaseNativeSymbols = tasks.register<Zip>("zipPlayReleaseNativeSymbols") {
+  dependsOn("mergePlayReleaseNativeLibs")
+  from(layout.buildDirectory.dir("intermediates/merged_native_libs/playRelease/mergePlayReleaseNativeLibs/out/lib"))
+  destinationDirectory.set(layout.buildDirectory.dir("outputs/native-debug-symbols/playRelease"))
+  archiveFileName.set("native-debug-symbols.zip")
+}
+tasks.matching { it.name == "bundlePlayRelease" }.configureEach { finalizedBy(zipPlayReleaseNativeSymbols) }
 
 kotlin {
   compilerOptions {
