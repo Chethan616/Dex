@@ -59,6 +59,8 @@ import type { AgentSession, HlEvent } from '../sessions/types';
 import { appendEvent, buildTranscript, type Block, type Transcript } from '../../renderer/logs/transcript';
 import { foldReactions } from '../../shared/reactions';
 import { quickReplies, widgetLine } from '../../shared/widgets';
+import { SLASH_COMMANDS, taskTitle } from '../../shared/slashCommands';
+import { MENTIONS } from '../../renderer/hub/mentions';
 import { buildSubagents, foldSubagentEvent, subagentsList, EMPTY_SUBAGENTS, type Subagent, type SubagentsState } from '../../shared/subagents';
 import { firebaseConfig } from './config';
 import { clearCredentials, loadCredentials, saveCredentials } from './credentials';
@@ -86,7 +88,7 @@ export interface BridgeHost {
   /** Files the task recorded (dex-state file) — shown in the phone's Files sheet. */
   getTaskFiles(id: string): Array<{ path: string; name: string; size?: number }>;
   listEngines(): Promise<Array<{ id: string; name: string; models: Array<{ id: string; label: string }> }>>;
-  newTask(input: { prompt: string; engine?: string; model?: string; attachments?: PhoneAttachment[] }): Promise<{ id: string; error?: string }>;
+  newTask(input: { prompt: string; engine?: string; model?: string; attachments?: PhoneAttachment[] }): Promise<{ id?: string; error?: string }>;
   followUp(id: string, prompt: string, attachments?: PhoneAttachment[]): Promise<Record<string, unknown>>;
   pause(id: string): unknown;
   resume(id: string): Promise<Record<string, unknown>>;
@@ -264,7 +266,7 @@ function lastLine(t: Transcript): string {
   for (let i = t.blocks.length - 1; i >= 0; i -= 1) {
     const b = t.blocks[i];
     if (b.kind === 'text' && b.text.trim()) return b.text.trim().split('\n').pop()!.slice(0, 160);
-    if (b.kind === 'tool') return `${b.result ? b.meta.done : b.meta.active} ${b.meta.display ?? b.summary}`.slice(0, 160);
+    if (b.kind === 'tool') return `${b.result ? b.meta.done : b.meta.active} ${b.meta.display ?? b.summary}`.trim().slice(0, 160);
     if (b.kind === 'done') return b.summary.split('\n')[0].slice(0, 160);
     if (b.kind === 'error') return b.message.slice(0, 160);
     if (b.kind === 'widget') return widgetLine(b.widget).slice(0, 160);
@@ -462,6 +464,9 @@ export class FirebaseBridge {
       lastSeen: serverTimestamp(),
       engines,
       approvalMode: this.host.getApprovalMode(),
+      // The phone's `/` and `@` menus list what this DEX understands.
+      commands: SLASH_COMMANDS.map((c) => ({ name: c.name, label: c.label, usage: c.usage, summary: c.summary, requiresArg: c.requiresArg })),
+      mentions: MENTIONS.map((m) => ({ name: m.name, label: m.label, summary: m.summary })),
     }, { merge: true });
   }
 
@@ -629,6 +634,8 @@ export class FirebaseBridge {
     batch.set(doc(this.db, this.userDoc('sessions', id)), {
       id,
       prompt: clip(session.prompt, 10_000),
+      // What lists and the live update call it ("Your routines", not three lines of instructions).
+      title: clip(taskTitle(session.prompt), 200),
       status: session.status,
       engine: session.engine ?? null,
       model: session.model ?? null,

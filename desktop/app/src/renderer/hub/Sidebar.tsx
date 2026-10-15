@@ -3,6 +3,7 @@ import type { AgentSession, SessionStatus } from './types';
 import { orderSessionsForSidebar } from './sessionOrdering';
 import { closeAppPopup, openAnchoredAppPopup } from '../shared/appPopup';
 import { AgentAvatar, useBotMood } from '../components/lib';
+import { taskTitle } from '../../shared/slashCommands';
 
 /**
  * A row's icon: the site's favicon while the task rests, its bot while it's
@@ -211,13 +212,13 @@ function SessionRowImpl({
         onClick={() => onSelect?.(s.id)}
         onMouseDown={preventMouseFocus}
         tabIndex={-1}
-        data-tooltip={s.prompt}
+        data-tooltip={taskTitle(s.prompt)}
       >
         <span className="sidebar__row-icon">
           <RowIcon session={s} favicon={favicon} size={18} fallbackClass="sidebar__row-icon-fallback" />
           <span className="sidebar__row-dot" style={{ background: dot.color }} aria-label={dot.label} />
         </span>
-        <span className="sidebar__row-title">{s.prompt}</span>
+        <span className="sidebar__row-title">{taskTitle(s.prompt)}</span>
         {pinned && (
           <span className="sidebar__row-pin" aria-label="Pinned" title="Pinned">
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
@@ -311,7 +312,7 @@ function TabChipImpl({
       onClick={() => onSelect?.(s.id)}
       onMouseDown={preventMouseFocus}
       tabIndex={-1}
-      data-tooltip={s.prompt}
+      data-tooltip={taskTitle(s.prompt)}
       data-status={s.status}
       data-bucket={bucket}
     >
@@ -320,7 +321,7 @@ function TabChipImpl({
         <RowIcon session={s} favicon={favicon} size={14} fallbackClass="tabstrip__chip-icon-fallback" />
         <span className="tabstrip__chip-dot" style={{ background: dot.color }} aria-label={dot.label} />
       </span>
-      <span className="tabstrip__chip-title">{s.prompt}</span>
+      <span className="tabstrip__chip-title">{taskTitle(s.prompt)}</span>
     </button>
   );
 }

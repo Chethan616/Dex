@@ -203,6 +203,13 @@ const claudeCodeAdapter: EngineAdapter = {
       '--include-partial-messages',
       '--verbose',
       '--dangerously-skip-permissions',
+      // Claude Code's own schedulers and skills stay out of DEX's tasks. Asked
+      // to "add that to the workflow", an agent used its `schedule` skill and
+      // made a cloud routine DEX can't see, so /workflow stayed empty; DEX has
+      // its own (dex-workflow, the hub's slash commands). And, as with
+      // --strict-mcp-config below, the user's personal skills aren't the task's.
+      '--disable-slash-commands',
+      '--disallowedTools', 'CronCreate,CronDelete,CronList,RemoteTrigger,ScheduleWakeup',
     ];
     if (_ctx.resumeSessionId) args.push('--resume', _ctx.resumeSessionId);
     if (_ctx.model) args.push('--model', _ctx.model);

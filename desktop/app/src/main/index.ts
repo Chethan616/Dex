@@ -169,6 +169,7 @@ import { ChannelRouter } from './channels/ChannelRouter';
 import { WorkflowStore } from './workflows/store';
 import { startWorkflowScheduler } from './workflows/scheduler';
 import { workflowPrompt, type Workflow } from '../shared/workflows';
+import { expandSlashCommand } from '../shared/slashCommands';
 import { registerChannelHandlers, unregisterChannelHandlers } from './channels/ipc';
 // Auto-updater
 import {
@@ -3191,7 +3192,12 @@ app.whenReady().then(async () => {
         }));
       },
       newTask: async ({ prompt, engine, model, attachments: phoneFiles }) => {
-        const validatedPrompt = assertString(prompt, 'prompt', 10000);
+        // A `/command` from the phone is expanded here, as the hub's task box
+        // does (shared/slashCommands.ts): sent as typed, "/workflow" reached the
+        // agent without its instructions.
+        const expansion = expandSlashCommand(assertString(prompt, 'prompt', 10000));
+        if (expansion.error) return { error: expansion.error };
+        const validatedPrompt = expansion.prompt;
         // Same limits as the desktop's own task box (shared/attachments.ts).
         const attachments = assertAttachments(phoneFiles ?? []);
         const engineId = engine ? assertString(engine, 'engine', 50) : DEFAULT_ENGINE_ID;
@@ -3210,7 +3216,21 @@ app.whenReady().then(async () => {
           return { id, error: (err as Error).message };
         }
       },
-      followUp: (id, prompt, phoneFiles) => handleResumeRequest(assertString(id, 'id', 100), assertString(prompt, 'prompt', 10000), assertAttachments(phoneFiles ?? [])),
+      followUp: (id, prompt, phoneFiles) => {
+        const sessionId = assertString(id, 'id', 100);
+        const typed = assertString(prompt, 'prompt', 10000);
+        const files = assertAttachments(phoneFiles ?? []);
+        // As in the hub's composer: a bare `/workflow` draws the saved workflows
+        // into the chat with no agent turn; other commands are expanded first.
+        const expansion = expandSlashCommand(typed);
+        if (expansion.error) return Promise.resolve({ error: expansion.error });
+        if (expansion.command?.name === 'workflow' && typed.trim() === '/workflow' && files.length === 0 && sessionManager.getSession(sessionId)) {
+          sessionManager.appendOutput(sessionId, { type: 'user_input', text: '/workflow' });
+          showWorkflowsIn(sessionId);
+          return Promise.resolve({ ok: true });
+        }
+        return handleResumeRequest(sessionId, expansion.prompt, files);
+      },
       pause: (id) => pauseSessionFromMain(assertString(id, 'id', 100), 'button'),
       resume: (id) => handleResumeRequest(assertString(id, 'id', 100), 'Continue from where you left off.', []),
       stop: (id) => cancelSessionFromMain(assertString(id, 'id', 100), 'button'),

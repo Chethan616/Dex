@@ -31,23 +31,30 @@ const INSTALL = `(() => {
   const sheet = new CSSStyleSheet();
   sheet.replaceSync(\`
     :host { all: initial; position: fixed; inset: 0; z-index: 2147483647; pointer-events: none; }
-    .c { position: absolute; left: 0; top: 0; width: 26px; height: 26px; opacity: 0;
+    .c { position: absolute; left: 0; top: 0; width: 28px; height: 28px; margin: -5px 0 0 -6px; opacity: 0;
          transition-property: transform, opacity; transition-timing-function: cubic-bezier(.2,.8,.2,1);
-         will-change: transform; filter: drop-shadow(0 2px 6px rgba(0,0,0,.35)) drop-shadow(0 0 10px rgba(53,184,255,.55)); }
+         will-change: transform; filter: drop-shadow(0 2px 5px rgba(0,0,0,.35)) drop-shadow(0 0 9px rgba(79,140,255,.45)); }
     .c.on { opacity: 1; }
-    .c svg { display: block; transform-origin: 3px 3px; transition: transform .12s ease; }
-    .c.press svg { transform: scale(.82); }
-    .tag { position: absolute; left: 20px; top: 20px; padding: 2px 7px; border-radius: 999px;
-           background: #1683ff; color: #fff; font: 600 10px/1.5 system-ui, sans-serif; letter-spacing: .02em;
-           box-shadow: 0 1px 4px rgba(0,0,0,.3); white-space: nowrap; }
+    .c svg { display: block; transform-origin: 6px 5px; transition: transform .12s ease; }
+    .c.press svg { transform: scale(.84); }
+    .tag { position: absolute; left: 21px; top: 22px; padding: 2px 8px 2px 7px; border-radius: 999px;
+           background: linear-gradient(135deg, #3bb4ff, #7b5cff); color: #fff; font: 700 10px/1.5 system-ui, sans-serif;
+           letter-spacing: .04em; box-shadow: 0 1px 4px rgba(0,0,0,.3), inset 0 0 0 1px rgba(255,255,255,.35); white-space: nowrap; }
     .ring { position: absolute; width: 36px; height: 36px; margin: -18px 0 0 -18px; border-radius: 50%;
-            border: 2px solid rgba(53,184,255,.9); opacity: .9; animation: ring .5s ease-out forwards; }
+            border: 2px solid rgba(91,140,255,.9); opacity: .9; animation: ring .5s ease-out forwards; }
     @keyframes ring { to { transform: scale(1.9); opacity: 0; } }
   \`);
   root.adoptedStyleSheets = [sheet];
   const c = document.createElement('div');
   c.className = 'c';
-  c.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M3.2 2.6 20 10.4c.8.4.7 1.5-.1 1.8l-6.5 2.2-2.9 6.2c-.4.8-1.5.7-1.8-.1L2.1 3.8c-.3-.8.4-1.5 1.1-1.2Z" fill="#fff" stroke="#0b2a4a" stroke-width="1.6" stroke-linejoin="round"/></svg><span class="tag">DEX</span>';
+  // A rounded arrowhead with a notched base, in DEX's blue-to-violet, edged in
+  // white so it reads on any page; a highlight along its leading edge.
+  c.innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24">'
+    + '<defs><linearGradient id="dexg" x1="0.15" y1="0.1" x2="0.85" y2="0.95"><stop offset="0" stop-color="#4cc4ff"/><stop offset="0.55" stop-color="#3d7bff"/><stop offset="1" stop-color="#7b5cff"/></linearGradient></defs>'
+    + '<path d="M5 4.2 L19.4 10.6 L12.9 12.9 L10.6 19.4 Z" fill="#fff" stroke="#fff" stroke-width="5" stroke-linejoin="round"/>'
+    + '<path d="M5 4.2 L19.4 10.6 L12.9 12.9 L10.6 19.4 Z" fill="url(#dexg)" stroke="url(#dexg)" stroke-width="2.2" stroke-linejoin="round"/>'
+    + '<path d="M6.9 6.7 L10.6 8.4" stroke="rgba(255,255,255,.6)" stroke-width="1.2" stroke-linecap="round"/>'
+    + '</svg><span class="tag">DEX</span>';
   root.appendChild(c);
   (document.documentElement || document.body).appendChild(host);
   const state = { host, root, c, x: innerWidth / 2, y: innerHeight / 2 };

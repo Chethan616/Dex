@@ -34,6 +34,7 @@ import { ReactionBadge } from './Reactions';
 import { friendlyModel } from './modelName';
 import { agentEmojis, foldReactions, userMessageKey, type Reaction, type Reactions } from '../../../shared/reactions';
 import './chat.css';
+import { taskTitle } from '../../../shared/slashCommands';
 
 const NO_REACTIONS: Reaction[] = [];
 
@@ -612,7 +613,7 @@ export function ChatView({ session, tabUrls = [], engineName, engineIcon, onFoll
         <Minibar
           avatar={<AgentAvatar sessionId={sessionId} engineId={session.engine} status={session.status} mood={mood} size={28} />}
           sessionId={sessionId}
-          title={session.prompt}
+          title={taskTitle(session.prompt)}
           engineName={engineName}
           engineIcon={engineIcon}
           model={friendlyModel(session.model) ?? undefined}

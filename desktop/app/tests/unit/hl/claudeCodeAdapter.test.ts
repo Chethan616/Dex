@@ -96,6 +96,9 @@ describe('claude-code adapter spawn args', () => {
       '--include-partial-messages',
       '--verbose',
       '--dangerously-skip-permissions',
+      '--disable-slash-commands',
+      '--disallowedTools',
+      'CronCreate,CronDelete,CronList,RemoteTrigger,ScheduleWakeup',
       '--resume',
       'claude-session-123',
     ]);

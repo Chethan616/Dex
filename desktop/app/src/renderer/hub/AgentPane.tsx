@@ -26,6 +26,8 @@ import { taskFiles } from './workspace/docs/fileTree';
 import { useHydrateSession } from './useSessionsQuery';
 import { useSubagents } from './subagents';
 import type { AgentSession, OutputEntry } from './types';
+import { taskTitle } from '../../shared/slashCommands';
+import { classifyTool } from '../logs/transcript';
 
 const ENGINE_NAMES: Record<string, string> = {
   'claude-code': 'Claude Code',
@@ -711,13 +713,28 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
     window.addEventListener('dex:focus-composer', onFocus);
     return () => window.removeEventListener('dex:focus-composer', onFocus);
   }, [session.id]);
+  /**
+   * Is the agent using the browser in this turn? That is what brings the page
+   * to the front, not that the task browsed at some point: a follow-up
+   * question switched to the page the moment it was sent, while the agent
+   * only read and answered.
+   */
+  const browsingThisTurn = useMemo(() => {
+    const out = session.output;
+    for (let i = out.length - 1; i >= 0; i -= 1) {
+      const e = out[i];
+      if (e.type === 'user_input') return false;
+      if (e.type === 'tool_call' && classifyTool(e.name, e.args).kind === 'browse') return true;
+    }
+    return false;
+  }, [session.output]);
   const chatActive = useMemo(() => {
     if (docActive || subagentsActive || deskActive || toolActive) return false;
     if (session.hasBrowser === false) return true;
     if (paneOverride !== 'auto') return paneOverride === 'chat';
     const working = session.status === 'running' || session.status === 'stuck';
-    return !(working && session.primarySite);
-  }, [docActive, subagentsActive, deskActive, toolActive, session.hasBrowser, session.status, session.primarySite, paneOverride]);
+    return !(working && browsingThisTurn);
+  }, [docActive, subagentsActive, deskActive, toolActive, session.hasBrowser, session.status, browsingThisTurn, paneOverride]);
 
   /**
    * The task's tabs (docs/unify/PLAN.md §3.2). A blank tab *you* opened shows
@@ -1062,7 +1079,7 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
           <span className={`pane__dot pane__dot--${session.status}`} />
         </span>
         <div className="pane__title-group">
-          <span className="pane__prompt">{session.prompt}</span>
+          <span className="pane__prompt">{taskTitle(session.prompt)}</span>
           {session.engine === 'codex' && (
             <img className="pane__engine-icon" src={openaiLogo} alt="Codex" title="Codex" />
           )}

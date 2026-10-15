@@ -13,6 +13,7 @@ import dexWordmark from '../assets/dex-wordmark.png';
 import { taglineFor } from './taglines';
 import { Orb, TaskAvatar } from '../components/lib';
 import type { AgentSession } from './types';
+import { taskTitle } from '../../shared/slashCommands';
 
 const HOUR = 3600 * 1000;
 const DAY = 24 * HOUR;
@@ -256,7 +257,7 @@ export function Dashboard({ sessions, onSwitchToGrid, onSelectSession, onSubmitT
                 </span>
                 <span className="dashboard__recent-status">{STATUS_LABEL[session.status]}</span>
                 {session.group && <span className="dashboard__recent-group">{session.group}</span>}
-                <span className="dashboard__recent-prompt">{session.prompt}</span>
+                <span className="dashboard__recent-prompt">{taskTitle(session.prompt)}</span>
                 <span className="dashboard__recent-elapsed">{formatElapsed(session.createdAt)}</span>
               </div>
             ))}

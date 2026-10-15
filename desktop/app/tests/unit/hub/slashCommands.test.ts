@@ -7,7 +7,7 @@
  * message that happens to start with a slash being silently rewritten.
  */
 import { describe, expect, it } from 'vitest';
-import { expandSlashCommand, matchingCommands, SLASH_COMMANDS } from '../../../src/renderer/hub/slashCommands';
+import { expandSlashCommand, matchingCommands, SLASH_COMMANDS, taskTitle, typedCommand } from '../../../src/renderer/hub/slashCommands';
 
 describe('expandSlashCommand', () => {
   it('leaves an ordinary prompt untouched', () => {
@@ -122,5 +122,32 @@ describe('matchingCommands', () => {
 
   it('suggests nothing for a non-slash input', () => {
     expect(matchingCommands('scrape this')).toEqual([]);
+  });
+});
+
+describe('reading a task prompt back', () => {
+  const expanded = (raw: string) => expandSlashCommand(raw).prompt;
+
+  it('gives back what the user typed for an expanded command', () => {
+    expect(typedCommand(expanded('/workflow'))).toBe('/workflow');
+    expect(typedCommand(expanded('/workflow check VTOP every morning'))).toBe('/workflow check VTOP every morning');
+    expect(typedCommand(expanded('/scrape vtop.vit.ac.in and log in first'))).toBe('/scrape vtop.vit.ac.in and log in first');
+    expect(typedCommand(expanded('/bugbounty example.com'))).toBe('/bugbounty example.com');
+    expect(typedCommand('/workflow')).toBe('/workflow');
+  });
+
+  it('leaves ordinary prompts alone', () => {
+    expect(typedCommand('Find flights to Goa')).toBeNull();
+    expect(typedCommand('/notacommand hello')).toBeNull();
+  });
+
+  it('titles a task by what it is, not its instructions', () => {
+    expect(taskTitle(expanded('/workflow'))).toBe('Your routines');
+    expect(taskTitle('/workflow')).toBe('Your routines');
+    expect(taskTitle(expanded('/workflow check VTOP every morning'))).toBe('Check VTOP every morning');
+    expect(taskTitle(expanded('/scrape https://www.vit.ac.in/'))).toBe('Map vit.ac.in');
+    expect(taskTitle(expanded('/bugbounty example.com'))).toBe('Security check of example.com');
+    expect(taskTitle('Run my workflow “Morning briefing”.\n\nDo these steps in order:')).toBe('Morning briefing');
+    expect(taskTitle('\n  Find the cheapest flight\nto Goa')).toBe('Find the cheapest flight');
   });
 });

@@ -12,6 +12,7 @@
  * emit prose as many small `thinking` deltas (Claude Code sends one per
  * token), which is why consecutive text is merged rather than one block each.
  */
+import { typedCommand } from '../../shared/slashCommands';
 import type { OrbState } from 'thinking-orbs';
 import { parseWidget, type Widget } from '../../shared/widgets';
 import { HOSTED_CONNECTORS, remoteConnectionId } from '../../shared/connectorCatalog';
@@ -92,9 +93,117 @@ function windowsMeta(tool: string, args: unknown, element: { name?: string; role
   return { kind: 'desktop', active: words.active, done: words.done, orb: KIND_META.desktop.orb, display: '' };
 }
 
+/* ── Steps in plain words ──────────────────────────────────────────────
+ * A shell step used to read "Ran browser-harness-js <<'EOF'" and a look at a
+ * screenshot "Read /tmp/vtop-menu.png" — in the chat and on the phone's live
+ * update alike. These say what the step does: the agent's own words for it
+ * (the comment that opens its browser code, or the shell call's
+ * description) put into the present and past tense, else what the code
+ * does ("Opening vtop.vit.ac.in"). */
+
+/** A step's first word → its present and past form: "Click on Academics" → "Clicking on Academics". */
+const VERBS: Record<string, [string, string]> = {
+  click: ['Clicking', 'Clicked'], tap: ['Tapping', 'Tapped'], open: ['Opening', 'Opened'], go: ['Going', 'Went'],
+  navigate: ['Going', 'Went'], visit: ['Visiting', 'Visited'], fill: ['Filling', 'Filled'], type: ['Typing', 'Typed'],
+  enter: ['Entering', 'Entered'], select: ['Selecting', 'Selected'], choose: ['Choosing', 'Chose'], pick: ['Picking', 'Picked'],
+  check: ['Checking', 'Checked'], find: ['Finding', 'Found'], look: ['Looking', 'Looked'], read: ['Reading', 'Read'],
+  get: ['Getting', 'Got'], extract: ['Extracting', 'Extracted'], scroll: ['Scrolling', 'Scrolled'], wait: ['Waiting', 'Waited'],
+  close: ['Closing', 'Closed'], submit: ['Submitting', 'Submitted'], search: ['Searching', 'Searched'], press: ['Pressing', 'Pressed'],
+  log: ['Logging', 'Logged'], login: ['Logging in', 'Logged in'], sign: ['Signing', 'Signed'], refresh: ['Refreshing', 'Refreshed'],
+  reload: ['Reloading', 'Reloaded'], clear: ['Clearing', 'Cleared'], set: ['Setting', 'Set'], switch: ['Switching', 'Switched'],
+  take: ['Taking', 'Took'], capture: ['Capturing', 'Captured'], connect: ['Connecting', 'Connected'], save: ['Saving', 'Saved'],
+  download: ['Downloading', 'Downloaded'], list: ['Listing', 'Listed'], show: ['Showing', 'Showed'], run: ['Running', 'Ran'],
+  install: ['Installing', 'Installed'], create: ['Creating', 'Created'], make: ['Making', 'Made'], write: ['Writing', 'Wrote'],
+  copy: ['Copying', 'Copied'], move: ['Moving', 'Moved'], delete: ['Deleting', 'Deleted'], remove: ['Removing', 'Removed'],
+  update: ['Updating', 'Updated'], start: ['Starting', 'Started'], stop: ['Stopping', 'Stopped'], test: ['Testing', 'Tested'],
+  verify: ['Verifying', 'Verified'], try: ['Trying', 'Tried'], retry: ['Retrying', 'Retried'], use: ['Using', 'Used'],
+  add: ['Adding', 'Added'], focus: ['Focusing', 'Focused'], hover: ['Hovering', 'Hovered'], inspect: ['Inspecting', 'Inspected'],
+  count: ['Counting', 'Counted'], compare: ['Comparing', 'Compared'], collect: ['Collecting', 'Collected'], fetch: ['Fetching', 'Fetched'],
+  query: ['Querying', 'Queried'], print: ['Printing', 'Printed'], dismiss: ['Dismissing', 'Dismissed'], accept: ['Accepting', 'Accepted'],
+  expand: ['Expanding', 'Expanded'], return: ['Returning', 'Returned'], build: ['Building', 'Built'], render: ['Rendering', 'Rendered'],
+  convert: ['Converting', 'Converted'], send: ['Sending', 'Sent'], upload: ['Uploading', 'Uploaded'], view: ['Viewing', 'Viewed'],
+  navigating: ['Going', 'Went'],
+};
+
+/** "Click on Academics menu" → { active: "Clicking on Academics menu", done: "Clicked on Academics menu" }. */
+export function stepPhrase(text: string): { active: string; done: string } | null {
+  const t = text.trim().replace(/^[-*•\s]+/, '').replace(/[.:;,\s]+$/, '').slice(0, 90);
+  if (!t || !/[a-z]/i.test(t)) return null;
+  const m = /^([A-Za-z]+)([\s\S]*)$/.exec(t);
+  const verb = m ? VERBS[m[1].toLowerCase()] : undefined;
+  if (!m || !verb) {
+    const same = t.charAt(0).toUpperCase() + t.slice(1);
+    return { active: same, done: same };
+  }
+  return { active: verb[0] + m[2], done: verb[1] + m[2] };
+}
+
+const hostIn = (url: string): string => {
+  try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
+};
+
+/** DEX's own command-line tools, by name. */
+const DEX_CLI: Record<string, [string, string]> = {
+  'dex-ui': ['Asking you', 'Asked you'], 'dex-workflow': ['Updating your routines', 'Updated your routines'],
+  'dex-canvas': ['Writing it up', 'Wrote it up'], 'dex-open': ['Opening a file', 'Opened a file'],
+  'dex-find': ['Searching your files', 'Searched your files'], 'dex-websearch': ['Searching the web', 'Searched the web'],
+  'dex-send': ['Sending it to you', 'Sent it to you'], 'dex-tab': ['Using a browser tab', 'Used a browser tab'],
+  'dex-remember': ['Remembering it', 'Remembered it'], 'dex-recall': ['Recalling what it knows', 'Recalled what it knows'],
+  'dex-state': ['Updating its plan', 'Updated its plan'], 'dex-react': ['Reacting', 'Reacted'],
+  'dex-3d': ['Making a 3D model', 'Made a 3D model'], 'dex-blender': ['Working in Blender', 'Worked in Blender'],
+  'dex-fill': ['Filling a form', 'Filled a form'], 'dex-registry': ['Checking Windows settings', 'Checked Windows settings'],
+};
+
+/** A shell call in plain words, or null to keep the default ("Ran …"). */
+function shellMeta(args: unknown): ToolMeta | null {
+  if (!args || typeof args !== 'object') return null;
+  const a = args as Record<string, unknown>;
+  const raw = a.command ?? a.cmd;
+  const command = Array.isArray(raw) ? raw.map(String).join(' ') : typeof raw === 'string' ? raw : '';
+  const description = typeof a.description === 'string' ? a.description : '';
+  const browse = (active: string, done: string): ToolMeta => ({ kind: 'browse', active, done, orb: KIND_META.browse.orb, display: '' });
+  const plain = (p: { active: string; done: string }, kind: ToolKind): ToolMeta => ({ kind, ...p, orb: KIND_META[kind].orb, display: '' });
+
+  if (/browser-harness-js/.test(command)) {
+    const comment = /^\s*\/\/\s*(.+)$/m.exec(command)?.[1];
+    const said = (comment && stepPhrase(comment)) || (description && stepPhrase(description));
+    if (said) return plain(said, 'browse');
+    if (/connectToAssignedTarget/.test(command)) return browse('Opening its browser tab', 'Opened its browser tab');
+    const url = /navigate\(\s*\{\s*url:\s*['"`]([^'"`]+)['"`]/.exec(command)?.[1];
+    if (url) return browse(`Opening ${hostIn(url) || 'a page'}`, `Opened ${hostIn(url) || 'a page'}`);
+    if (/dispatchMouseEvent|\.click\(/.test(command)) return browse('Clicking on the page', 'Clicked on the page');
+    if (/insertText|dispatchKeyEvent/.test(command)) return browse('Typing on the page', 'Typed on the page');
+    if (/captureScreenshot/.test(command)) return browse('Looking at the page', 'Looked at the page');
+    return browse('Reading the page', 'Read the page');
+  }
+  const cli = /(?:^|[\s;&|(])((?:dex-[a-z0-9]+))(?=\s|$)/.exec(command)?.[1];
+  if (cli && DEX_CLI[cli]) return plain({ active: DEX_CLI[cli][0], done: DEX_CLI[cli][1] }, 'run');
+  const said = description && stepPhrase(description);
+  return said ? plain(said, 'run') : null;
+}
+
+/** A Read of a screenshot the agent took: it's looking at the page, not reading a file. */
+function readMeta(args: unknown): ToolMeta | null {
+  const p = args && typeof args === 'object' ? (args as Record<string, unknown>).file_path ?? (args as Record<string, unknown>).path : undefined;
+  if (typeof p !== 'string' || !/\.(png|jpe?g|webp|gif)$/i.test(p)) return null;
+  const shot = /[\\/](tmp|temp)[\\/]|screenshot|screen[-_]?shot|capture/i.test(p);
+  const name = p.split(/[\\/]/).pop() ?? p;
+  return shot
+    ? { kind: 'browse', active: 'Looking at the page', done: 'Looked at the page', orb: KIND_META.browse.orb, display: '' }
+    : { kind: 'read', active: `Looking at ${name}`, done: `Looked at ${name}`, orb: KIND_META.read.orb, display: '' };
+}
+
 export function classifyTool(name: string, args?: unknown): ToolMeta {
   const win = WINDOWS_TOOL.exec(name);
   if (win) return windowsMeta(win[1], args);
+  if (/^(bash|shell|exec_command|local_shell)$/i.test(name)) {
+    const meta = shellMeta(args);
+    if (meta) return meta;
+  }
+  if (name === 'Read') {
+    const meta = readMeta(args);
+    if (meta) return meta;
+  }
   // Claude Code loading deferred tools: housekeeping, not a step worth naming.
   if (name === 'ToolSearch') return { kind: 'other', done: 'Loaded its tools', active: 'Loading its tools', orb: KIND_META.other.orb, display: '' };
   let kind: ToolKind = 'other';
@@ -373,7 +482,9 @@ function fold(t: Transcript, raw: RawEvent, at: number | undefined): Transcript 
 
 export function buildTranscript(prompt: string | undefined, events: RawEvent[]): Transcript {
   let t = EMPTY_TRANSCRIPT;
-  if (prompt?.trim()) t = push(t, { kind: 'user', id: 0, text: prompt.trim() });
+  // A command's task keeps the expanded instructions as its prompt; the chat
+  // shows what the user typed ("/workflow"), not those instructions.
+  if (prompt?.trim()) t = push(t, { kind: 'user', id: 0, text: typedCommand(prompt) ?? prompt.trim() });
   const first = prompt?.trim();
   for (const ev of events) {
     // Some engines echo the opening prompt as a user_input; it's already shown.
