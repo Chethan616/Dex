@@ -27,3 +27,6 @@ The owner asked (2026-10-14) for workflows and daily routines in DEX:
 - Phone-sent `/workflow` is now expanded in main (`shared/slashCommands.ts`).
 - If a routine still doesn't save, check the task's events in `%APPDATA%/DEX/sessions.db` (`session_events`) for which tool the agent used.
 - **Codex equivalent:** `in_app_local_automation` and Codex's own `browser_use`, `in_app_browser` and `computer_use` are off in DEX's tasks via `-c features.X=false`. Don't use `--disable`: it errors on a feature name an older Codex lacks.
+- **Second try failed too (2026-10-15 ~22:20):** the owner's DEX was a dev build started before the fixes. Check what's running before blaming the code: `Get-Process electron`'s path and start time, and whether `electron-forge` actually restarted main.
+- **Now:** every prompt carries DEX's memory and the routine rules (`engines/memory.ts`). "execute <routine name>" runs it directly (`workflowCalledFor`). Clean-up steps use `temp_clean`, `recycle_bin_empty` and `app_close`.
+

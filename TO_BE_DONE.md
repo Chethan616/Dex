@@ -25,6 +25,14 @@
 - **Phone commands:** slash commands now live in `src/shared/slashCommands.ts`, and main expands them for phone tasks and follow-ups. Before this, "/workflow" sent from the phone reached the agent as bare text.
 - **Titles:** `taskTitle()` and `typedCommand()` give command tasks titles like "Your routines" and show what was typed as the first message. The bridge sends `title`. The phone shows `Session.heading`.
 - **Plain-words steps:** in `transcript.ts` (`stepPhrase`, `shellMeta`, `readMeta`), used by the chat and the phone's live update.
+- **Second workflow chat (`497fc0c6`).** The owner's DEX was the dev build started at 20:30, before these fixes; it was restarted with them at about 22:40.
+  - **Shared memory:** `engines/memory.ts` gives every engine DEX's memory (sites, whether a login is saved, routines) plus the rules (record with `dex-remember`; routines only through `dex-workflow`).
+  - **Routines by name:** `workflowCalledFor` makes "execute order 66" run that routine from the task box or the phone.
+  - **New Windows actions:** `temp_clean`, `recycle_bin_empty`, `app_close` (protected list in `actions.mjs`).
+  - **VTOP:** the stored login was a placeholder ("23BXX" from the docs' example) and was cleared. The site and its nicknames are kept.
+  - **Still to do:**
+    - DEX doesn't start with Windows, so scheduled routines run only while it's open or in the tray. Offer start-at-login.
+    - Run a real "Fasten my PC" routine and "execute order 66" end to end.
 - **Codex too:** its own automations, browser and computer use are off, via `-c features.X=false` (not `--disable`, which refuses to start on unknown names). Its PowerShell- and `dex-sh`-wrapped steps get plain words (`unwrapShell`, `everydayCommand`). Its MCP calls are named `mcp__server__tool`.
 - **Follow-ups stay in the chat:** AgentPane `browsingThisTurn`.
 - **New DEX cursor:** in `main/workspace/agentCursor.ts`.
