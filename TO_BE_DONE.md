@@ -20,6 +20,28 @@
 
 ## ▶ RESUME HERE — live work log (keep this block current; newest first)
 
+**2026-10-16, owner's PC, session `baacd51d`: memory, and why no workflow ever saved.** Pushed in `0972e13c`.
+- **Workflows, the real cause:** Claude Code now runs commands through its **PowerShell** tool. Windows PowerShell puts a BOM in front of anything it pipes, so every `dex-workflow create` spec arrived as `"spec":﻿{…}`.
+  - The BOM is now stripped in `dex-lib.sh` (`dex_stdin`, `dex_file`) and in `localTaskServer.readBody`.
+  - New JSON-free form: `dex-workflow create "<name>" --when "<words>" --step "pc: …"`, plus `--file`.
+  - Schedules parse from words and cron (`triggerFromText`); steps can be named by action.
+  - `show` with no workflows posts no card.
+  - `--help` on any `dex-*` prints help. It used to run `dex-find "--help"`, which posted Steam logs into the chat.
+  - The PowerShell tool now gets plain-words steps.
+- **Memory (owner: "don't hardcode, other users differ; like graphify, don't waste tokens"):**
+  - Notes: `main/memory/notes.ts`, one fact each, a topic each (`shared/memoryTopics.ts`).
+  - Index: `main/memory/recall.ts` picks what each task is told (core notes, what its words or topics reach, a one-line outline). `dex-recall` returns `remembered`.
+  - `dex-remember note|forget-note|list`; secrets are refused.
+  - Settings › About you (questions in `shared/aboutYou.ts`, branching) and the ChatGPT/Claude import. Settings › Memory lists and forgets. The questions are also an optional onboarding step, `aboutyou`.
+- **Sites moved to `<userData>/memory/sites.json`, with one keychain entry per login.** Windows caps an entry at 2,560 bytes, so the old single entry broke past about 12 sites. It's moved over on first load.
+- **Tests had been writing into the owner's real keychain:** `vi.mock('keytar')` doesn't catch `require`. Now `tests/fixtures/keytar-guard.ts` gives every `require('keytar')` an in-memory fake. The owner's sites were restored (vtop + egateway; the egateway login is kept).
+- **Admin helper setup never ran:** `elevation.ts` passed `\"path\"`, which the elevated PowerShell read as literal quotes. Now plain quotes, and `setup-elevated.ps1` writes `error.txt` on failure.
+- **Recent sessions:** avatars stay still unless working, and the list has `contain: paint` (black flecks while scrolling).
+- **Still to do:**
+  - The owner should retry the admin helper and a routine on the restarted DEX (dex-dev11).
+  - Start-at-login is still only offered.
+  - The phone doesn't show Memory or About you yet. Memory stays on the PC on purpose: it never goes to Firebase.
+
 **2026-10-15 evening, owner's PC, session `baacd51d`: the owner's fourth batch** (from trying 2.0.1 on the phone). Done and pushed: `942efa59` (desktop) and `5a3f1553` (phone).
 - **Workflows didn't save:** the agent used Claude Code's own `schedule` skill (a cloud routine) instead of `dex-workflow`. Claude Code runs now get `--disable-slash-commands` and `--disallowedTools CronCreate,CronDelete,CronList,RemoteTrigger,ScheduleWakeup`.
 - **Phone commands:** slash commands now live in `src/shared/slashCommands.ts`, and main expands them for phone tasks and follow-ups. Before this, "/workflow" sent from the phone reached the agent as bare text.
