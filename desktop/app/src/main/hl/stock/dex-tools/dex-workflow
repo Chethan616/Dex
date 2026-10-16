@@ -3,36 +3,58 @@
 # delete, list, show as cards in the chat, and run. DEX keeps them and starts
 # the scheduled ones on time. See workflows.md.
 #
-# Specs come from stdin as JSON (a heredoc), like dex-ui: quotes and brackets
-# are painful to hand-escape into arguments.
+# The plain way needs no JSON at all — a name, when, and the steps in words —
+# so it works the same from bash, PowerShell or cmd:
+#
+#   dex-workflow create "Fasten my PC" --when "every day at 8am" --step "pc: Clear temp files" --step "pc: Close apps I'm not using"
+#
+# A full spec (descriptions, details, prompts per step) comes as JSON on stdin
+# or from a file with --file. Stdin is cleaned of what Windows adds (a BOM,
+# carriage returns) before it's sent.
 
 set -uo pipefail
 . "$(dirname "$0")/dex-lib.sh"
 
 usage() {
-  cat >&2 <<'USAGE'
+  cat <<'USAGE'
 usage:
+  dex-workflow create "<name>" --when "<schedule>" --step "<step>" [--step ...] [--about "<what it's for>"]
+      <schedule>: "on demand", "every day at 8am", "weekdays at 7:30", "mon and fri at 9 pm", "every morning"
+      <step>: what to do, in words; start with a kind to set it — "pc: Clear temp files",
+              "web: Check the weather in my city", "notify: Send me the summary" (task, app, web, pc, notify, wait, ask)
+  dex-workflow create --file spec.json                full spec as JSON (also on stdin)
+  dex-workflow update <name|id> [--when ...] [--step ... (replaces all steps)] [--rename "<new name>"] [--about ...]
+  dex-workflow update <name|id> --file patch.json     only the fields that change, as JSON (also on stdin)
   dex-workflow list                                   every workflow: id, name, trigger, steps
   dex-workflow get <name|id>                          one workflow, in full
-  dex-workflow create <<'EOF'  {"name": "...", "trigger": {...}, "steps": [...]}
-  dex-workflow update <name|id> <<'EOF'  {only the fields that change; "steps" replaces them all}
   dex-workflow enable <name|id>  /  dex-workflow disable <name|id>
   dex-workflow delete <name|id>
   dex-workflow show [<name|id>]                       cards in the chat, with View and Run now
   dex-workflow run <name|id>                          start it now, as a task of its own
 
-Every key is in workflows.md.
+Every key is in workflows.md. Never Task Scheduler, cron or a script for the user: DEX runs these itself.
 USAGE
-  exit 2
 }
 
-[ $# -ge 1 ] || usage
+fail_usage() { usage >&2; exit 2; }
+
+[ $# -ge 1 ] || fail_usage
 op="$1"; shift
+case "$op" in -h|--help|help) usage; exit 0 ;; esac
 
 session="$(dex_session_id)"
 sid="$(dex_esc "$session")"
 ref=""
-[ $# -ge 1 ] && ref="$(dex_esc "$1")"
+case "${1:-}" in --*|"") ;; *) ref="$(dex_esc "$1")" ;; esac
+
+# One step from words: "pc: Clear temp files" → {"kind":"pc","title":"Clear temp files"}.
+step_json() {
+  local s="$1" kind="task"
+  case "$s" in
+    task:*|app:*|web:*|pc:*|notify:*|wait:*|ask:*) kind="${s%%:*}"; s="${s#*:}"; s="${s# }" ;;
+  esac
+  printf '{"kind":"%s","title":"%s"}' "$kind" "$(dex_esc "$s")"
+}
 
 case "$op" in
   list)
@@ -48,12 +70,53 @@ case "$op" in
     ;;
   create|update)
     if [ "$op" = update ] && [ -z "$ref" ]; then echo "dex-workflow update: say which workflow (its name or id)" >&2; exit 2; fi
-    spec="$(cat)"
-    [ -n "${spec//[[:space:]]/}" ] || { echo "dex-workflow $op: no JSON on stdin" >&2; exit 2; }
+    [ -n "$ref" ] && shift
+    name=""; when=""; about=""; rename=""; file=""; steps=""; worded=0
+    [ "$op" = create ] && name="$ref" && ref=""
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --file) file="${2:-}"; shift 2 ;;
+        --when|--schedule|--trigger) when="${when:+$when }${2:-}"; worded=1; shift 2 ;;
+        --every) when="${when:+$when }every ${2:-}"; worded=1; shift 2 ;;
+        --at) when="${when:+$when }at ${2:-}"; worded=1; shift 2 ;;
+        --on) when="${when:+$when }${2:-}"; worded=1; shift 2 ;;
+        --step|--steps)
+          worded=1
+          v="${2:-}"; v="${v#$'\xEF\xBB\xBF'}"
+          case "$v" in
+            \[*) v="${v#\[}"; v="${v%\]}"; steps="${steps:+$steps,}${v//$'\r'/}" ;;  # a JSON array of steps, as given
+            *) steps="${steps:+$steps,}$(step_json "$v")" ;;
+          esac
+          shift 2 ;;
+        --about|--description) about="${2:-}"; worded=1; shift 2 ;;
+        --rename|--name) rename="${2:-}"; worded=1; shift 2 ;;
+        --*) echo "dex-workflow $op: unknown option $1" >&2; fail_usage ;;
+        *) [ -z "$name" ] && [ "$op" = create ] && name="$(dex_esc "$1")"; shift ;;
+      esac
+    done
+    if [ -n "$file" ]; then
+      spec="$(dex_file "$file")" || exit 2
+    elif [ "$worded" = 1 ]; then
+      spec="{"
+      [ "$op" = create ] && spec="${spec}\"name\":\"${name}\","
+      [ -n "$rename" ] && spec="${spec}\"name\":\"$(dex_esc "$rename")\","
+      [ -n "$when" ] && spec="${spec}\"trigger\":\"$(dex_esc "$when")\","
+      [ -n "$about" ] && spec="${spec}\"description\":\"$(dex_esc "$about")\","
+      [ -n "$steps" ] && spec="${spec}\"steps\":[${steps}],"
+      spec="${spec%,}}"
+    elif [ ! -t 0 ]; then
+      spec="$(dex_stdin)"
+    else
+      spec=""
+    fi
+    if [ -z "${spec//[[:space:]]/}" ]; then
+      echo "dex-workflow $op: nothing to $op from — give --when and --step, a --file, or JSON on stdin" >&2
+      fail_usage
+    fi
+    if [ "$op" = create ] && [ "$worded" = 1 ] && [ -z "$name" ]; then echo "dex-workflow create: give it a name first: dex-workflow create \"<name>\" --when ... --step ..." >&2; exit 2; fi
     body="{\"op\":\"${op}\",\"sessionId\":\"${sid}\",\"ref\":\"${ref}\",\"spec\":${spec}}"
     ;;
-  -h|--help|help) usage ;;
-  *) echo "dex-workflow: unknown verb '$op'" >&2; usage ;;
+  *) echo "dex-workflow: unknown verb '$op'" >&2; fail_usage ;;
 esac
 
 dex_post /dex/workflow "$body"

@@ -15,6 +15,12 @@ param(
   [switch]$Remove
 )
 $ErrorActionPreference = 'Stop'
+# This runs in its own elevated window, so its errors never reach DEX on
+# their own: leave the first one next to this script for DEX to read.
+trap {
+  try { "$($_.Exception.Message)" | Out-File -Encoding utf8 (Join-Path $PSScriptRoot 'error.txt') } catch {}
+  exit 1
+}
 $dir = Join-Path $env:ProgramData 'DEX\elevated'
 
 if ($Remove) {

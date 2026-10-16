@@ -262,6 +262,12 @@ function shellMeta(args: unknown): ToolMeta | null {
     return browse('Reading the page', 'Read the page');
   }
   const cli = /(?:^|[\s;&|(])((?:dex-[a-z0-9]+))(?=\s|$)/.exec(command)?.[1];
+  // What DEX kept, in its words: the user sees what it now knows about them.
+  const kept = cli === 'dex-remember' ? /dex-remember\s+note\s+(["'])(.+?)\1/.exec(command)?.[2] : undefined;
+  if (kept) {
+    const said = kept.length > 60 ? `${kept.slice(0, 59)}…` : kept;
+    return plain({ active: `Remembering “${said}”`, done: `Remembered “${said}”` }, 'run');
+  }
   if (cli && DEX_CLI[cli]) return plain({ active: DEX_CLI[cli][0], done: DEX_CLI[cli][1] }, 'run');
   const said = description && stepPhrase(description);
   if (said) return plain(said, 'run');
@@ -285,7 +291,8 @@ function readMeta(args: unknown): ToolMeta | null {
 export function classifyTool(name: string, args?: unknown): ToolMeta {
   const win = WINDOWS_TOOL.exec(name);
   if (win) return windowsMeta(win[1], args);
-  if (/^(bash|shell|exec_command|local_shell)$/i.test(name)) {
+  // Claude Code on Windows runs commands through its PowerShell tool.
+  if (/^(bash|shell|exec_command|local_shell|powershell)$/i.test(name)) {
     const meta = shellMeta(args);
     if (meta) return meta;
   }

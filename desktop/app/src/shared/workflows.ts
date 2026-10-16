@@ -78,7 +78,7 @@ const KIND_WORDS: Record<string, StepKind> = {
   task: 'task', agent: 'task', do: 'task', action: 'task', step: 'task',
   app: 'app', apps: 'app', open: 'app', launch: 'app', desktop: 'app', windows: 'app',
   web: 'web', browser: 'web', browse: 'web', site: 'web', website: 'web', url: 'web', search: 'web',
-  pc: 'pc', system: 'pc', computer: 'pc', settings: 'pc',
+  pc: 'pc', system: 'pc', computer: 'pc', settings: 'pc', systemchange: 'pc', cleanup: 'pc', clean: 'pc',
   notify: 'notify', notification: 'notify', message: 'notify', tell: 'notify', report: 'notify', summary: 'notify', send: 'notify',
   wait: 'wait', delay: 'wait', pause: 'wait',
   ask: 'ask', question: 'ask', confirm: 'ask', choose: 'ask',
@@ -98,9 +98,47 @@ export function normalizeTime(raw: unknown): unknown {
   return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
 }
 
+const PART_OF_DAY: Record<string, string> = { morning: '08:00', noon: '12:00', midday: '12:00', afternoon: '14:00', evening: '19:00', night: '21:00', tonight: '21:00', midnight: '00:00' };
+
+/**
+ * A schedule said in words, the way agents (and people) write it: "every day
+ * at 8am", "weekdays 7:30", "mon and fri at 9 pm", "every morning", "on
+ * demand", or a cron line ("0 8 * * *"). Null when it isn't one.
+ */
+export function triggerFromText(raw: string): Trigger | null {
+  const s = raw.toLowerCase().trim();
+  if (!s) return null;
+  if (/^(manual|none|never|on[\s-]?demand|only when (i|they) ask|when (i|they) (ask|say)|by hand|on request)\b/.test(s)) return { kind: 'manual' };
+  const cron = /^(\d{1,2})\s+(\d{1,2})\s+\*\s+\*\s+([\d,\-*]+)$/.exec(s);
+  if (cron) {
+    const time = `${cron[2].padStart(2, '0')}:${cron[1].padStart(2, '0')}`;
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return null;
+    if (cron[3] === '*') return { kind: 'daily', time };
+    const nums = cron[3].split(',').flatMap((p) => {
+      const [a, b] = p.split('-').map(Number);
+      return b === undefined ? [a] : Array.from({ length: Math.max(0, b - a + 1) }, (_, i) => a + i);
+    });
+    const days = WEEKDAYS.filter((d) => nums.some((n) => JS_DAY[n % 7] === d));
+    return days.length === 7 ? { kind: 'daily', time } : days.length ? { kind: 'weekly', days, time } : null;
+  }
+  const clock = /\b(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?(?=\s|$|,)/.exec(s.replace(/\b(at|@)\s*/g, ' '));
+  let time: string | undefined;
+  if (clock && (clock[2] || clock[3])) time = normalizeTime(`${clock[1]}${clock[2] ? `:${clock[2]}` : ''}${clock[3] ?? ''}`) as string;
+  else if (clock && /\bat\s*\d/.test(s)) time = normalizeTime(clock[1]) as string;
+  time ??= Object.entries(PART_OF_DAY).find(([w]) => new RegExp(`\\b${w}s?\\b`).test(s))?.[1];
+  if (time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) time = undefined;
+  const days = WEEKDAYS.filter((d) => s.split(/[^a-z]+/).some((w) => DAY_WORDS[w]?.includes(d)));
+  if (days.length && days.length < 7) return { kind: 'weekly', days, time: time ?? '09:00' };
+  if (time || days.length === 7 || /\b(daily|every\s*day|everyday|each day)\b/.test(s)) return { kind: 'daily', time: time ?? '09:00' };
+  return null;
+}
+
 function normTrigger(raw: unknown): unknown {
   if (raw === undefined || raw === null || raw === '' || raw === 'manual') return { kind: 'manual' };
+  if (typeof raw === 'string') return triggerFromText(raw) ?? raw;
   if (!isObj(raw)) return raw;
+  const said = firstOf(raw, 'cron', 'expression', 'text');
+  if (typeof said === 'string' && triggerFromText(said)) return triggerFromText(said);
   const kind = String(firstOf(raw, 'kind', 'type', 'every', 'repeat') ?? '').toLowerCase();
   const time = normalizeTime(firstOf(raw, 'time', 'at'));
   const daysRaw = firstOf(raw, 'days', 'on', 'weekdays');
@@ -138,7 +176,11 @@ export function normalizeWorkflowInput(raw: unknown): unknown {
       if (typeof s === 'string') return { id: slugStepId(i), kind: 'task', title: s.trim().slice(0, 80), ...(s.trim().length > 80 ? { prompt: s.trim() } : {}) };
       if (!isObj(s)) return s;
       const given = String(firstOf(s, 'kind', 'type', 'action') ?? 'task').toLowerCase().replace(/[^a-z]/g, '');
-      const title = firstOf(s, 'title', 'name', 'label', 'do');
+      const params = isObj(s.params) ? s.params : isObj(s.args) ? s.args : {};
+      // No title: what it says it does, or the action it names ("temp_clean" → "Temp clean").
+      const said = firstOf(s, 'title', 'name', 'label', 'do', 'description', 'summary', 'text');
+      const named = firstOf(s, 'command') ?? firstOf(params, 'command', 'action', 'name');
+      const title = said ?? (typeof named === 'string' ? named.replace(/[_-]+/g, ' ').replace(/^\w/, (c) => c.toUpperCase()) : undefined);
       const step: Loose = {
         id: typeof s.id === 'string' && /^[A-Za-z0-9][\w-]{0,23}$/.test(s.id) ? s.id : slugStepId(i),
         kind: KIND_WORDS[given] ?? 'task',

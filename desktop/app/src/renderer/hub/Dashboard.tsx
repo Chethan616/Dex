@@ -252,7 +252,9 @@ export function Dashboard({ sessions, onSwitchToGrid, onSelectSession, onSubmitT
                 onKeyDown={(e) => { if (e.key === 'Enter') onSelectSession?.(session.id); }}
               >
                 <span className="dashboard__recent-avatar">
-                  <TaskAvatar session={session} size={22} />
+                  {/* Still, unless it's working: a hundred animated canvases in a clipped
+                      scroller left black flecks under the card on some GPUs while scrolling. */}
+                  <TaskAvatar session={session} size={22} animate={session.status === 'running'} />
                   <span className={`dashboard__recent-dot dashboard__recent-dot--${session.status}`} />
                 </span>
                 <span className="dashboard__recent-status">{STATUS_LABEL[session.status]}</span>

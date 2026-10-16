@@ -48,7 +48,7 @@ const BIN = 'claude';
 // ── helpers: prompt shaping ─────────────────────────────────────────────────
 
 function stringifyToolInput(name: string, input: Record<string, unknown>): string {
-  if (name === 'Bash' && typeof input.command === 'string') return input.command as string;
+  if ((name === 'Bash' || name === 'PowerShell') && typeof input.command === 'string') return input.command as string;
   const fp = input.file_path ?? input.path ?? input.target_file;
   if (typeof fp === 'string') {
     const extra = Object.entries(input).filter(([k]) => k !== 'file_path' && k !== 'path' && k !== 'target_file');

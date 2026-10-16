@@ -278,11 +278,15 @@ ${opts.prompt}`;
     engineLogger.warn('engines.run.mcpConfig.failed', { error: (err as Error).message });
   }
 
-  // DEX's own memory (sites, logins saved, routines), the same for every engine.
+  // DEX's own memory, the same for every engine: the core facts and what this
+  // task's words reach (memory/recall.ts), not all of it.
   let memoryLines: string[] = [];
   try {
     const { app } = await import('electron');
-    memoryLines = await (await import('./memory')).memoryBriefing(path.join(app.getPath('userData'), 'workflows.json'));
+    memoryLines = await (await import('./memory')).memoryBriefing(
+      path.join(app.getPath('userData'), 'workflows.json'),
+      `${opts.taskPrompt ?? ''}\n${opts.prompt}`,
+    );
   } catch (err) {
     engineLogger.warn('engines.run.memory.failed', { error: (err as Error).message });
   }

@@ -4,6 +4,8 @@ import { PhoneCard } from './PhoneCard';
 import { ExtensionsSection } from './ExtensionsSection';
 import { PuzzleIcon } from './icons/PuzzleIcon';
 import { DesktopControlSection } from './DesktopControlSection';
+import { MemorySection } from './MemorySection';
+import { AboutYouQuiz, ImportMemory } from '../components/aboutYou/AboutYou';
 import { MARKET_ITEMS, Mark, type MarketItem } from './connectors/Marketplace';
 import type { ActionId, KeyBinding } from './keybindings';
 import { fallbackShortcutPlatform, keyboardEventToShortcut } from '../../shared/hotkeys';
@@ -958,6 +960,8 @@ export type SettingsSectionId =
   | 'settings-agent-approval'
   | 'settings-privacy'
   | 'settings-appearance'
+  | 'settings-about-you'
+  | 'settings-memory'
   | 'settings-application';
 
 export interface SettingsOpenIntent {
@@ -986,6 +990,8 @@ interface SettingsTab {
 const SETTINGS_TABS: SettingsTab[] = [
   { id: 'settings-application', label: 'Application', icon: 'M2.5 3.5h11v9h-11zM2.5 6h11', keywords: 'version update download restart tab layout side top sidebar' },
   { id: 'settings-appearance', label: 'Appearance', icon: 'M8 2.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM8 2.5v11', keywords: 'theme light dark system mode colour color' },
+  { id: 'settings-about-you', label: 'About you', icon: 'M8 8a2.75 2.75 0 100-5.5A2.75 2.75 0 008 8zM3 13.5c.6-2.4 2.6-3.8 5-3.8s4.4 1.4 5 3.8', keywords: 'about me questions questionnaire know me better profile personal import chatgpt claude memory preferences', isNew: true },
+  { id: 'settings-memory', label: 'Memory', icon: 'M4.5 2.5h7v11L8 11l-3.5 2.5z', keywords: 'memory remember remembers notes facts about me sites nickname login password saved forget what dex knows', isNew: true },
   { id: 'settings-model-providers', label: 'Model providers', icon: 'M8 2l5 3v6l-5 3-5-3V5zM8 8l5-3M8 8v6M8 8L3 5', keywords: 'api key openai anthropic claude gemini groq ollama browsercode model provider' },
   { id: 'settings-connections', label: 'Channels', icon: 'M3 3.5h10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H7.5L4.5 14v-2.5H3a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1Z', keywords: 'phone android dex app pair whatsapp telegram bot channel message text yourself notifications advanced token api mcp' },
   { id: 'settings-browser-sync', label: 'Browser Sync', icon: 'M13 8a5 5 0 01-8.6 3.5M3 8a5 5 0 018.6-3.5M11.5 2.5v2h-2M4.5 13.5v-2h2', keywords: 'cookies chrome sync login' },
@@ -1349,6 +1355,25 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
               <h2 className="settings-section-header__title">Appearance</h2>
             </div>
             <AppearanceSection />
+          </section>
+
+          <section id="settings-about-you" className="settings-page__section">
+            <div className="settings-section-header">
+              <h2 className="settings-section-header__title">Let DEX get to know you</h2>
+            </div>
+            <p className="settings-section-lede">
+              A few quick questions, all optional. Your answers go into DEX’s memory, which every task on every engine uses, so you don’t have to repeat yourself.
+            </p>
+            <AboutYouQuiz />
+            <div className="settings-section-subhead">Or bring what another assistant knows</div>
+            <ImportMemory />
+          </section>
+
+          <section id="settings-memory" className="settings-page__section">
+            <div className="settings-section-header">
+              <h2 className="settings-section-header__title">Memory</h2>
+            </div>
+            <MemorySection />
           </section>
 
           <ConnectionsPane

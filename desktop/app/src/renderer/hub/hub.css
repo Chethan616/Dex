@@ -3332,6 +3332,8 @@ button:focus:not(:focus-visible) {
     inset 0 0 0 1px rgba(var(--highlight-rgb), 0.05),
     var(--surface-card-ring);
   overflow: hidden;
+  /* Its own stacking context: the rounded clip holds for what scrolls inside. */
+  isolation: isolate;
 }
 
 .dashboard__card-header {
@@ -3385,6 +3387,9 @@ button:focus:not(:focus-visible) {
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: rgba(var(--highlight-rgb), 0.18) transparent;
+  /* Nothing a row draws (an avatar's canvas is larger than its slot) paints
+     outside the list, even mid-scroll. */
+  contain: paint;
 }
 
 .dashboard__recent-row {

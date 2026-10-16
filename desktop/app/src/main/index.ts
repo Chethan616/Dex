@@ -101,6 +101,7 @@ import { createLocalTaskServer } from './localTaskServer';
 import { registerAccountsIpc } from './accounts';
 import { registerSetupIpc } from './setup/essentials';
 import { registerProfileIpc } from './profile';
+import { registerMemoryIpc } from './memory/ipc';
 import {
   resolveUserDataDir,
   resolveDevtoolsPortOptIn,
@@ -1062,6 +1063,7 @@ app.whenReady().then(async () => {
   registerAccountsIpc();
   registerSetupIpc();
   registerProfileIpc();
+  registerMemoryIpc();
   startSystemThemeWatcher();
   registerChannelHandlers(channelRouter, whatsAppAdapter, telegramAdapter);
   whatsAppAdapter.onStatusChange((status, detail) => {
@@ -1953,12 +1955,44 @@ app.whenReady().then(async () => {
       },
 
       // Resolve a nickname to a site. Returns the URL and whether credentials
-      // exist — never the password.
+      // exist — never the password — and the notes that bear on the request.
       'POST /dex/recall-site': async (raw) => {
         const { query } = JSON.parse(raw || '{}') as { query?: unknown };
         const q = assertString(query, 'query', 300);
-        const { recallSite } = await import('./memory/siteStore');
-        return { site: await recallSite(q) };
+        const { recallSite, listSites } = await import('./memory/siteStore');
+        const { listNotes } = await import('./memory/notes');
+        const { nodesOf, recall } = await import('./memory/recall');
+        const found = recall(nodesOf(listNotes(), await listSites(), workflowStore.list()), q, 8);
+        return { site: await recallSite(q), remembered: found.map((n) => ({ kind: n.kind, id: n.id, text: n.text })) };
+      },
+
+      // A fact the user wants kept, for every later task on any engine:
+      // `dex-remember note "<fact>" [--replaces <id>]`. A secret is refused.
+      'POST /dex/remember-note': async (raw) => {
+        const body = JSON.parse(raw || '{}') as { text?: unknown; replaces?: unknown; topic?: unknown };
+        const text = assertString(body.text, 'text', 2000);
+        const { addNote } = await import('./memory/notes');
+        const { isTopic } = await import('../shared/memoryTopics');
+        const result = addNote(text, 'dex', {
+          replaces: typeof body.replaces === 'string' ? body.replaces : undefined,
+          topic: isTopic(body.topic) ? body.topic : undefined,
+        });
+        if ('error' in result) throw new Error(result.error);
+        mainLogger.info('memory.note.added', { id: result.note.id, replaced: result.replaced?.id });
+        return result;
+      },
+      'POST /dex/forget-note': async (raw) => {
+        const { ref } = JSON.parse(raw || '{}') as { ref?: unknown };
+        const { forgetNote } = await import('./memory/notes');
+        const result = forgetNote(assertString(ref, 'ref', 400));
+        if ('error' in result) throw new Error(result.error);
+        return result;
+      },
+      // Everything remembered, as the agent may see it: notes, and sites without their passwords.
+      'POST /dex/memory': async () => {
+        const { listNotes } = await import('./memory/notes');
+        const { listSites } = await import('./memory/siteStore');
+        return { notes: listNotes().map(({ id, text, topic }) => ({ id, text, topic })), sites: await listSites(), routines: workflowStore.list().map((w) => w.name) };
       },
 
       // Type a stored credential into the session's focused browser field.
@@ -2469,6 +2503,11 @@ app.whenReady().then(async () => {
           }
           case 'show': {
             if (!sessionId || !sessionManager.getSession(sessionId)) throw new Error('no session to show it in (DEX_SESSION_ID)');
+            // An agent checking on its own work posted "Your workflows" with
+            // nothing in it, three times in one chat. None: nothing to show.
+            if (!ref && workflowStore.list().length === 0) {
+              return { ok: true, shown: false, next: 'There are no workflows yet, so no cards were shown. Make one with `dex-workflow create "<name>" --when "<schedule>" --step "<step>"`.' };
+            }
             const id = showWorkflowsIn(sessionId, ref ? pick() : undefined);
             return { ok: true, id, next: 'Shown as cards with View and Run now. Say nothing more about them unless the user asked something else.' };
           }

@@ -29,9 +29,14 @@
     return path.startsWith('on.') || /^on[A-Z]/.test(last) || /^subscribe/.test(last);
   };
 
+  // One proxy per path, like the preload's objects: a component that keys an
+  // effect on `window.electronAPI.settings.app` must get the same object
+  // every render, or the effect re-runs forever.
+  const cache = new Map();
   function deep(path) {
+    if (cache.has(path)) return cache.get(path);
     const fn = function () {};
-    return new Proxy(fn, {
+    const proxy = new Proxy(fn, {
       get(_t, prop) {
         if (prop === 'then') return undefined;
         if (typeof prop === 'symbol') return undefined;
@@ -45,6 +50,8 @@
         return Promise.resolve(typeof d === 'function' ? d(...args) : d);
       },
     });
+    cache.set(path, proxy);
+    return proxy;
   }
   window.electronAPI = deep('');
   window.__dexMockReady = true;

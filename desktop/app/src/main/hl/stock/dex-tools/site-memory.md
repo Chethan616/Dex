@@ -1,23 +1,40 @@
-# Skill: remembering the user's sites and logins
+# Skill: remembering the user — facts, sites and logins
 
-DEX can remember the sites a user cares about — what they call them, and how to
-sign in — so that after being told once, it acts on "open my uni portal"
-without asking again. Three tools:
+DEX keeps one memory for every engine and every chat: facts the user told it
+(notes), the sites they named and what they call them, and their logins (in
+the OS keychain). Each task is told the core facts and whatever its words
+reach; the rest is a `dex-recall` away. Told once, DEX acts on "open my uni
+portal" or "book my usual seat" without asking again. Three tools:
 
 | Tool | For |
 |---|---|
-| `dex-remember` | Recording a nickname for a site, or a login the user gave. |
-| `dex-recall` | Looking a site up by nickname to get its real URL. |
+| `dex-remember` | Keeping a fact (`note`), a nickname for a site (`site`), or a login the user gave (`login`). |
+| `dex-recall` | Looking up what DEX remembers — a site by nickname, or any fact — before asking the user. |
 | `dex-fill` | Typing a stored credential into a focused login field. |
+
+## When the user tells you something about themselves
+
+What they do, where they live, how they like things, who someone is, what a
+phrase of theirs means ("order 66" = close the bloatware): keep it, one fact
+per note, in their terms.
+
+```bash
+dex-remember note "Works night shifts, so never message before noon"
+dex-remember note "Lives in Pune now" --replaces m3c1f     # the old city's note id
+dex-remember forget-note m3c1f                            # when they ask you to forget it
+```
+
+Not this task's details ("the PDF is on the desktop"), and never a password,
+key or card number — those are refused; a login goes in `dex-remember login`.
 
 ## When the user names a site
 
-If the user says something like "my university portal is vtop.vit.ac.in" — or
+If the user says something like "my college portal is portal.example.edu" — or
 tells you the address of any site they clearly expect you to remember — record
 it, with the words they used for it:
 
 ```bash
-dex-remember site vtop.vit.ac.in "university portal" "uni portal" "college portal" "vtop"
+dex-remember site portal.example.edu "college portal" "uni portal" "student portal" "attendance"
 ```
 
 Add the natural variants, because they will refer to it however they please
@@ -31,16 +48,19 @@ Before asking "which site?" or guessing a URL, look it up:
 dex-recall "open my uni portal"
 ```
 
-It returns the host, the URL to open, the aliases, and whether a username and
-password are stored (`hasUsername` / `hasPassword`) — never the password
-itself. Navigate to the URL and carry on.
+`site` is the best match: the host, the URL to open, the aliases, and whether
+a username and password are stored (`hasUsername` / `hasPassword`) — never the
+password itself. `remembered` is everything else the words reach in DEX's
+memory: notes, other sites, routines. Navigate to the URL and carry on. The
+same goes for any question about the user — "where do I study?", "my usual
+seat": recall before you ask.
 
 ## When the user gives you a login
 
 Only ever for their own account, and only what they actually provide:
 
 ```bash
-dex-remember login vtop.vit.ac.in --user 23BXX1234 --pass "the-password-they-gave"
+dex-remember login portal.example.edu --user their-username --pass "the-password-they-gave"
 ```
 
 The password goes into the operating system's credential store. It is not
@@ -54,8 +74,8 @@ field on the page and let DEX enter the value:
 1. Recall the site and check `hasPassword` is true.
 2. Inspect the login form and find the CSS selectors of the username and
    password inputs (e.g. `#username`, `input[type=password]`).
-3. Fill each by selector: `dex-fill vtop.vit.ac.in user "#username"` then
-   `dex-fill vtop.vit.ac.in pass "input[type=password]"`. Verify both fields
+3. Fill each by selector: `dex-fill portal.example.edu user "#username"` then
+   `dex-fill portal.example.edu pass "input[type=password]"`. Verify both fields
    show a value; if one is empty the selector was wrong — find the right one
    and fill again.
 4. Handle the CAPTCHA **only if one is actually on the page** (see below).
@@ -86,8 +106,8 @@ order.
   NOT a challenge and has NO checkbox.** It scores you silently in the
   background and the token is created when you submit. **Just click Submit.** Do
   not look for an "I'm not a robot" box, do not wait — there is nothing to
-  click. This badge is the single most common thing that gets misread. VTOP's
-  login is exactly this case: username, password, Submit, and the badge.
+  click. This badge is the single most common thing that gets misread: many
+  login pages are just username, password, Submit, and the badge.
 
 - **No CAPTCHA field at all** → just submit.
 

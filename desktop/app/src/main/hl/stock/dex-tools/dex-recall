@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
-# dex-recall — look up a site the user named earlier.
+# dex-recall — look up a site the user named earlier, and what DEX remembers
+# that bears on the request.
 #
-#   dex-recall "university portal"   ->  { host, url, aliases, hasUsername, hasPassword }
+#   dex-recall "check my attendance"  ->  { site: { host, url, aliases, hasUsername, hasPassword },
+#                                           remembered: [{ kind: note|site|routine, id, text }, ...] }
 #
-# Use this the moment the user refers to a site by a nickname ("open my uni
-# portal") to get the real URL. The result tells you whether a login is stored;
-# if it is, sign in with dex-fill rather than asking for the password.
+# Use this the moment the user refers to something of theirs DEX may know —
+# a site by a nickname ("open my uni portal"), where they study or work, a
+# preference, a routine — before asking them. `site` is the best site match:
+# if it has a stored login, sign in with dex-fill rather than asking for the
+# password. `remembered` is everything in DEX's memory the words reach,
+# best first.
 
 set -uo pipefail
 . "$(dirname "$0")/dex-lib.sh"
 
-[ $# -ge 1 ] || { echo "usage: dex-recall <nickname-or-host>" >&2; exit 2; }
+[ $# -ge 1 ] || { echo "usage: dex-recall <nickname-host-or-words>" >&2; exit 2; }
 dex_post /dex/recall-site "{\"query\":\"$(dex_esc "$*")\"}"

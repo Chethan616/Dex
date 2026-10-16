@@ -28,6 +28,8 @@ export default defineConfig({
     // pragma. The default is node so the existing pure-unit suite is unaffected.
     environment: 'node',
     globals: false,
+    // require('keytar') gets an in-memory store: tests never touch the real keychain.
+    setupFiles: ['tests/fixtures/keytar-guard.ts'],
     // Mock electron module so tests run outside Electron
     alias: {
       electron: path.resolve(__dirname, 'tests/fixtures/electron-mock.ts'),

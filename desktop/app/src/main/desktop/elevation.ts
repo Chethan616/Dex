@@ -53,14 +53,23 @@ function runElevated(extra: string[]): { ok: boolean; error?: string } {
     fs.writeFileSync(hostScript, bundled('host.ps1'));
     fs.writeFileSync(setup, bundled('setup-elevated.ps1'));
     const user = `${process.env.USERDOMAIN ?? os.hostname()}\\${process.env.USERNAME ?? os.userInfo().username}`;
-    const q = (s: string) => `\\"${s.replace(/"/g, '')}\\"`;
+    // Plain double quotes: this is the elevated process's own command line.
+    // It used to be \"…\", which Windows reads as quote characters inside the
+    // path — so -File named a file that doesn't exist, the elevated
+    // PowerShell exited at once, and every setup "didn't finish", with
+    // nothing on stderr to say why (the elevated window is its own).
+    const q = (s: string) => `"${s.replace(/"/g, '')}"`;
     const inner = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', q(setup), '-HostScript', q(hostScript), '-DeskHome', q(deskHome()), '-User', q(user), ...extra].join(' ');
     const r = spawnSync('powershell.exe', [
       '-NoProfile', '-NonInteractive', '-Command',
       `$p = Start-Process powershell.exe -Verb RunAs -Wait -PassThru -WindowStyle Hidden -ArgumentList '${inner.replace(/'/g, "''")}'; exit $p.ExitCode`,
     ], { encoding: 'utf-8', windowsHide: true, timeout: 5 * 60_000 });
     if (r.status === 0) return { ok: true };
-    const said = `${r.stderr ?? ''}`.trim();
+    // setup-elevated.ps1 leaves what went wrong next to itself.
+    let said = '';
+    try { said = fs.readFileSync(path.join(dir, 'error.txt'), 'utf-8').replace(/^\uFEFF/, '').trim(); } catch { /* none written */ }
+    said ||= `${r.stderr ?? ''}`.trim();
+    mainLogger.warn('desktop.elevation.failed', { status: r.status, said: said.slice(0, 500) });
     return { ok: false, error: /cancel/i.test(said) ? 'You said no to the Windows prompt. Nothing changed.' : `Windows didn’t finish the setup${said ? `: ${said.split(/\r?\n/)[0]}` : '.'}` };
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });

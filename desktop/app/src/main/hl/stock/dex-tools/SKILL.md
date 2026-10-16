@@ -6,8 +6,8 @@ them with Bash like any other command.
 | Tool | Use it for |
 |---|---|
 | `dex-state` | Recording the plan and its progress. Always available. |
-| `dex-remember` | Recording a site the user named, or a login they gave. See `site-memory.md`. |
-| `dex-recall` | Resolving a nickname ("my uni portal") to a real URL. |
+| `dex-remember` | Keeping what the user tells you: a fact about them (`note`), a site they named, a login they gave. Every later task, on any engine, is told it. See `site-memory.md`. |
+| `dex-recall` | Looking up what DEX remembers before asking the user: a site by nickname ("my uni portal"), where they study or work, a preference, a routine. |
 | `dex-fill` | Typing a stored credential into a focused login field without seeing it. |
 | `dex-sh` | A different shell (cmd/PowerShell/WSL) with a structured, timed result, one-shot or as a persistent `session start`/`run`/`end` that keeps cwd/env between calls. See `registry.md`. |
 | `dex-registry` | Reading the Windows registry freely; writing always waits for the user to approve in the app. See `registry.md`. |

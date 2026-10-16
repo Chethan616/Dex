@@ -714,9 +714,24 @@ interface ElectronWorkflowsAPI {
   showInChat: (sessionId: string) => Promise<{ ok: boolean }>;
 }
 
+/** What DEX remembers (main/memory): notes and named sites, never a password. */
+interface ElectronMemoryAPI {
+  list: () => Promise<{ notes: import('../main/memory/notes').MemoryNote[]; sites: import('../main/memory/siteStore').SafeSiteRecord[] }>;
+  addNote: (text: string) => Promise<import('../main/memory/notes').NoteResult>;
+  forgetNote: (id: string) => Promise<{ forgotten: import('../main/memory/notes').MemoryNote } | { error: string }>;
+  forgetSite: (host: string) => Promise<{ ok: boolean }>;
+  answers: () => Promise<Record<string, string>>;
+  answer: (qid: string, value: string) => Promise<import('../main/memory/notes').NoteResult | { cleared: true }>;
+  parseImport: (raw: string) => Promise<{ facts: string[]; skipped: number }>;
+  importFacts: (facts: string[]) => Promise<{ saved: number; skipped: number }>;
+  openAssistant: (which: 'chatgpt' | 'claude') => Promise<{ opened: boolean }>;
+  onChange: (cb: () => void) => () => void;
+}
+
 interface ElectronAPI {
   widgets?: ElectronWidgetsAPI;
   workflows?: ElectronWorkflowsAPI;
+  memory?: ElectronMemoryAPI;
   profile?: ElectronProfileAPI;
   pill: ElectronPillAPI;
   logs?: ElectronLogsAPI;

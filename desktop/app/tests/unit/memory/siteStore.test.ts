@@ -6,27 +6,31 @@
  * the module through any of the reader functions the agent can reach — only
  * getSecret, which the fill handler uses, ever returns it.
  *
- * keytar is mocked with an in-memory blob, exactly as the real store would
- * serialise it, so the round trip is genuine.
+ * keytar is mocked with an in-memory map, exactly as the real store would
+ * serialise into it, and the sites file goes to a scratch folder, so the round
+ * trip is genuine.
  */
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../../src/main/logger', () => ({
   mainLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-const store = new Map<string, string>();
-vi.mock('keytar', () => ({
-  getPassword: async (s: string, a: string) => store.get(`${s}:${a}`) ?? null,
-  setPassword: async (s: string, a: string, p: string) => { store.set(`${s}:${a}`, p); },
-  deletePassword: async (s: string, a: string) => store.delete(`${s}:${a}`),
-}));
+// tests/fixtures/keytar-guard.ts: what `require('keytar')` gets under vitest.
+const store = (globalThis as unknown as { __dexTestKeytar: { store: Map<string, string> } }).__dexTestKeytar.store;
 
 const mem = await import('../../../src/main/memory/siteStore');
+const { setMemoryDir } = await import('../../../src/main/memory/files');
 
+let dir: string;
 beforeEach(() => {
   store.clear();
   mem._resetCache();
+  dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dex-sites-'));
+  setMemoryDir(dir);
 });
 afterEach(() => vi.clearAllMocks());
 
@@ -104,5 +108,48 @@ describe('logins', () => {
   it('returns null secret for a site with no stored login', async () => {
     await mem.rememberSite('example.com', ['example']);
     expect(await mem.getSecret('example.com', 'password')).toBeNull();
+  });
+});
+
+describe('where it is kept', () => {
+  const SERVICE = 'com.chethan616.dex.sites';
+
+  it('keeps logins out of the file, one keychain entry per site', async () => {
+    await mem.rememberSite('vtop.vit.ac.in', ['uni portal']);
+    await mem.rememberLogin('vtop.vit.ac.in', { username: '23BXX', password: 'hunter2' });
+    const file = fs.readFileSync(path.join(dir, 'sites.json'), 'utf-8');
+    expect(file).toContain('uni portal');
+    expect(file).not.toContain('hunter2');
+    expect(file).not.toContain('23BXX');
+    expect(JSON.parse(store.get(`${SERVICE}:login:vtop.vit.ac.in`)!)).toEqual({ username: '23BXX', password: 'hunter2' });
+  });
+
+  it('holds far more sites than one keychain entry could (Windows caps one at 2,560 bytes)', async () => {
+    for (let i = 0; i < 60; i += 1) await mem.rememberSite(`site${i}.example.com`, [`portal number ${i}`, `the ${i}th site`]);
+    await mem.rememberLogin('site59.example.com', { password: 'p' });
+    mem._resetCache();
+    expect(await mem.listSites()).toHaveLength(60);
+    expect(await mem.getSecret('the 59th site', 'password')).toBe('p');
+    for (const v of store.values()) expect(Buffer.byteLength(v)).toBeLessThan(2560);
+  });
+
+  it('moves the old single entry over once, logins and all, then drops it', async () => {
+    store.set(`${SERVICE}:sites`, JSON.stringify({
+      'vtop.vit.ac.in': { host: 'vtop.vit.ac.in', url: 'https://vtop.vit.ac.in', aliases: ['vtop'], credential: { username: '23BXX', password: 'hunter2' } },
+      'example.com': { host: 'example.com', aliases: ['example'] },
+    }));
+    expect((await mem.listSites()).map((s) => s.host).sort()).toEqual(['example.com', 'vtop.vit.ac.in']);
+    expect(store.has(`${SERVICE}:sites`)).toBe(false);
+    mem._resetCache();
+    expect((await mem.recallSite('vtop'))?.url).toBe('https://vtop.vit.ac.in');
+    expect(await mem.getSecret('vtop', 'password')).toBe('hunter2');
+  });
+
+  it('forgets a site and its login together', async () => {
+    await mem.rememberLogin('vtop.vit.ac.in', { password: 'hunter2' });
+    await mem.forgetSite('vtop.vit.ac.in');
+    mem._resetCache();
+    expect(await mem.listSites()).toEqual([]);
+    expect([...store.keys()]).toEqual([]);
   });
 });

@@ -1,0 +1,110 @@
+/* Settings › Memory (MemorySection.tsx): the notes DEX keeps about the user, and their sites. */
+
+.dexmem__add {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+.dexmem__input {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 10px;
+  background: var(--color-bg-base);
+  color: var(--color-fg-primary);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+.dexmem__input::placeholder { color: var(--color-fg-tertiary); }
+.dexmem__input:focus { border-color: var(--color-accent-default); }
+.dexmem__go { height: 34px; border-radius: 999px; padding: 0 16px; }
+
+.dexmem__error { margin-top: -6px; font-size: 12px; color: var(--color-status-error); }
+.dexmem__empty { font-size: 12.5px; color: var(--color-fg-tertiary); }
+
+.dexmem__notes, .dexmem__sites {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dexmem__note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 6px 6px 6px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-elevated);
+}
+.dexmem__text { flex: 1; min-width: 0; font-size: 13px; line-height: 1.4; color: var(--color-fg-primary); overflow-wrap: anywhere; }
+.dexmem__meta { flex: none; font-size: 11.5px; color: var(--color-fg-tertiary); white-space: nowrap; }
+.dexmem__x {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-fg-tertiary);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out);
+}
+.dexmem__note:hover .dexmem__x, .dexmem__x:focus-visible { opacity: 1; }
+.dexmem__x:hover { color: var(--color-fg-primary); background: rgba(var(--highlight-rgb), 0.08); }
+
+.dexmem__more {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-fg-secondary);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.dexmem__more:hover { color: var(--color-fg-primary); text-decoration: underline; }
+
+.dexmem__site {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-elevated);
+}
+.dexmem__site-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.dexmem__host { font-size: 13px; font-weight: 600; color: var(--color-fg-primary); }
+.dexmem__aliases { font-size: 12px; color: var(--color-fg-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dexmem__badge {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-status-success) 14%, transparent);
+  color: var(--color-status-success);
+  font-size: 11.5px;
+  font-weight: 550;
+}
+.dexmem__confirm { display: inline-flex; gap: 6px; }
+.dexmem__danger { background: var(--color-status-error); color: #fff; }
+.dexmem__danger:hover { opacity: 0.88; }
+
+/* Settings › About you: the line under the heading, and the "or import" divider. */
+.settings-section-lede { margin: 0 0 4px; font-size: 13px; line-height: 1.5; color: var(--color-fg-tertiary); max-width: 640px; }
+.settings-section-subhead { margin: 10px 0 0; font-size: 13px; font-weight: 600; color: var(--color-fg-secondary); }

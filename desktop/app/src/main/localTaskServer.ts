@@ -72,7 +72,10 @@ function readBody(req: IncomingMessage, maxBytes = 256 * 1024): Promise<string> 
       }
       body += chunk;
     });
-    req.on('end', () => resolve(body));
+    // No byte-order marks: Windows PowerShell puts one in front of anything it
+    // pipes to a program, so a tool's JSON could arrive as `"spec":\uFEFF{…}`
+    // and fail to parse, however correct it was. None of DEX's bodies needs one.
+    req.on('end', () => resolve(body.replace(/\uFEFF/g, '')));
     req.on('error', reject);
   });
 }

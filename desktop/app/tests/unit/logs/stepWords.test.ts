@@ -32,6 +32,8 @@ describe('steps in plain words', () => {
   it('names DEX’s own tools and keeps plain shell commands described', () => {
     expect(classifyTool('Bash', { command: 'dex-ui choose "Which one?" "A" "B"' }).active).toBe('Asking you');
     expect(classifyTool('Bash', { command: "dex-workflow create <<'EOF'\n{}\nEOF" }).done).toBe('Updated your routines');
+    expect(classifyTool('PowerShell', { command: 'dex-remember note "Prefers aisle seats"' }).done).toBe('Remembered “Prefers aisle seats”');
+    expect(classifyTool('Bash', { command: 'dex-remember site portal.example.edu "uni portal"' }).done).toBe('Remembered it');
     expect(classifyTool('Bash', { command: 'ls -la', description: 'List files in the current directory' }).active).toBe('Listing files in the current directory');
     expect(classifyTool('Bash', { command: 'ls -la' }).active).toBe('Looking through files');
     expect(classifyTool('Bash', { command: 'Get-Process | Sort-Object CPU' }).done).toBe('Checked what’s running');

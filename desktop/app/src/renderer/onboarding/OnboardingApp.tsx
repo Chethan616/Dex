@@ -4,6 +4,7 @@ import { SetupStep } from './SetupStep';
 import { ConnectStep } from './ConnectStep';
 import { IntroStage } from './IntroStage';
 import { ArrowRight, StepFooter } from './StepFooter';
+import { AboutYouQuiz } from '../components/aboutYou/AboutYou';
 import dexWordmark from '../assets/dex-wordmark.png';
 import claudeCodeLogo from './claude-code-logo.svg';
 import codexLogo from './codex-logo.svg';
@@ -143,7 +144,7 @@ declare global {
   }
 }
 
-type Step = 'intro' | 'avatar' | 'setup' | 'profile' | 'apikey' | 'connect' | 'notifications' | 'shortcut';
+type Step = 'intro' | 'avatar' | 'aboutyou' | 'setup' | 'profile' | 'apikey' | 'connect' | 'notifications' | 'shortcut';
 type InstallableOnboardingEngine = 'claude-code' | 'codex';
 type InstallingEngines = Record<InstallableOnboardingEngine, boolean>;
 
@@ -291,7 +292,26 @@ function AvatarStep({ onContinue, onBack }: { onContinue: () => void; onBack: ()
   );
 }
 
-const VALID_STEPS: readonly Step[] = ['intro', 'avatar', 'setup', 'profile', 'apikey', 'connect', 'notifications', 'shortcut'];
+/** Optional: a few quick questions so DEX doesn't start every task from nothing. */
+function AboutYouStep({ onContinue, onBack }: { onContinue: () => void; onBack: () => void }) {
+  return (
+    <div className="step-panel about-you-step">
+      <h1 className="step-title">Let DEX get to know you</h1>
+      <p className="step-subtitle">
+        A few quick taps, all optional. DEX remembers your answers for every task, so you never have to explain yourself twice. Skip any, or all of it — you can answer later in Settings → About you.
+      </p>
+      <AboutYouQuiz onFinished={onContinue} finishLabel="Done" />
+      <StepFooter onBack={onBack}>
+        <button type="button" className="ob-btn ob-btn--primary" onClick={onContinue}>
+          Continue
+          <ArrowRight />
+        </button>
+      </StepFooter>
+    </div>
+  );
+}
+
+const VALID_STEPS: readonly Step[] = ['intro', 'avatar', 'aboutyou', 'setup', 'profile', 'apikey', 'connect', 'notifications', 'shortcut'];
 
 // Cookie sync is unsupported on Windows: Chromium 127+ uses App-Bound
 // Encryption (v20) keyed to the original user-data-dir, so a temp-copy
@@ -313,6 +333,7 @@ const IS_WINDOWS = typeof window !== 'undefined'
 const STEP_ORDER: readonly Step[] = [
   'intro',
   'avatar',
+  'aboutyou',
   ...(IS_WINDOWS ? ['setup' as const] : []),
   ...(COOKIE_SYNC_SUPPORTED ? ['profile' as const] : []),
   'apikey',
@@ -967,6 +988,10 @@ export function OnboardingApp() {
             onContinue={() => setStep(nextStep('avatar'))}
             onBack={() => setStep('intro')}
           />
+        )}
+
+        {step === 'aboutyou' && (
+          <AboutYouStep onContinue={() => setStep(nextStep('aboutyou'))} onBack={() => setStep(prevStep('aboutyou'))} />
         )}
 
         {step === 'setup' && (

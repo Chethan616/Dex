@@ -16,21 +16,34 @@ morning / every Friday", "save what you just did as a workflow".
    that matters — when it runs, or what a step should cover? Ask with one
    `dex-ui ask` (a `time` field, a `choice` of days), then end your turn.
    Don't ask what you can decide (a name, the order of obvious steps).
-2. Save it:
+2. Save it. The plain way needs no JSON and works the same from bash,
+   PowerShell or cmd — a name, when, and each step in words, with its kind
+   in front when it isn't a plain `task`:
+   ```
+   dex-workflow create "Morning routine" --when "weekdays at 7:30" --about "Weather, my day and unread mail before work" --step "web: Check the weather in their city" --step "Read today's calendar" --step "Summarise unread mail from people, not newsletters" --step "notify: Send me the summary"
+   ```
+   `--when` takes words: "on demand", "every day at 8am", "weekdays at
+   7:30", "mon and fri at 9 pm", "every morning". Leave it out for a
+   routine the user starts by name.
+
+   For details and per-step prompts, the full spec — on stdin in bash, or
+   from a file anywhere (PowerShell: write it with `Set-Content x.json`,
+   then `dex-workflow create --file x.json`; a BOM is fine):
    ```bash
    dex-workflow create <<'EOF'
    {"name": "Morning routine",
-    "description": "Weather, my day and unread mail before work",
     "trigger": {"kind": "weekly", "days": ["mon","tue","wed","thu","fri"], "time": "07:30"},
     "steps": [
-      {"kind": "web",    "title": "Check the weather", "detail": "Hyderabad, today and tonight"},
-      {"kind": "task",   "title": "Read today's calendar", "detail": "Google Calendar"},
+      {"kind": "web",    "title": "Check the weather", "detail": "their city, today and tonight"},
       {"kind": "task",   "title": "Summarise unread mail", "detail": "Gmail, last 24 hours",
        "prompt": "Only mail from people, not newsletters. One line each, most important first."},
       {"kind": "notify", "title": "Send me the summary"}
     ]}
    EOF
    ```
+   It answers `{"ok":true,"workflow":{…}}`. If it answers with an error,
+   the message says what to change: fix that and run it again. Don't
+   debug the tool, and never hand the user a command to run instead.
 3. Show it: `dex-workflow show "Morning routine"` (one card, with View and
    Run now), and say in one line when it runs next. Don't repeat the steps
    in prose: the card and its graph show them.

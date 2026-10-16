@@ -8,6 +8,7 @@ import {
 } from '../shared/session-schemas';
 import type { AgentSession, HlEvent, TabInfo, BrowserPoolStats } from '../shared/session-schemas';
 import { createPopupBridge } from './popupBridge';
+import { memoryBridge } from './memoryBridge';
 import type { PreflightReport } from '../main/startup/preflight';
 import type { TelegramInfo as TelegramChannelInfo } from '../main/channels/TelegramAdapter';
 
@@ -44,6 +45,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     run: (id: string): Promise<{ sessionId?: string; error?: string }> => ipcRenderer.invoke('workflows:run', id),
     showInChat: (sessionId: string): Promise<{ ok: boolean }> => ipcRenderer.invoke('workflows:show-in-chat', sessionId),
   },
+  // What DEX remembers (main/memory/ipc.ts): Settings › Memory and About you.
+  memory: memoryBridge(),
   profile: {
     get: (): Promise<unknown> => ipcRenderer.invoke('profile:get'),
     set: (next: { bot?: string; color?: string | null; name?: string | null }): Promise<unknown> => ipcRenderer.invoke('profile:set', next),

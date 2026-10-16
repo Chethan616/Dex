@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import { memoryBridge } from './memoryBridge';
 
 export interface ChromeProfile {
   id: string;
@@ -233,6 +234,8 @@ type ThemeState = { mode: ThemeModeValue; resolved: 'light' | 'dark' };
 // renderer/design/themeMode.ts can hydrate and follow Light/Dark/System here
 // too. Without it onboarding was always dark.
 contextBridge.exposeInMainWorld('electronAPI', {
+  // "Let DEX get to know you": the same questions as Settings › About you.
+  memory: memoryBridge(),
   profile: {
     get: (): Promise<unknown> => ipcRenderer.invoke('profile:get'),
     set: (next: { bot?: string; color?: string | null; name?: string | null }): Promise<unknown> => ipcRenderer.invoke('profile:set', next),

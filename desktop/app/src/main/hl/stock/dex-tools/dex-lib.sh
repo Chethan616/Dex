@@ -92,3 +92,36 @@ dex_post() {
 dex_session_id() {
   printf '%s' "${DEX_SESSION_ID:-${BU_SESSION_ID:-}}"
 }
+
+# Everything on stdin, without what Windows adds to it: a byte-order mark —
+# Windows PowerShell puts one in front of whatever it pipes to a program, and
+# .NET's UTF8 encoding writes one into files — and carriage returns. A BOM in
+# front of a JSON spec made every `dex-workflow create` from PowerShell fail
+# as "not valid JSON", however the agent quoted it.
+dex_stdin() {
+  local s
+  s="$(cat)"
+  s="${s#$'\xEF\xBB\xBF'}"
+  s="${s//$'\r'/}"
+  printf '%s' "$s"
+}
+
+# A file's contents the same way, for `--file <path>` (the route that needs no
+# pipe at all). Windows paths work: Git Bash reads C:\... as given.
+dex_file() {
+  [ -f "$1" ] || { echo "dex: no file at $1" >&2; return 2; }
+  dex_stdin < "$1"
+}
+
+# `--help` is a request for help, never a search, a site or a message: asked
+# `dex-find --help`, DEX once searched the PC for "--help" and posted Steam's
+# log files in the chat. A tool that handles it itself is left to; the rest
+# print the comment at their top.
+case "${1:-}" in
+  -h|--help|-help|/\?)
+    if ! grep -q -e '--help' "$0" 2>/dev/null; then
+      sed -n '2,/^[^#]/{/^#/s/^# \{0,1\}//p}' "$0"
+      exit 0
+    fi
+    ;;
+esac
