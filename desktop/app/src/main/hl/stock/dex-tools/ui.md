@@ -114,6 +114,10 @@ what to change). Five or fewer show as a list instead of the plot.
      FYI and social messages are 3–4. Newsletters, promotions and automated
      notifications are 0–2.
    - Five and up counts as high on that axis.
+   - **Category**, what it's about: `academics` (college, courses, exams,
+     professors), `work` (job, clients, colleagues), `personal` (family,
+     friends, home) or `other` (shops, newsletters, notifications). Each
+     corner of the card is split into a lane per category on it.
 4. **Draft each reply** as the user would write it, using their tone from
    memory. Keep it short, write in the language the message came in, and sign
    off the way they sign. No `draft` at all for something that needs no reply
@@ -130,10 +134,10 @@ dex-ui triage <<'EOF'
     "subject": "Q3 budget sign-off", "at": "9:42 am",
     "preview": "Need your sign-off on the Q3 numbers by 4 pm today…",
     "body": "<the message, in full or its first ~40 lines>",
-    "urgency": 9, "importance": 9, "why": "Deadline 4 pm, your manager",
+    "urgency": 9, "importance": 9, "why": "Deadline 4 pm, your manager", "category": "work",
     "draft": "Hi Priya, signed off — the numbers look right. Thanks!"},
    {"id": "18c2f1d07e2a", "from": "Swiggy", "subject": "Your order receipt",
-    "preview": "Order #4812 delivered", "urgency": 1, "importance": 1, "why": "Receipt, no reply needed"}
+    "preview": "Order #4812 delivered", "urgency": 1, "importance": 1, "why": "Receipt, no reply needed", "category": "other"}
  ]}
 EOF
 ```
@@ -144,6 +148,7 @@ Each item takes:
 - `preview` (≤300 characters) and `body` (≤4000);
 - `urgency` and `importance`;
 - `why`, one line;
+- `category`: academics, work, personal or other;
 - `draft`;
 - `source` per item, when they're mixed.
 

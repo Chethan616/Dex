@@ -120,3 +120,19 @@ describe('answers', () => {
     expect(HlEventSchema.safeParse({ type: 'widget_update', id: 'w1', items: { i1: { state: 'exploded' } } }).success).toBe(false);
   });
 });
+
+describe('categories', () => {
+  it('reads what a message is about from the words agents use, and lanes only what the card has', async () => {
+    const { lanesOf, categoryFrom } = await import('../../../src/shared/triage');
+    expect(['Studies', 'College', 'job', 'Family', 'newsletter', 'something else', ''].map(categoryFrom)).toEqual(['academics', 'academics', 'work', 'personal', 'other', 'other', undefined]);
+    const { widget } = parseWidget({ type: 'triage', items: [
+      { from: 'Prof', urgency: 8, importance: 8, category: 'University' },
+      { from: 'Mom', urgency: 4, importance: 8, kind: 'family' },
+      { from: 'Shop', urgency: 1, importance: 1 },
+    ] });
+    if (widget?.type !== 'triage') throw new Error('no card');
+    expect(widget.items.map((i) => i.category)).toEqual(['academics', 'personal', undefined]);
+    // Canonical order, only the ones present: no empty work lane.
+    expect(lanesOf(widget.items)).toEqual(['academics', 'personal', 'other']);
+  });
+});

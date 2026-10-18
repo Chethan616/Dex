@@ -63,6 +63,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -74,6 +75,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.chethan616.dex.ui.haptics.LocalHaptics
+import com.chethan616.dex.ui.theme.LocalStatusColors
 import kotlinx.coroutines.delay
 import org.json.JSONObject
 import kotlin.math.cos
@@ -108,6 +110,8 @@ data class TItem(
   val source: String?,
   val state: String?,
   val note: String?,
+  /** What it's about: academics, work, personal or other — its lane in the quadrant. */
+  val category: String = "other",
 )
 
 private fun JSONObject.s(k: String): String? = if (has(k) && !isNull(k)) optString(k).takeIf { it.isNotBlank() } else null
@@ -129,17 +133,54 @@ internal fun parseTriageItem(o: JSONObject, i: Int): TItem? {
     source = o.s("source"),
     state = o.s("state"),
     note = o.s("note"),
+    category = o.s("category")?.takeIf { it in CATEGORIES } ?: "other",
   )
 }
 
+/** The lanes, in the desktop's order (shared/triage.ts TRIAGE_CATEGORIES). */
+internal val CATEGORIES = listOf("academics", "work", "personal", "other")
+private val CATEGORY_LABELS = mapOf("academics" to "Academics", "work" to "Work", "personal" to "Personal", "other" to "Other")
+
+/** The categories a card's messages have, in order: its quadrants' lanes. */
+internal fun lanesOf(items: List<TItem>): List<String> = CATEGORIES.filter { c -> items.any { it.category == c } }
+
 /* ── The four corners (the same split as shared/triage.ts) ─────────── */
 
-internal enum class Quad(val label: String, val color: Color) {
-  Now("Reply now", Color(0xFFEF5B5B)),
-  Quick("Quick reply", Color(0xFFF1A23B)),
-  Plan("Plan a reply", Color(0xFF4C8BFF)),
-  Later("Later", Color(0xFF8D97A8)),
+internal enum class Quad(val label: String, val short: String) {
+  Now("Reply now", "Reply now"),
+  Quick("Quick reply", "Quick"),
+  Plan("Plan a reply", "Plan"),
+  Later("Later", "Later"),
 }
+
+/** A corner's colour: priority, from the status colours the desktop shares (theme.global.css). */
+@Composable
+private fun quadColor(q: Quad): Color {
+  val status = LocalStatusColors.current
+  return when (q) {
+    Quad.Now -> status.stuck
+    Quad.Quick -> status.idle
+    Quad.Plan -> status.paused
+    Quad.Later -> MaterialTheme.colorScheme.onSurfaceVariant
+  }
+}
+
+/** A category's fill and the ink on it, from the app's scheme — the same roles as the desktop's. */
+@Composable
+private fun catColors(category: String): Pair<Color, Color> {
+  val scheme = MaterialTheme.colorScheme
+  val status = LocalStatusColors.current
+  val fill = when (category) {
+    "academics" -> scheme.primary
+    "work" -> status.idle
+    "personal" -> scheme.tertiary
+    else -> scheme.outline
+  }
+  return fill to inkOn(fill)
+}
+
+/** Dark text on a light fill, white on a dark one: the light theme's status colours are dark, the dark theme's light. */
+private fun inkOn(fill: Color): Color = if (fill.luminance() > 0.4f) Color(0xFF1B1B1F) else Color.White
 
 internal fun quadOf(i: TItem): Quad = when {
   i.urgency >= 5 && i.importance >= 5 -> Quad.Now
@@ -222,7 +263,7 @@ internal fun TriageCard(title: String?, source: String?, cardItems: List<TItem>,
         }
       } else {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-          Icon(Icons.Rounded.Check, null, Modifier.size(16.dp), tint = Color(0xFF3DD68C))
+          Icon(Icons.Rounded.Check, null, Modifier.size(16.dp), tint = LocalStatusColors.current.running)
           Text("All answered", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
       }
@@ -240,17 +281,18 @@ internal fun TriageCard(title: String?, source: String?, cardItems: List<TItem>,
 @Composable
 private fun Progress(done: Int, total: Int) {
   Box(Modifier.fillMaxWidth().height(3.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest)) {
-    Box(Modifier.fillMaxHeight().fillMaxWidth(if (total == 0) 0f else done.toFloat() / total).clip(CircleShape).background(Color(0xFF3DD68C)))
+    Box(Modifier.fillMaxHeight().fillMaxWidth(if (total == 0) 0f else done.toFloat() / total).clip(CircleShape).background(LocalStatusColors.current.running))
   }
 }
 
 @Composable
 private fun Avatar(item: TItem, size: Int = 34) {
-  val q = quadOf(item)
-  val bg = when (item.state) { "sent" -> Color(0xFF3DD68C); else -> q.color }
+  val (fill, ink) = catColors(item.category)
+  val sent = item.state == "sent"
+  val bg = if (sent) LocalStatusColors.current.running else fill
   Box(Modifier.size(size.dp).clip(CircleShape).background(bg), contentAlignment = Alignment.Center) {
-    if (item.state == "sent") Icon(Icons.Rounded.Check, null, Modifier.size((size * 0.5).dp), tint = Color.White)
-    else Text(initials(item.from), color = Color.White, fontWeight = FontWeight.Bold, fontSize = (size * 0.36).sp)
+    if (sent) Icon(Icons.Rounded.Check, null, Modifier.size((size * 0.5).dp), tint = inkOn(bg))
+    else Text(initials(item.from), color = ink, fontWeight = FontWeight.Bold, fontSize = (size * 0.36).sp, maxLines = 1)
   }
 }
 
@@ -258,7 +300,7 @@ private fun Avatar(item: TItem, size: Int = 34) {
 private fun QuadChip(item: TItem) {
   val q = quadOf(item)
   val text = STATE_WORDS[item.state] ?: q.label
-  val tint = if (item.state == "sent") Color(0xFF3DD68C) else if (item.state == "failed") MaterialTheme.colorScheme.error else q.color
+  val tint = if (item.state == "sent") LocalStatusColors.current.running else if (item.state == "failed") MaterialTheme.colorScheme.error else quadColor(q)
   Surface(shape = CircleShape, color = tint.copy(alpha = 0.15f)) {
     Text(text, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = tint, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
   }
@@ -286,21 +328,49 @@ private fun TriageRow(item: TItem, selected: Boolean, onClick: () -> Unit) {
 /* ── The plot ─────────────────────────────────────────────────────── */
 
 private data class Placed(val item: TItem, val x: Float, val y: Float)
+private data class Box4(val x: Float, val y: Float, val w: Float, val h: Float)
 
-/** Each message where its scores put it, nudged off any point it would cover (as Triage.tsx does). */
-private fun place(items: List<TItem>, left: Float, top: Float, w: Float, h: Float, r: Float): List<Placed> {
+/** Where each corner sits in the plot (plan and now on top), in pixels. */
+private fun corner(q: Quad, w: Float, top: Float, plotH: Float, gap: Float): Box4 {
+  val qw = (w - gap) / 2
+  val qh = (plotH - gap) / 2
+  val right = q == Quad.Now || q == Quad.Quick
+  val upper = q == Quad.Plan || q == Quad.Now
+  return Box4(if (right) qw + gap else 0f, top + if (upper) 0f else qh + gap, qw, qh)
+}
+
+/** One category's lane in a corner: a small plot of its own, the same axes. */
+private fun lane(c: Box4, i: Int, n: Int, head: Float, inset: Float): Box4 {
+  val lw = (c.w - inset * 2) / n
+  return Box4(c.x + inset + i * lw, c.y + head, lw, c.h - head - inset)
+}
+
+/**
+ * Each message in its corner's lane for its category, where its scores put it
+ * within the corner, nudged off any point it would cover without leaving the
+ * lane (as Triage.tsx does).
+ */
+private fun place(items: List<TItem>, lanes: List<String>, w: Float, top: Float, plotH: Float, gap: Float, head: Float, inset: Float, r: Float): List<Placed> {
   val out = mutableListOf<Placed>()
+  val n = maxOf(1, lanes.size)
   for (item in triageOrder(items)) {
-    val bx = left + r + (w - 2 * r) * (item.urgency / 10.0).toFloat()
-    val by = top + r + (h - 2 * r) * ((10 - item.importance) / 10.0).toFloat()
+    val b = lane(corner(quadOf(item), w, top, plotH, gap), maxOf(0, lanes.indexOf(item.category)), n, head, inset)
+    val fu = ((item.urgency - if (item.urgency >= 5) 5.0 else 0.0) / 5.0).coerceIn(0.0, 1.0).toFloat()
+    val fi = ((item.importance - if (item.importance >= 5) 5.0 else 0.0) / 5.0).coerceIn(0.0, 1.0).toFloat()
+    val minX = b.x + r
+    val maxX = maxOf(minX, b.x + b.w - r)
+    val minY = b.y + r
+    val maxY = maxOf(minY, b.y + b.h - r)
+    val bx = minX + (maxX - minX) * fu
+    val by = minY + (maxY - minY) * (1 - fi)
     var x = bx
     var y = by
     var a = 0.0
     var k = 1
-    while (k < 40 && out.any { hypot(it.x - x, it.y - y) < 2 * r + 3 }) {
+    while (k < 48 && out.any { hypot(it.x - x, it.y - y) < 2 * r + 2 }) {
       a += 2.4
-      x = (bx + cos(a).toFloat() * (4 + k * 3)).coerceIn(left + r, left + w - r)
-      y = (by + sin(a).toFloat() * (4 + k * 3)).coerceIn(top + r, top + h - r)
+      x = (bx + cos(a).toFloat() * (3 + k * 2.5f)).coerceIn(minX, maxX)
+      y = (by + sin(a).toFloat() * (3 + k * 2.5f)).coerceIn(minY, maxY)
       k += 1
     }
     out += Placed(item, x, y)
@@ -308,59 +378,102 @@ private fun place(items: List<TItem>, left: Float, top: Float, w: Float, h: Floa
   return out
 }
 
+/** The categories with their colours and counts — what the lanes' colour keys mean. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun Legend(items: List<TItem>, lanes: List<String>) {
+  FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    lanes.forEach { c ->
+      Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+        Box(Modifier.size(8.dp).clip(CircleShape).background(catColors(c).first))
+        Text(CATEGORY_LABELS[c] ?: c, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("${items.count { it.category == c }}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.outline)
+      }
+    }
+  }
+}
+
 @Composable
 private fun TriagePlot(items: List<TItem>, selected: String?, onSelect: (String) -> Unit) {
   val scheme = MaterialTheme.colorScheme
   val density = LocalDensity.current
-  BoxWithConstraints(Modifier.fillMaxWidth().aspectRatio(1.35f)) {
-    val wPx = constraints.maxWidth.toFloat()
-    val hPx = constraints.maxHeight.toFloat()
-    val band = with(density) { 22.dp.toPx() }
-    val r = with(density) { 15.dp.toPx() }
-    val top = band
-    val plotH = hPx - band * 2
-    val cx = wPx / 2
-    val cy = top + plotH / 2
-    val placed = remember(items, wPx, hPx) { place(items, 0f, top, wPx, plotH, r) }
-    val axis = scheme.onSurfaceVariant.copy(alpha = 0.7f)
-    Canvas(Modifier.fillMaxSize()) {
-      val corner = CornerRadius(14.dp.toPx())
-      drawRoundRect(Quad.Plan.color.copy(alpha = 0.09f), Offset(0f, top), Size(cx, cy - top), corner)
-      drawRoundRect(Quad.Now.color.copy(alpha = 0.10f), Offset(cx, top), Size(wPx - cx, cy - top), corner)
-      drawRoundRect(scheme.onSurface.copy(alpha = 0.04f), Offset(0f, cy), Size(cx, top + plotH - cy), corner)
-      drawRoundRect(Quad.Quick.color.copy(alpha = 0.09f), Offset(cx, cy), Size(wPx - cx, top + plotH - cy), corner)
-      val stroke = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round)
-      drawLine(axis, Offset(4f, cy), Offset(wPx - 2f, cy), stroke.width, StrokeCap.Round)
-      drawLine(axis, Offset(cx, top + plotH - 2f), Offset(cx, top + 2f), stroke.width, StrokeCap.Round)
-      val a = 7.dp.toPx()
-      drawPath(Path().apply { moveTo(wPx - 2f - a, cy - a * 0.8f); lineTo(wPx - 2f, cy); lineTo(wPx - 2f - a, cy + a * 0.8f) }, axis, style = stroke)
-      drawPath(Path().apply { moveTo(cx - a * 0.8f, top + 2f + a); lineTo(cx, top + 2f); lineTo(cx + a * 0.8f, top + 2f + a) }, axis, style = stroke)
-    }
-    val label = MaterialTheme.typography.labelSmall
-    Text(Quad.Plan.label.uppercase(), style = label, color = scheme.onSurfaceVariant, modifier = Modifier.align(Alignment.TopStart))
-    Text("Importance", style = label, fontWeight = FontWeight.SemiBold, color = scheme.onSurface, modifier = Modifier.align(Alignment.TopCenter))
-    Text(Quad.Now.label.uppercase(), style = label, fontWeight = FontWeight.SemiBold, color = Quad.Now.color, modifier = Modifier.align(Alignment.TopEnd))
-    Text(Quad.Later.label.uppercase(), style = label, color = scheme.onSurfaceVariant, modifier = Modifier.align(Alignment.BottomStart))
-    Text(Quad.Quick.label.uppercase(), style = label, color = scheme.onSurfaceVariant, modifier = Modifier.align(Alignment.BottomEnd))
-    Text(
-      "Urgency", style = label, fontWeight = FontWeight.SemiBold, color = scheme.onSurface,
-      modifier = Modifier.offset { IntOffset((wPx - with(density) { 64.dp.toPx() }).roundToInt(), (cy + with(density) { 6.dp.toPx() }).roundToInt()) },
-    )
-    val size = with(density) { (r * 2).toDp() }
-    placed.forEach { p ->
-      val on = p.item.id == selected
-      Box(
-        Modifier
-          .offset { IntOffset((p.x - r).roundToInt(), (p.y - r).roundToInt()) }
-          .size(size)
-          .alpha(if (p.item.state == "skipped") 0.35f else 1f)
-          .then(if (on) Modifier.border(2.dp, scheme.onSurface, CircleShape) else Modifier)
-          .clip(CircleShape)
-          .clickable { onSelect(p.item.id) }
-          .semantics { contentDescription = "${p.item.from}${p.item.subject?.let { ": $it" } ?: ""}, ${quadOf(p.item).label}" },
-        contentAlignment = Alignment.Center,
-      ) {
-        Avatar(p.item, size = if (on) 26 else 30)
+  val lanes = remember(items) { lanesOf(items) }
+  val n = maxOf(1, lanes.size)
+  val colors = CATEGORIES.associateWith { catColors(it).first }
+  val quads = Quad.entries.associateWith { quadColor(it) }
+  Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    if (lanes.size > 1) Legend(items, lanes)
+    // Compact on a phone: a little taller than wide, so each lane keeps room for its points.
+    BoxWithConstraints(Modifier.fillMaxWidth().aspectRatio(1.08f)) {
+      val wPx = constraints.maxWidth.toFloat()
+      val hPx = constraints.maxHeight.toFloat()
+      val padT = with(density) { 16.dp.toPx() }
+      val padB = with(density) { 16.dp.toPx() }
+      val gap = with(density) { 8.dp.toPx() }
+      val head = with(density) { 20.dp.toPx() }
+      val inset = with(density) { 4.dp.toPx() }
+      val r = with(density) { 11.dp.toPx() }
+      val plotH = hPx - padT - padB
+      val cx = wPx / 2
+      val cy = padT + plotH / 2
+      val placed = remember(items, lanes, wPx, hPx) { place(items, lanes, wPx, padT, plotH, gap, head, inset, r) }
+      val axis = scheme.outline
+      val panel = scheme.surfaceContainerHigh
+      val divider = scheme.outlineVariant.copy(alpha = 0.6f)
+      Canvas(Modifier.fillMaxSize()) {
+        val round = CornerRadius(12.dp.toPx())
+        Quad.entries.forEach { q ->
+          val c = corner(q, wPx, padT, plotH, gap)
+          val fill = if (q == Quad.Now) quads.getValue(q).copy(alpha = 0.12f) else panel.copy(alpha = 0.55f)
+          drawRoundRect(fill, Offset(c.x, c.y), Size(c.w, c.h), round)
+          if (lanes.size > 1) {
+            lanes.forEachIndexed { i, cat ->
+              val b = lane(c, i, n, head, inset)
+              drawRoundRect(colors.getValue(cat).copy(alpha = 0.6f), Offset(b.x + 2.dp.toPx(), b.y - 3.dp.toPx()), Size(maxOf(0f, b.w - 4.dp.toPx()), 2.dp.toPx()), CornerRadius(1.dp.toPx()))
+              if (i > 0) drawLine(divider, Offset(b.x, b.y + 2.dp.toPx()), Offset(b.x, b.y + b.h), 1.dp.toPx(), pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx())))
+            }
+          }
+        }
+        val stroke = Stroke(width = 1.4.dp.toPx(), cap = StrokeCap.Round)
+        drawLine(axis, Offset(2f, cy), Offset(wPx - 2f, cy), stroke.width, StrokeCap.Round)
+        drawLine(axis, Offset(cx, padT + plotH), Offset(cx, padT - 4.dp.toPx()), stroke.width, StrokeCap.Round)
+        val a = 6.dp.toPx()
+        drawPath(Path().apply { moveTo(wPx - 2f - a, cy - a * 0.8f); lineTo(wPx - 2f, cy); lineTo(wPx - 2f - a, cy + a * 0.8f) }, axis, style = stroke)
+        drawPath(Path().apply { moveTo(cx - a * 0.8f, padT - 4.dp.toPx() + a); lineTo(cx, padT - 4.dp.toPx()); lineTo(cx + a * 0.8f, padT - 4.dp.toPx() + a) }, axis, style = stroke)
+      }
+      val label = MaterialTheme.typography.labelSmall
+      // Each corner's name and count, inside it.
+      Quad.entries.forEach { q ->
+        val c = corner(q, wPx, padT, plotH, gap)
+        val count = items.count { quadOf(it) == q }
+        Row(
+          Modifier.offset { IntOffset((c.x + with(density) { 8.dp.toPx() }).roundToInt(), (c.y + with(density) { 4.dp.toPx() }).roundToInt()) }
+            .width(with(density) { (c.w - 16.dp.toPx()).toDp() }),
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Text(q.short.uppercase(), style = label, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = quads.getValue(q), maxLines = 1, modifier = Modifier.weight(1f))
+          if (count > 0) Text("$count", style = label, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, color = scheme.outline)
+        }
+      }
+      Text("Importance", style = label, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = scheme.onSurfaceVariant,
+        modifier = Modifier.offset { IntOffset((cx + with(density) { 8.dp.toPx() }).roundToInt(), 0) })
+      Text("Urgency →", style = label, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = scheme.onSurfaceVariant, modifier = Modifier.align(Alignment.BottomEnd))
+      val dot = with(density) { (r * 2).toDp() }
+      placed.forEach { p ->
+        val on = p.item.id == selected
+        Box(
+          Modifier
+            .offset { IntOffset((p.x - r).roundToInt(), (p.y - r).roundToInt()) }
+            .size(dot)
+            .alpha(if (p.item.state == "skipped") 0.35f else 1f)
+            .then(if (on) Modifier.border(2.dp, scheme.onSurface, CircleShape) else Modifier)
+            .clip(CircleShape)
+            .clickable { onSelect(p.item.id) }
+            .semantics { contentDescription = "${p.item.from}${p.item.subject?.let { ": $it" } ?: ""}, ${quadOf(p.item).label}, ${CATEGORY_LABELS[p.item.category]}" },
+          contentAlignment = Alignment.Center,
+        ) {
+          Avatar(p.item, size = if (on) 18 else 22)
+        }
       }
     }
   }
@@ -442,8 +555,15 @@ private fun TriageMessage(item: TItem, source: String?, canAnswer: Boolean, inRo
         item.at?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant) }
       }
       FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Surface(shape = CircleShape, color = q.color.copy(alpha = 0.15f)) {
-          Text(q.label, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = q.color, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+        val qc = quadColor(q)
+        Surface(shape = CircleShape, color = qc.copy(alpha = 0.15f)) {
+          Text(q.label, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = qc, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+        }
+        Surface(shape = CircleShape, color = scheme.surfaceContainerHighest) {
+          Row(Modifier.padding(horizontal = 8.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            Box(Modifier.size(7.dp).clip(CircleShape).background(catColors(item.category).first))
+            Text(CATEGORY_LABELS[item.category] ?: "Other", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = scheme.onSurfaceVariant)
+          }
         }
         item.why?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant, modifier = Modifier.align(Alignment.CenterVertically)) }
       }
@@ -456,7 +576,7 @@ private fun TriageMessage(item: TItem, source: String?, canAnswer: Boolean, inRo
       Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Icon(Icons.Rounded.MailOutline, null, Modifier.size(16.dp), tint = scheme.onSurfaceVariant)
         Text(if (item.draft != null) "DEX’s reply" else "No reply needed", style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-        STATE_WORDS[state]?.let { Text(it, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = if (done) Color(0xFF3DD68C) else if (state == "failed") scheme.error else scheme.onSurfaceVariant) }
+        STATE_WORDS[state]?.let { Text(it, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = if (done) LocalStatusColors.current.running else if (state == "failed") scheme.error else scheme.onSurfaceVariant) }
       }
       if (item.draft != null || draft.isNotEmpty()) {
         OutlinedTextField(

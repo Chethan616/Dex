@@ -12,8 +12,8 @@
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  PLOT_ABOVE, QUADRANTS, isSettled, quadrantOf, triageCommand, triageOrder,
-  type TriageItem, type TriageState, type TriageWidget,
+  CATEGORY_LABELS, PLOT_ABOVE, QUADRANTS, categoryOf, isSettled, lanesOf, quadrantOf, triageCommand, triageOrder,
+  type Quadrant, type TriageCategory, type TriageItem, type TriageState, type TriageWidget,
 } from '../../../shared/triage';
 import { Glyph } from './Widgets';
 import './triage.css';
@@ -32,28 +32,65 @@ function initials(name: string): string {
 /* ── The plot ─────────────────────────────────────────────────────── */
 
 const W = 600;
-const H = 320;
-/** Room above and below for the corner names, so no point ever sits on one. */
-const PAD = { l: 8, r: 8, t: 30, b: 30 };
-const R = 14;
+const H = 380;
+/** Room above for "Importance ↑" and below for "Urgency →". */
+const PAD_T = 18;
+const PAD_B = 18;
+/** The gap between the corners, where the axes run. */
+const GAP = 12;
+/** A corner's own header: its name and how many. */
+const HEAD = 24;
+const INSET = 7;
+const R = 11;
 
+const Q_ORDER: Quadrant[] = ['plan', 'now', 'later', 'quick'];
+
+interface Box { x: number; y: number; w: number; h: number }
 interface Placed { item: TriageItem; x: number; y: number }
 
-/** Each message where its scores put it, nudged off any point it would cover. */
-function place(items: TriageItem[]): Placed[] {
+/** Where each corner sits: plan and now on top, later and quick below. */
+function cornerBox(q: Quadrant): Box {
+  const qw = (W - GAP) / 2;
+  const qh = (H - PAD_T - PAD_B - GAP) / 2;
+  const right = q === 'now' || q === 'quick';
+  const top = q === 'plan' || q === 'now';
+  return { x: right ? qw + GAP : 0, y: PAD_T + (top ? 0 : qh + GAP), w: qw, h: qh };
+}
+
+/** A corner's lanes, one per category on the card: each a small plot of its own. */
+function laneBox(q: Quadrant, lane: number, lanes: number): Box {
+  const c = cornerBox(q);
+  const w = (c.w - INSET * 2) / lanes;
+  return { x: c.x + INSET + lane * w, y: c.y + HEAD, w, h: c.h - HEAD - INSET };
+}
+
+/**
+ * Each message in its corner's lane for its category, where its scores put
+ * it within that corner (urgency across, importance up — the same axes,
+ * smaller), nudged off any point it would cover without leaving the lane.
+ */
+function place(items: TriageItem[], lanes: TriageCategory[]): Placed[] {
   const placed: Placed[] = [];
-  const iw = W - PAD.l - PAD.r;
-  const ih = H - PAD.t - PAD.b;
   for (const item of triageOrder(items)) {
-    let x = PAD.l + R + ((iw - 2 * R) * item.urgency) / 10;
-    let y = PAD.t + R + ((ih - 2 * R) * (10 - item.importance)) / 10;
-    const bx = x;
-    const by = y;
-    // A spiral out from where it belongs, a step at a time, until it's clear.
-    for (let k = 1, a = 0; k < 40 && placed.some((p) => Math.hypot(p.x - x, p.y - y) < 2 * R + 3); k += 1) {
+    const q = quadrantOf(item);
+    const lane = Math.max(0, lanes.indexOf(categoryOf(item)));
+    const b = laneBox(q, lane, Math.max(1, lanes.length));
+    const uLo = item.urgency >= 5 ? 5 : 0;
+    const iLo = item.importance >= 5 ? 5 : 0;
+    const fu = Math.min(1, Math.max(0, (item.urgency - uLo) / 5));
+    const fi = Math.min(1, Math.max(0, (item.importance - iLo) / 5));
+    const minX = b.x + R;
+    const maxX = Math.max(minX, b.x + b.w - R);
+    const minY = b.y + R;
+    const maxY = Math.max(minY, b.y + b.h - R);
+    const bx = minX + (maxX - minX) * fu;
+    const by = minY + (maxY - minY) * (1 - fi);
+    let x = bx;
+    let y = by;
+    for (let k = 1, a = 0; k < 48 && placed.some((p) => Math.hypot(p.x - x, p.y - y) < 2 * R + 2); k += 1) {
       a += 2.4;
-      x = Math.min(W - PAD.r - R, Math.max(PAD.l + R, bx + Math.cos(a) * (4 + k * 3)));
-      y = Math.min(H - PAD.b - R, Math.max(PAD.t + R, by + Math.sin(a) * (4 + k * 3)));
+      x = Math.min(maxX, Math.max(minX, bx + Math.cos(a) * (3 + k * 2.5)));
+      y = Math.min(maxY, Math.max(minY, by + Math.sin(a) * (3 + k * 2.5)));
     }
     placed.push({ item, x, y });
   }
@@ -61,30 +98,54 @@ function place(items: TriageItem[]): Placed[] {
 }
 
 function Plot({ items, selected, onSelect }: { items: TriageItem[]; selected: string | null; onSelect: (id: string) => void }): React.ReactElement {
-  const placed = useMemo(() => place(items), [items]);
+  const lanes = useMemo(() => lanesOf(items), [items]);
+  const placed = useMemo(() => place(items, lanes), [items, lanes]);
   const [hover, setHover] = useState<string | null>(null);
   const tip = placed.find((p) => p.item.id === hover);
   const cx = W / 2;
-  const cy = H / 2;
+  const cy = PAD_T + (H - PAD_T - PAD_B) / 2;
+  const n = Math.max(1, lanes.length);
   return (
     <div className="tri-plot">
-      <svg viewBox={`0 0 ${W} ${H}`} role="group" aria-label="Messages by urgency and importance">
-        {/* The four corners, faintly tinted, each named. */}
-        <rect className="tri-q tri-q--plan" x={PAD.l} y={PAD.t} width={cx - PAD.l} height={cy - PAD.t} rx="14" />
-        <rect className="tri-q tri-q--now" x={cx} y={PAD.t} width={W - PAD.r - cx} height={cy - PAD.t} rx="14" />
-        <rect className="tri-q tri-q--later" x={PAD.l} y={cy} width={cx - PAD.l} height={H - PAD.b - cy} rx="14" />
-        <rect className="tri-q tri-q--quick" x={cx} y={cy} width={W - PAD.r - cx} height={H - PAD.b - cy} rx="14" />
-        <text className="tri-ql" x={PAD.l + 4} y={PAD.t - 11}>{QUADRANTS.plan.label}</text>
-        <text className="tri-ql tri-ql--now" x={W - PAD.r - 4} y={PAD.t - 11} textAnchor="end">{QUADRANTS.now.label}</text>
-        <text className="tri-ql" x={PAD.l + 4} y={H - PAD.b + 20}>{QUADRANTS.later.label}</text>
-        <text className="tri-ql" x={W - PAD.r - 4} y={H - PAD.b + 20} textAnchor="end">{QUADRANTS.quick.label}</text>
-        {/* The axes through the middle, arrows out: urgency across, importance up. */}
+      {lanes.length > 1 && (
+        <div className="tri-legend" aria-label="Lanes in each corner">
+          {lanes.map((c) => (
+            <span key={c} className={`tri-legend__item tri-cat--${c}`}>
+              <i aria-hidden="true" />{CATEGORY_LABELS[c]}<b>{items.filter((it) => categoryOf(it) === c).length}</b>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="tri-plot__area">
+      <svg viewBox={`0 0 ${W} ${H}`} role="group" aria-label="Messages by urgency and importance, each corner split by what they're about">
+        {Q_ORDER.map((q) => {
+          const c = cornerBox(q);
+          const count = items.filter((it) => quadrantOf(it) === q).length;
+          return (
+            <g key={q} className={`tri-corner tri-corner--${q}`}>
+              <rect className="tri-corner__bg" x={c.x} y={c.y} width={c.w} height={c.h} rx="12" />
+              <text className="tri-corner__name" x={c.x + 10} y={c.y + 16}>{QUADRANTS[q].label}</text>
+              <text className="tri-corner__count" x={c.x + c.w - 10} y={c.y + 16} textAnchor="end">{count || ''}</text>
+              {/* Each lane keyed by its category's colour, and divided from the next. */}
+              {lanes.length > 1 && lanes.map((cat, i) => {
+                const b = laneBox(q, i, n);
+                return (
+                  <g key={cat}>
+                    <rect className={`tri-lane__key tri-cat--${cat}`} x={b.x + 3} y={b.y - 3} width={Math.max(0, b.w - 6)} height="2.5" rx="1.25"><title>{CATEGORY_LABELS[cat]}</title></rect>
+                    {i > 0 && <line className="tri-lane__div" x1={b.x} y1={b.y + 2} x2={b.x} y2={b.y + b.h} />}
+                  </g>
+                );
+              })}
+            </g>
+          );
+        })}
+        {/* The axes run through the gaps between the corners, arrows out. */}
         <g className="tri-axis">
-          <path d={`M${PAD.l + 4} ${cy}H${W - PAD.r - 2}M${W - PAD.r - 10} ${cy - 6}l8 6-8 6`} />
-          <path d={`M${cx} ${H - PAD.b - 2}V${PAD.t + 2}M${cx - 6} ${PAD.t + 10}l6-8 6 8`} />
+          <path d={`M2 ${cy}H${W - 2}M${W - 9} ${cy - 5}l7 5-7 5`} />
+          <path d={`M${cx} ${H - PAD_B}V${PAD_T - 6}M${cx - 5} ${PAD_T + 1}l5-7 5 7`} />
         </g>
-        <text className="tri-al" x={W - PAD.r - 8} y={cy + 22} textAnchor="end">Urgency</text>
-        <text className="tri-al" x={cx} y={PAD.t - 11} textAnchor="middle">Importance</text>
+        <text className="tri-al" x={cx + 9} y={11}>Importance</text>
+        <text className="tri-al" x={W - 2} y={H - 4} textAnchor="end">Urgency →</text>
         {placed.map(({ item, x, y }) => {
           const q = quadrantOf(item);
           const state = item.state ?? 'open';
@@ -92,11 +153,11 @@ function Plot({ items, selected, onSelect }: { items: TriageItem[]; selected: st
           return (
             <g
               key={item.id}
-              className={`tri-pt tri-pt--${q} tri-pt--${state}${on ? ' tri-pt--on' : ''}`}
+              className={`tri-pt tri-cat--${categoryOf(item)} tri-pt--${state}${on ? ' tri-pt--on' : ''}`}
               transform={`translate(${x} ${y})`}
               role="button"
               tabIndex={0}
-              aria-label={`${item.from}${item.subject ? `: ${item.subject}` : ''} — ${QUADRANTS[q].label}${state === 'sent' ? ', sent' : state === 'skipped' ? ', skipped' : ''}`}
+              aria-label={`${item.from}${item.subject ? `: ${item.subject}` : ''} — ${QUADRANTS[q].label}, ${CATEGORY_LABELS[categoryOf(item)]}${state === 'sent' ? ', sent' : state === 'skipped' ? ', skipped' : ''}`}
               aria-pressed={on}
               onClick={() => onSelect(item.id)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(item.id); } }}
@@ -105,10 +166,10 @@ function Plot({ items, selected, onSelect }: { items: TriageItem[]; selected: st
               onFocus={() => setHover(item.id)}
               onBlur={() => setHover((h) => (h === item.id ? null : h))}
             >
-              {on && <circle className="tri-pt__ring" r={R + 5} />}
+              {on && <circle className="tri-pt__ring" r={R + 4} />}
               <circle className="tri-pt__dot" r={R} />
               {state === 'sent' ? (
-                <path className="tri-pt__mark" d="M-5 0.5l3.4 3.4L5.5-4" />
+                <path className="tri-pt__mark" d="M-4.5 0.5l3 3L4.8-3.6" />
               ) : (
                 <text className="tri-pt__ini" textAnchor="middle" dy="0.35em">{initials(item.from)}</text>
               )}
@@ -126,6 +187,7 @@ function Plot({ items, selected, onSelect }: { items: TriageItem[]; selected: st
           <span>{tip.item.subject ?? tip.item.preview ?? ''}</span>
         </div>
       )}
+      </div>
     </div>
   );
 }
@@ -179,7 +241,7 @@ function Message({ item, source, onAnswer, inRow }: {
       ) : (
         <>
           <div className="tri-msg__head">
-            <span className={`tri-av tri-av--${q}`} aria-hidden="true">{initials(item.from)}</span>
+            <span className={`tri-av tri-cat--${categoryOf(item)}`} aria-hidden="true">{initials(item.from)}</span>
             <div className="tri-msg__who">
               <span className="tri-msg__from">{item.from}</span>
               {(item.address || via) && <span className="tri-msg__addr">{[item.address, via].filter(Boolean).join(' · ')}</span>}
@@ -188,6 +250,7 @@ function Message({ item, source, onAnswer, inRow }: {
           </div>
           <div className="tri-msg__tags">
             <span className={`tri-chip tri-chip--${q}`}>{QUADRANTS[q].label}</span>
+            <span className={`tri-chip tri-chip--cat tri-cat--${categoryOf(item)}`}><i aria-hidden="true" />{CATEGORY_LABELS[categoryOf(item)]}</span>
             {item.why && <span className="tri-msg__why">{item.why}</span>}
           </div>
           {item.subject && <div className="tri-msg__subject">{item.subject}</div>}
@@ -312,7 +375,7 @@ export function TriageView({ widget, wid, onReply }: { widget: TriageWidget; wid
             return (
               <li key={item.id} className={`tri-row${on ? ' tri-row--on' : ''} tri-row--${state}`}>
                 <button type="button" className="tri-row__head" aria-expanded={on} onClick={() => setSelected(on ? null : item.id)}>
-                  <span className={`tri-av tri-av--${q}`} aria-hidden="true">{state === 'sent' ? <Glyph name="check" size={14} /> : initials(item.from)}</span>
+                  <span className={`tri-av tri-cat--${categoryOf(item)}`} aria-hidden="true">{state === 'sent' ? <Glyph name="check" size={14} /> : initials(item.from)}</span>
                   <span className="tri-row__text">
                     <span className="tri-row__from">{item.from}</span>
                     <span className="tri-row__line">{item.subject ?? item.preview ?? ''}</span>

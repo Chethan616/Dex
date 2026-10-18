@@ -22,6 +22,15 @@ const text = (max: number) => z.string().trim().min(1).max(max);
 export const TRIAGE_SOURCES = ['email', 'gmail', 'outlook', 'whatsapp', 'telegram', 'slack', 'teams', 'discord', 'sms', 'messages'] as const;
 export type TriageSource = (typeof TRIAGE_SOURCES)[number];
 
+/**
+ * What a message is about — each quadrant is split into a lane per category
+ * present (three or four), so "Reply now" shows its academics apart from its
+ * personal messages. Canonical order, left to right.
+ */
+export const TRIAGE_CATEGORIES = ['academics', 'work', 'personal', 'other'] as const;
+export type TriageCategory = (typeof TRIAGE_CATEGORIES)[number];
+export const CATEGORY_LABELS: Record<TriageCategory, string> = { academics: 'Academics', work: 'Work', personal: 'Personal', other: 'Other' };
+
 /** Where a message stands once the user has answered; `open` is back to undecided (a redraft). */
 export const TRIAGE_STATES = ['open', 'sending', 'sent', 'skipped', 'changing', 'failed'] as const;
 export type TriageState = (typeof TRIAGE_STATES)[number];
@@ -48,6 +57,8 @@ export const TriageItemSchema = z.object({
   /** The reply DEX would send. None: no reply needed (a receipt, a newsletter). */
   draft: text(3000).optional(),
   source: z.enum(TRIAGE_SOURCES).optional(),
+  /** What it's about: its lane within the quadrant. None: other. */
+  category: z.enum(TRIAGE_CATEGORIES).optional(),
   state: z.enum(TRIAGE_STATES).optional(),
   /** What happened, when it didn't go to plan: "Gmail refused: quota". */
   note: text(200).optional(),
@@ -64,6 +75,18 @@ export type TriageWidget = Omit<z.infer<typeof TriageWidgetSchema>, 'items'> & {
 
 /** More than this many messages: the plot. This many or fewer: a list. */
 export const PLOT_ABOVE = 5;
+
+export const categoryOf = (item: Pick<TriageItem, 'category'>): TriageCategory => item.category ?? 'other';
+
+/**
+ * The lanes a card's quadrants split into: the categories its messages have,
+ * in canonical order. One category (or none given): no lanes, the whole
+ * quadrant is one plot.
+ */
+export function lanesOf(items: Array<Pick<TriageItem, 'category'>>): TriageCategory[] {
+  const present = new Set(items.map(categoryOf));
+  return TRIAGE_CATEGORIES.filter((c) => present.has(c));
+}
 
 /* ── The four corners ──────────────────────────────────────────────── */
 
@@ -140,6 +163,20 @@ const SOURCE_WORDS: Record<string, TriageSource> = {
 };
 const sourceOf = (v: unknown): unknown => (typeof v === 'string' ? SOURCE_WORDS[v.trim().toLowerCase()] ?? v : v);
 
+const CATEGORY_WORDS: Record<string, TriageCategory> = {
+  academics: 'academics', academic: 'academics', study: 'academics', studies: 'academics', school: 'academics', college: 'academics',
+  university: 'academics', uni: 'academics', class: 'academics', course: 'academics', education: 'academics', exam: 'academics', exams: 'academics',
+  work: 'work', job: 'work', office: 'work', professional: 'work', business: 'work', career: 'work', client: 'work', clients: 'work', team: 'work',
+  personal: 'personal', family: 'personal', friends: 'personal', friend: 'personal', social: 'personal', home: 'personal', life: 'personal',
+  other: 'other', others: 'other', misc: 'other', promotions: 'other', promotion: 'other', newsletter: 'other', newsletters: 'other',
+  notification: 'other', notifications: 'other', automated: 'other', updates: 'other', finance: 'other', shopping: 'other',
+};
+/** "Studies", "Family", "Job" → its category; anything unknown is other. */
+export function categoryFrom(v: unknown): TriageCategory | undefined {
+  if (typeof v !== 'string' || !v.trim()) return undefined;
+  return CATEGORY_WORDS[v.trim().toLowerCase()] ?? 'other';
+}
+
 function normItem(raw: unknown, i: number): unknown {
   if (!isObj(raw)) return raw;
   const from = firstOf(raw, 'from', 'sender', 'name', 'who', 'author', 'contact');
@@ -156,6 +193,7 @@ function normItem(raw: unknown, i: number): unknown {
     why: firstOf(raw, 'why', 'reason', 'because', 'rationale'),
     draft: firstOf(raw, 'draft', 'reply', 'suggestedReply', 'response', 'answer'),
     source: sourceOf(firstOf(raw, 'source', 'channel', 'app', 'platform')),
+    category: categoryFrom(firstOf(raw, 'category', 'kind', 'area', 'type', 'group', 'context')),
     state: raw.state,
     note: raw.note,
   };
@@ -191,7 +229,7 @@ export function withItemIds(items: Array<z.infer<typeof TriageItemSchema>>): Tri
 }
 
 export const TRIAGE_SHAPE =
-  '{"title":"Today\'s unread mail","source":"gmail","items":[{"id":"<the message or thread id>","from":"Priya Shah","address":"priya@acme.com","subject":"Q3 budget sign-off","preview":"Need your sign-off by 4 pm…","body":"<the message>","at":"9:42 am","urgency":9,"importance":8,"why":"Deadline today, your manager","draft":"Hi Priya, signed off — …"}]} — urgency and importance 0–10; no "draft" when no reply is needed';
+  '{"title":"Today\'s unread mail","source":"gmail","items":[{"id":"<the message or thread id>","from":"Priya Shah","address":"priya@acme.com","subject":"Q3 budget sign-off","preview":"Need your sign-off by 4 pm…","body":"<the message>","at":"9:42 am","urgency":9,"importance":8,"why":"Deadline today, your manager","category":"work","draft":"Hi Priya, signed off — …"}]} — urgency and importance 0–10; category academics, work, personal or other; no "draft" when no reply is needed';
 
 /** "12 messages · 3 to reply now". */
 export function triageLine(w: { title?: string; items: Array<Pick<TriageItem, 'urgency' | 'importance' | 'state'>> }): string {
