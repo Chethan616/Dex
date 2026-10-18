@@ -118,7 +118,9 @@ what to change). Five or fewer show as a list instead of the plot.
    memory. Keep it short, write in the language the message came in, and sign
    off the way they sign. No `draft` at all for something that needs no reply
    (a receipt, a newsletter, a no-reply sender).
-5. **Show the card, then end your turn:**
+5. **Show the card — always, even when nothing needs a reply** (four
+   newsletters are four points in Later, without drafts: the user sees what
+   came in and decides). Then end your turn:
 
 ```bash
 dex-ui triage <<'EOF'

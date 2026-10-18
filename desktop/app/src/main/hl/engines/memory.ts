@@ -73,7 +73,7 @@ export function briefingLines(
   // nothing; it hadn't opened ui.md.
   if (REPLY_WORDS.test(prompt)) {
     lines.push(
-      'Answering messages: unless the request names one message or person (then draft it and send it), show every message you fetched as ONE `dex-ui triage` card — read the Triage section of `./dex-tools/ui.md` first. Score each for urgency and importance, draft the replies, and put even the ones that need no reply on the card (no draft; they sit in Later). Then end your turn: the user answers each message with Yes / No / Specify. Never a list of drafts in prose, and never send without their Yes.',
+      'Answering messages: unless the request names one message or person (then draft it and send it), show every message you fetched as ONE `dex-ui triage` card — read the Triage section of `./dex-tools/ui.md` first. Score each for urgency and importance and draft the replies. ALWAYS show the card, even when every message is automated and nothing needs a reply: the card is how the user sees what came in, and deciding what deserves a reply is theirs, not yours. Those go on it without a draft and sit in Later; one line of prose may say so. Then end your turn: the user answers each message with Yes / No / Specify. Never a list of drafts in prose, and never send without their Yes.',
     );
   }
 
