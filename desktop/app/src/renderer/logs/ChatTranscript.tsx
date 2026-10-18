@@ -439,6 +439,7 @@ export function ChatTranscript({ sessionId, status, engine, history }: ChatTrans
                   <div className="chat-block cx-wscope">
                     <WidgetView
                       widget={block.widget}
+                      wid={block.wid}
                       answered={block.id < lastUserId}
                       onReply={(text) => { void window.logsAPI?.followUp(sessionId, text); }}
                       onOpenUrl={(url) => { void window.electronAPI?.widgets?.openUrl(url); }}

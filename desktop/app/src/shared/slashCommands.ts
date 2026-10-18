@@ -19,6 +19,7 @@
  * `typedCommand` and `taskTitle` read it back: the chat shows what the user
  * typed and lists show a title, not three lines of instructions.
  */
+import { typedTriage } from './triage';
 
 export interface SlashCommand {
   name: string;
@@ -242,6 +243,8 @@ const WORKFLOW_RUN = /^Run my workflow “([^”]+)”/;
  */
 export function typedCommand(prompt: string): string | null {
   const text = prompt.trim();
+  const answered = typedTriage(text);
+  if (answered) return answered;
   const raw = /^\/([a-zA-Z][\w-]*)(?:\s|$)/.exec(text);
   if (raw && COMMAND_BY_NAME.has(raw[1].toLowerCase())) return text;
   if (text.startsWith(WORKFLOW_SHOW)) return '/workflow';
@@ -267,6 +270,8 @@ export function taskTitle(prompt: string): string {
   const run = WORKFLOW_RUN.exec(text);
   if (run) return run[1];
   const typed = typedCommand(text);
+  // An answer on a triage card reads as what the user did.
+  if (typed && !typed.startsWith('/')) return typed;
   if (typed) {
     const m = /^\/([a-zA-Z][\w-]*)\s*([\s\S]*)$/.exec(typed)!;
     const name = m[1].toLowerCase();

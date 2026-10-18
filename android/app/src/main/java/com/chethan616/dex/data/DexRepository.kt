@@ -432,6 +432,8 @@ private fun DocumentSnapshot.toBlock(): Block {
     path = getString("path"),
     thumb = getString("thumb"),
     widget = getString("widget"),
+    wid = getString("wid"),
+    answer = getBoolean("answer") == true,
     attachments = (get("attachments") as? List<*>)?.mapNotNull { a ->
       (a as? Map<*, *>)?.let { m ->
         AttachmentMeta(m["name"]?.toString() ?: return@let null, m["mime"]?.toString() ?: "", (m["size"] as? Number)?.toLong() ?: 0)

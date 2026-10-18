@@ -141,6 +141,7 @@ import {
 } from './hl/engines/statusCache';
 import { TaskStateMutationSchema } from '../shared/session-schemas';
 import { parseWidget } from '../shared/widgets';
+import { TRIAGE_STATES, parseTriageCommand, triagePrompt, type TriageState, type TriageWidget } from '../shared/triage';
 // Agent loop: CLI subprocess driving the browser harness. Engine is
 // pluggable (claude-code, codex, …) — see src/main/hl/engines/.
 import { bootstrapHarness, harnessDir } from './hl/harness';
@@ -1911,6 +1912,56 @@ app.whenReady().then(async () => {
     return id;
   }
 
+  /**
+   * A triage widget in a task as it stands now: the agent's spec with every
+   * `widget_update` since folded in (shared/triage.ts).
+   */
+  function triageIn(sessionId: string, wid: string): TriageWidget | null {
+    const output = sessionManager.getSession(sessionId)?.output ?? [];
+    let widget: TriageWidget | null = null;
+    for (const ev of output) {
+      if (ev.type === 'widget' && ev.id === wid && ev.widget.type === 'triage') widget = ev.widget as TriageWidget;
+      else if (ev.type === 'widget_update' && ev.id === wid && widget) {
+        widget = {
+          ...widget,
+          items: widget.items.map((it) => {
+            const p = ev.items[it.id];
+            return p ? { ...it, ...(p.state ? { state: p.state } : {}), ...(p.draft ? { draft: p.draft } : {}) } : it;
+          }),
+        };
+      }
+    }
+    return widget;
+  }
+
+  /**
+   * An answer on a triage card — `/triage yes|no|change <widget> <item> […]`,
+   * from the hub or the phone. Yes and Specify become the instruction the
+   * agent needs (the draft, the thread) and resume the task; No just marks
+   * the message, with no agent turn. Null for anything that isn't one.
+   */
+  async function answerTriage(sessionId: string, input: string): Promise<Record<string, unknown> | null> {
+    const cmd = parseTriageCommand(input);
+    if (!cmd) return null;
+    const widget = triageIn(sessionId, cmd.widget);
+    const item = widget?.items.find((i) => i.id === cmd.item);
+    // A card from an old run, or a double tap: nothing to do, and not an error the chat should show.
+    if (!widget || !item) return { ok: true, ignored: 'no such message on that card' };
+    if (item.state === 'sent' || (item.state === 'sending' && cmd.decision === 'yes')) return { ok: true, ignored: 'already sent' };
+    mainLogger.info('main.triage.answer', { sessionId, widget: cmd.widget, item: cmd.item, decision: cmd.decision, edited: cmd.decision === 'yes' && Boolean(cmd.text) });
+    if (cmd.decision === 'no') {
+      sessionManager.appendOutput(sessionId, { type: 'widget_update', id: cmd.widget, items: { [item.id]: { state: 'skipped' } } });
+      return { ok: true, local: true };
+    }
+    const edited = cmd.decision === 'yes' && cmd.text && cmd.text !== item.draft ? cmd.text : undefined;
+    sessionManager.appendOutput(sessionId, {
+      type: 'widget_update',
+      id: cmd.widget,
+      items: { [item.id]: { state: cmd.decision === 'yes' ? 'sending' : 'changing', ...(edited ? { draft: edited } : {}) } },
+    });
+    return handleResumeRequest(sessionId, triagePrompt(cmd, item, widget.source), []);
+  }
+
   /** The workflows as a chat widget: a card each, with View and Run now. */
   function showWorkflowsIn(sessionId: string, only?: Workflow): string {
     const items = only ? [only] : workflowStore.list().sort((a, b) => a.name.localeCompare(b.name)).slice(0, 12);
@@ -2455,9 +2506,36 @@ app.whenReady().then(async () => {
         if (widget.type === 'workflows') throw new Error('show saved workflows with `dex-workflow show`, not dex-ui');
         const id = `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
         sessionManager.appendOutput(sessionId, { type: 'widget', id, widget });
+        if (widget.type === 'triage') {
+          return {
+            ok: true,
+            id,
+            next: `Shown: ${widget.items.length} message${widget.items.length === 1 ? '' : 's'}, each with Yes / No / Specify. End your turn now. Each answer arrives as its own message that says what to do; send nothing until then.`,
+          };
+        }
         return widget.type === 'ask'
           ? { ok: true, id, next: "Shown. End your turn now: the user's answer arrives as their next message." }
           : { ok: true, id };
+      },
+
+      // A triage card's message after the user answered it: `dex-ui mark <widget> <item> sent|failed|skipped ["note"]`,
+      // or a redrafted reply: `dex-ui redraft <widget> <item>` (shared/triage.ts).
+      'POST /dex/ui-update': async (raw) => {
+        const body = JSON.parse(raw || '{}') as { sessionId?: unknown; id?: unknown; item?: unknown; state?: unknown; note?: unknown; draft?: unknown };
+        const sessionId = assertString(body.sessionId, 'sessionId', 100);
+        const wid = assertString(body.id, 'id', 60);
+        const itemId = assertString(body.item, 'item', 64);
+        const widget = triageIn(sessionId, wid);
+        if (!widget) throw new Error(`no triage card ${wid} in this task — use the id dex-ui gave when it showed the card`);
+        const item = widget.items.find((i) => i.id === itemId);
+        if (!item) throw new Error(`card ${wid} has no message ${itemId}; its messages are ${widget.items.map((i) => i.id).join(', ')}`);
+        const state = typeof body.state === 'string' && (TRIAGE_STATES as readonly string[]).includes(body.state) ? (body.state as TriageState) : undefined;
+        const draft = typeof body.draft === 'string' && body.draft.trim() ? body.draft.trim().slice(0, 3000) : undefined;
+        const note = typeof body.note === 'string' && body.note.trim() ? body.note.trim().slice(0, 200) : undefined;
+        if (!state && !draft) throw new Error('say what changed: a state (sent, failed, skipped) or a new draft');
+        // A redraft puts the message back in the user's hands.
+        sessionManager.appendOutput(sessionId, { type: 'widget_update', id: wid, items: { [item.id]: { state: state ?? 'open', ...(draft ? { draft } : {}), ...(note ? { note } : {}) } } });
+        return { ok: true, next: draft ? 'The new draft is on the card. End your turn: the user answers there.' : 'Marked.' };
       },
 
       // `dex-workflow`: make, change, delete, list, show and run the user's
@@ -2758,6 +2836,9 @@ app.whenReady().then(async () => {
       attachmentCount: resumeAttachments.length,
       attachmentMeta: resumeAttachments.map((a) => ({ name: a.name, mime: a.mime, size: a.bytes.byteLength })),
     });
+    // An answer on a triage card (Yes / No / Specify), not a message to pass on as typed.
+    const triaged = resumeAttachments.length === 0 ? await answerTriage(validatedId, validatedPrompt) : null;
+    if (triaged) return triaged;
     return handleResumeRequest(validatedId, validatedPrompt, resumeAttachments);
   });
 
@@ -3276,6 +3357,8 @@ app.whenReady().then(async () => {
         const sessionId = assertString(id, 'id', 100);
         const typed = assertString(prompt, 'prompt', 10000);
         const files = assertAttachments(phoneFiles ?? []);
+        // A tap on a triage card on the phone: the same answer as the hub's.
+        if (files.length === 0 && parseTriageCommand(typed)) return answerTriage(sessionId, typed).then((r) => r ?? { ok: true });
         // As in the hub's composer: a bare `/workflow` draws the saved workflows
         // into the chat with no agent turn; other commands are expanded first.
         const expansion = expandSlashCommand(typed);

@@ -89,6 +89,79 @@ An **action** is `{label, url}` (https, http, mailto:, tel:, geo:) or
 call, cart, money, doc, code, music, link, person, star, ticket, car, train,
 weather, pc, check.
 
+## Triage — answering a batch of messages
+
+"Reply to my unread emails", "go through today's WhatsApp", "answer my Slack
+DMs": the user gets one card. Each message is a point on two axes, urgency
+across and importance up, in four corners: Reply now · Quick reply · Plan a
+reply · Later. Tapping a point opens the message with your drafted reply and
+three buttons: **Yes** (send it), **No** (leave it), **Specify** (they say
+what to change). Five or fewer show as a list instead of the plot.
+
+1. **Fetch them.** Use the connector for the platform: Gmail or Outlook (MCP),
+   Slack (MCP). WhatsApp and Telegram are their Windows apps, read with
+   `mcp__windows__*` (see `desktop.md`). Take what was asked — "today", "unread",
+   "from my team" — and at most 40. Read each one in full.
+2. **Check who matters.** `dex-recall` for the people and their work before
+   scoring; DEX's memory knows their manager, family and clients.
+3. **Score each one, 0–10:**
+   - **Urgency** is time pressure. A deadline today or a meeting within hours
+     is 9–10. "Can you reply soon" or tomorrow is 7–8. This week is 5–6. No
+     time pressure is 0–3.
+   - **Importance** is who and what. Their manager, a client, a professor,
+     family, or anything about money, health, legal matters, grades or a job
+     offer is 8–10. A colleague or friend on something that matters is 5–7.
+     FYI and social messages are 3–4. Newsletters, promotions and automated
+     notifications are 0–2.
+   - Five and up counts as high on that axis.
+4. **Draft each reply** as the user would write it, using their tone from
+   memory. Keep it short, write in the language the message came in, and sign
+   off the way they sign. No `draft` at all for something that needs no reply
+   (a receipt, a newsletter, a no-reply sender).
+5. **Show the card, then end your turn:**
+
+```bash
+dex-ui triage <<'EOF'
+{"title": "Today's unread mail", "source": "gmail",
+ "items": [
+   {"id": "18c2f4a9b0e1", "from": "Priya Shah", "address": "priya@acme.com",
+    "subject": "Q3 budget sign-off", "at": "9:42 am",
+    "preview": "Need your sign-off on the Q3 numbers by 4 pm today…",
+    "body": "<the message, in full or its first ~40 lines>",
+    "urgency": 9, "importance": 9, "why": "Deadline 4 pm, your manager",
+    "draft": "Hi Priya, signed off — the numbers look right. Thanks!"},
+   {"id": "18c2f1d07e2a", "from": "Swiggy", "subject": "Your order receipt",
+    "preview": "Order #4812 delivered", "urgency": 1, "importance": 1, "why": "Receipt, no reply needed"}
+ ]}
+EOF
+```
+
+Each item takes:
+- `id`: the message or thread id from the connector, so you can find it again;
+- `from`, plus optional `address`, `subject` (emails), `at`;
+- `preview` (≤300 characters) and `body` (≤4000);
+- `urgency` and `importance`;
+- `why`, one line;
+- `draft`;
+- `source` per item, when they're mixed.
+
+`dex-ui` answers with the card's id (`w…`). The card stays live: the user
+answers messages in any order, one at a time.
+
+6. **Each answer arrives as its own message** and says exactly what to do:
+   - "Yes, send my reply to Priya Shah": it carries the reply. They may have
+     edited it, so send exactly that, in the same thread, from the same
+     account. Then mark it: `dex-ui mark <card> <item> sent`, or `failed "<why>"`.
+   - "Change my reply to Priya Shah: …": redraft it. Put the new draft back
+     with `dex-ui redraft <card> <item>` (text on stdin), don't send, and end
+     your turn.
+   - No: you never hear it. DEX marks the message skipped itself.
+
+Send nothing without a Yes on that message. The exception is when the user
+asks you to reply to one specific message or person ("reply to Priya and say
+I'll call at 5"): draft it and send it straight away, then say in one line
+what you sent.
+
 ## Ideas, by kind of task
 
 - **Travel:** ask one way or round trip first, then from / to / dates /

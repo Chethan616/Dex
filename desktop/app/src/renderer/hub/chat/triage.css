@@ -1,0 +1,240 @@
+/* The triage card (Triage.tsx): the urgency × importance plot, the opened message, and the list for a few. */
+
+.tri {
+  --tri-now: #ef5b5b;
+  --tri-quick: #f1a23b;
+  --tri-plan: #4c8bff;
+  --tri-later: #8d97a8;
+  margin: var(--space-6) 0 var(--space-2);
+  max-width: 640px;
+  padding: 14px 16px 16px;
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--cx-card-line);
+  background: var(--cx-card);
+  animation: cx-w-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.tri__head { display: flex; align-items: center; gap: var(--space-5); }
+.tri__glyph {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-lg);
+  background: var(--surface-chip);
+  box-shadow: var(--line-chip);
+  color: var(--fg-chip-icon);
+}
+.tri__titles { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.tri__title { font-size: var(--font-size-md); font-weight: 600; color: var(--color-fg-primary); }
+.tri__sub { font-size: var(--font-size-sm); color: var(--color-fg-tertiary); }
+
+.tri__views { flex: none; display: inline-flex; padding: 2px; border-radius: var(--radius-full); background: var(--surface-chip); box-shadow: var(--line-chip); }
+.tri__views button {
+  height: 24px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-fg-secondary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+.tri__views button[aria-selected='true'] { background: var(--cx-w-on-bg); color: var(--cx-w-on-fg); }
+
+.tri__progress { height: 3px; margin: var(--space-5) 0 var(--space-4); border-radius: var(--radius-full); background: rgba(var(--highlight-rgb), 0.07); overflow: hidden; }
+.tri__progress i { display: block; height: 100%; border-radius: inherit; background: var(--cx-w-good); transition: width 0.3s cubic-bezier(0.2, 0, 0, 1); }
+.tri__hint { padding: var(--space-6) 0 var(--space-2); text-align: center; font-size: var(--font-size-sm); color: var(--color-fg-tertiary); }
+
+/* ── The plot ── */
+
+.tri-plot { position: relative; }
+.tri-plot svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+.tri-q { stroke: none; }
+.tri-q--now { fill: color-mix(in srgb, var(--tri-now) 9%, transparent); }
+.tri-q--quick { fill: color-mix(in srgb, var(--tri-quick) 8%, transparent); }
+.tri-q--plan { fill: color-mix(in srgb, var(--tri-plan) 8%, transparent); }
+.tri-q--later { fill: rgba(var(--highlight-rgb), 0.03); }
+
+.tri-ql { font-size: 11px; font-weight: 600; letter-spacing: 0.02em; fill: var(--color-fg-tertiary); text-transform: uppercase; pointer-events: none; }
+.tri-ql--now { fill: color-mix(in srgb, var(--tri-now) 75%, var(--color-fg-primary)); }
+.tri-axis path { fill: none; stroke: var(--color-fg-secondary); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; opacity: 0.7; }
+.tri-al { font-size: 12px; font-weight: 600; fill: var(--color-fg-secondary); pointer-events: none; }
+
+.tri-pt { cursor: pointer; outline: none; }
+.tri-pt__dot { stroke: var(--color-bg-elevated); stroke-width: 2; transition: r 0.15s ease, opacity 0.15s ease; }
+.tri-pt--now .tri-pt__dot { fill: var(--tri-now); }
+.tri-pt--quick .tri-pt__dot { fill: var(--tri-quick); }
+.tri-pt--plan .tri-pt__dot { fill: var(--tri-plan); }
+.tri-pt--later .tri-pt__dot { fill: var(--tri-later); }
+.tri-pt__ini { font-size: 10.5px; font-weight: 700; fill: #fff; pointer-events: none; letter-spacing: 0.02em; }
+.tri-pt__mark { fill: none; stroke: #fff; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.tri-pt__ring { fill: none; stroke: var(--color-fg-primary); stroke-width: 2; }
+.tri-pt:hover .tri-pt__dot, .tri-pt:focus-visible .tri-pt__dot { r: 16; }
+.tri-pt:focus-visible .tri-pt__ring { stroke: var(--cx-w-ring); }
+.tri-pt--sent .tri-pt__dot { fill: var(--cx-w-good); }
+.tri-pt--skipped { opacity: 0.32; }
+.tri-pt--failed .tri-pt__dot { stroke: var(--color-status-error); stroke-width: 2.5; }
+.tri-pt--sending .tri-pt__dot, .tri-pt--changing .tri-pt__dot { animation: tri-pulse 1.1s ease-in-out infinite; }
+@keyframes tri-pulse { 50% { opacity: 0.55; } }
+
+.tri-tip {
+  position: absolute;
+  z-index: 2;
+  transform: translate(-50%, calc(-100% - 22px));
+  max-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--color-bg-elevated);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22), 0 0 0 1px var(--cx-card-line);
+  font-size: 12px;
+  line-height: 1.35;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.tri-tip b { font-weight: 600; color: var(--color-fg-primary); overflow: hidden; text-overflow: ellipsis; }
+.tri-tip span { color: var(--color-fg-tertiary); overflow: hidden; text-overflow: ellipsis; }
+
+/* ── One message ── */
+
+.tri-msg {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+  padding: 14px 16px;
+  border-radius: var(--radius-xl);
+  background: var(--cx-tile);
+  border: 1px solid var(--cx-card-line);
+  animation: cx-w-in 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.tri-msg__head { display: flex; align-items: center; gap: var(--space-4); }
+.tri-av {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+.tri-av--now { background: var(--tri-now); }
+.tri-av--quick { background: var(--tri-quick); }
+.tri-av--plan { background: var(--tri-plan); }
+.tri-av--later { background: var(--tri-later); }
+.tri-msg__who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.tri-msg__from { font-size: var(--font-size-md); font-weight: 600; color: var(--color-fg-primary); }
+.tri-msg__addr { font-size: var(--font-size-sm); color: var(--color-fg-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tri-msg__at { flex: none; font-size: var(--font-size-sm); color: var(--color-fg-tertiary); }
+.tri-msg__tags { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.tri-msg__why { font-size: var(--font-size-sm); color: var(--color-fg-secondary); }
+.tri-msg__subject { font-size: var(--font-size-md); font-weight: 600; color: var(--color-fg-primary); }
+.tri-msg__body {
+  max-height: 180px;
+  overflow-y: auto;
+  font-size: var(--font-size-sm);
+  line-height: 1.55;
+  color: var(--color-fg-secondary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.tri-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tri-chip--now { color: var(--tri-now); background: color-mix(in srgb, var(--tri-now) 14%, transparent); }
+.tri-chip--quick { color: color-mix(in srgb, var(--tri-quick) 85%, var(--color-fg-primary)); background: color-mix(in srgb, var(--tri-quick) 16%, transparent); }
+.tri-chip--plan { color: var(--tri-plan); background: color-mix(in srgb, var(--tri-plan) 14%, transparent); }
+.tri-chip--later { color: var(--color-fg-secondary); background: rgba(var(--highlight-rgb), 0.07); }
+
+.tri-reply { display: flex; flex-direction: column; gap: var(--space-3); padding-top: var(--space-4); border-top: 1px solid var(--cx-card-line); }
+.tri-reply__label { display: flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-sm); font-weight: 600; color: var(--color-fg-secondary); }
+.tri-reply__label svg { color: var(--fg-chip-icon); }
+.tri-reply__text {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--cx-card-line);
+  background: var(--color-bg-base);
+  color: var(--color-fg-primary);
+  font: inherit;
+  font-size: var(--font-size-md);
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+}
+.tri-reply__text:focus { box-shadow: 0 0 0 2px var(--cx-w-ring); border-color: transparent; }
+.tri-reply__text[readonly] { opacity: 0.75; }
+.tri-reply__note { font-size: var(--font-size-sm); color: var(--color-status-error); }
+
+.tri-state { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--color-fg-tertiary); }
+.tri-state--sent { color: var(--cx-w-good); }
+.tri-state--failed { color: var(--color-status-error); }
+.tri-state--sending, .tri-state--changing { animation: tri-pulse 1.1s ease-in-out infinite; }
+
+.tri-actions, .tri-ask { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.tri-actions .cx-wbtn:disabled { opacity: 0.45; cursor: default; }
+.tri-ask__input {
+  flex: 1;
+  min-width: 200px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--cx-card-line);
+  background: var(--color-bg-base);
+  color: var(--color-fg-primary);
+  font: inherit;
+  font-size: var(--font-size-md);
+  outline: none;
+}
+.tri-ask__input:focus { box-shadow: 0 0 0 2px var(--cx-w-ring); border-color: transparent; }
+
+/* ── The list, for a few ── */
+
+.tri-list { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.tri-row { border-radius: var(--radius-xl); }
+.tri-row__head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 8px 10px;
+  border: 1px solid var(--cx-card-line);
+  border-radius: var(--radius-xl);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.tri-row__head:hover { background: rgba(var(--highlight-rgb), 0.04); }
+.tri-row--on .tri-row__head { background: var(--cx-tile); }
+.tri-row__text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.tri-row__from { font-size: var(--font-size-md); font-weight: 600; color: var(--color-fg-primary); }
+.tri-row__line { font-size: var(--font-size-sm); color: var(--color-fg-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tri-row--sent .tri-av { background: var(--cx-w-good); }
+.tri-row--skipped .tri-row__head { opacity: 0.5; }
+.tri-row .tri-msg { margin-top: var(--space-2); }
+.tri-msg--in-row { gap: var(--space-3); }
+.tri-msg--in-row .tri-msg__tags { justify-content: space-between; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tri, .tri-msg { animation: none; }
+  .tri-pt--sending .tri-pt__dot, .tri-pt--changing .tri-pt__dot, .tri-state--sending, .tri-state--changing { animation: none; }
+}

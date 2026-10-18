@@ -64,7 +64,7 @@ function latest(a: number | undefined, b: number | undefined): number | undefine
   return Math.max(a, b);
 }
 
-function buildTurn(user: Of<'user'> | null, agent: Block[], live: boolean, fallbackStart?: number): Turn {
+function buildTurn(user: Of<'user'> | null, agent: Block[], live: boolean, fallbackStart?: number, answers: Block[] = []): Turn {
   // Everything after the last tool call (or screenshot) is the reply; before
   // it, prose is DEX narrating its work.
   let lastWork = -1;
@@ -135,6 +135,19 @@ function buildTurn(user: Of<'user'> | null, agent: Block[], live: boolean, fallb
       default:
         turn.work.push(b);
     }
+  }
+
+  // The work behind answers on a triage card: folded under this turn's
+  // "Worked for", so the card stays at the bottom with its messages marked
+  // sending and sent, rather than each answer opening a turn below it.
+  for (const b of answers) {
+    turn.endAt = latest(turn.endAt, b.endAt ?? b.at);
+    if (b.kind === 'error') turn.alerts.push(b);
+    else if (b.kind === 'notice' && b.level === 'blocking') turn.alerts.push(b);
+    else if (b.kind === 'widget') turn.widgets.push(b);
+    else if (b.kind === 'file') turn.files.push(fileOf(b));
+    else if (b.kind === 'change') turn.changes.push(b);
+    else if (b.kind !== 'done') turn.work.push(b);
   }
 
   turn.reply = replyParts.filter(Boolean).join('\n\n');
@@ -216,17 +229,27 @@ export function toTurns(blocks: Block[], running: boolean, sessionStart?: number
   const turns: Turn[] = [];
   let user: Of<'user'> | null = null;
   let agent: Block[] = [];
+  let answers: Block[] = [];
+  let answering = false;
   let started = false;
   const flush = (live: boolean) => {
     if (!started) return;
-    turns.push(buildTurn(user, agent, live, turns.length === 0 ? sessionStart : turns[turns.length - 1].endAt));
+    turns.push(buildTurn(user, agent, live, turns.length === 0 ? sessionStart : turns[turns.length - 1].endAt, answers));
   };
+  const hasTriage = (): boolean => agent.some((b) => b.kind === 'widget' && b.widget.type === 'triage');
   for (const b of blocks) {
-    if (b.kind === 'user') {
+    if (b.kind === 'user' && b.answer && started && (answering || hasTriage())) {
+      // An answer on this turn's triage card: its work belongs to the card.
+      answering = true;
+    } else if (b.kind === 'user') {
       flush(false);
       user = b;
       agent = [];
+      answers = [];
+      answering = false;
       started = true;
+    } else if (answering) {
+      answers.push(b);
     } else {
       agent.push(b);
       started = true;

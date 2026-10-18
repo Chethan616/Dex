@@ -183,6 +183,8 @@ function serializeBlock(block: Block): Record<string, unknown> {
       return {
         ...base,
         text: clip(block.text, MAX_TEXT),
+        // A Yes or Specify on a triage card: the phone shows it as a quiet line.
+        ...(block.answer ? { answer: true } : {}),
         attachments: (block.attachments ?? []).slice(0, 10).map((a) => ({ name: clip(a.name, 200), mime: a.mime, size: a.size })),
       };
     case 'text':
@@ -230,7 +232,8 @@ function serializeBlock(block: Block): Record<string, unknown> {
       };
     // The spec as JSON: the phone renders the same kit (Widgets.kt).
     case 'widget':
-      return { ...base, name: block.widget.type, text: clip(widgetLine(block.widget), 300), widget: JSON.stringify(block.widget) };
+      // `wid`: the widget's own id, which a triage card's answers name (shared/triage.ts).
+      return { ...base, name: block.widget.type, text: clip(widgetLine(block.widget), 300), widget: JSON.stringify(block.widget), wid: block.wid };
     default:
       return base;
   }

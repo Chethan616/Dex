@@ -1,57 +1,92 @@
 #!/usr/bin/env bash
 # dex-ui — put a widget from DEX's UI kit in the chat instead of prose: a
 # question with real controls (choices, a place, a date, a time, a number),
-# or results as cards, link buttons or a fact table. See ui.md.
+# results as cards, link buttons or a fact table, or messages to answer as a
+# triage card (urgency × importance, each with a drafted reply). See ui.md.
 #
 # Specs come from stdin as JSON (a heredoc), the same way dex-canvas takes its
-# markdown: quotes and brackets are painful to hand-escape into arguments.
+# markdown: quotes and brackets are painful to hand-escape into arguments. Or
+# from a file with --file, from any shell (PowerShell included).
 
 set -uo pipefail
 . "$(dirname "$0")/dex-lib.sh"
 
 usage() {
-  cat >&2 <<'USAGE'
+  cat <<'USAGE'
 usage:
-  dex-ui ask ["<title>"] <<'EOF'  {"title": "...", "fields": [...]}   JSON on stdin
+  dex-ui ask ["<title>"] <<'EOF'  {"title": "...", "fields": [...]}   JSON on stdin (or --file spec.json)
   dex-ui cards   <<'EOF'  {"title": "...", "items": [...]}
   dex-ui buttons <<'EOF'  {"buttons": [{"label": "...", "url": "https://..."}]}
   dex-ui facts   <<'EOF'  {"title": "...", "rows": [{"label": "...", "value": "..."}]}
+  dex-ui triage  <<'EOF'  {"title": "...", "source": "gmail", "items": [{"from": "...", "urgency": 8, "importance": 6, "draft": "..."}]}
+
+after the user answers a triage card:
+  dex-ui mark <card-id> <item-id> sent|failed|skipped ["note"]
+  dex-ui redraft <card-id> <item-id> ["new draft"]          (or the new draft on stdin)
 
 quick forms:
   dex-ui choose "<question>" "<option>" "<option>" [...]
   dex-ui link "<label>" "<url>" ["<label>" "<url>" ...]
 
-After ask/choose, end your turn: the answer arrives as the user's next
+After ask/choose/triage, end your turn: the answer arrives as the user's next
 message. Every key is in ui.md.
 USAGE
-  exit 2
 }
 
-[ $# -ge 1 ] || usage
+fail_usage() { usage >&2; exit 2; }
+
+[ $# -ge 1 ] || fail_usage
 op="$1"; shift
+case "$op" in -h|--help|help) usage; exit 0 ;; esac
 
 session="$(dex_session_id)"
 [ -n "$session" ] || { echo "dex-ui: no session id in the environment (DEX_SESSION_ID)" >&2; exit 3; }
 sid="$(dex_esc "$session")"
 
+# The spec: --file <path>, else stdin.
+read_spec() {
+  if [ "${1:-}" = "--file" ]; then dex_file "${2:-}"; return $?; fi
+  [ -t 0 ] && return 0
+  dex_stdin
+}
+
 case "$op" in
-  ask|cards|buttons|facts)
+  ask|cards|buttons|facts|triage)
     # An optional title on the command line: dex-ui ask "Flight details" <<'EOF'
     title=""
-    [ $# -ge 1 ] && title="$(dex_esc "$1")"
-    spec="$(cat)"
-    [ -n "${spec//[[:space:]]/}" ] || { echo "dex-ui $op: no JSON on stdin" >&2; exit 2; }
+    if [ $# -ge 1 ] && [ "$1" != "--file" ]; then title="$(dex_esc "$1")"; shift; fi
+    spec="$(read_spec "$@")" || exit 2
+    [ -n "${spec//[[:space:]]/}" ] || { echo "dex-ui $op: no JSON on stdin (or give --file <path>)" >&2; exit 2; }
     body="{\"sessionId\":\"${sid}\",\"type\":\"${op}\",\"title\":\"${title}\",\"widget\":${spec}}"
+    dex_post /dex/ui "$body"
+    exit $?
+    ;;
+  mark)
+    [ $# -ge 3 ] || fail_usage
+    note=""
+    [ $# -ge 4 ] && note="$4"
+    body="{\"sessionId\":\"${sid}\",\"id\":\"$(dex_esc "$1")\",\"item\":\"$(dex_esc "$2")\",\"state\":\"$(dex_esc "$3")\",\"note\":\"$(dex_esc "$note")\"}"
+    dex_post /dex/ui-update "$body"
+    exit $?
+    ;;
+  redraft)
+    [ $# -ge 2 ] || fail_usage
+    card="$1"; item="$2"; shift 2
+    if [ $# -ge 1 ] && [ "$1" != "--file" ]; then draft="$*"; else draft="$(read_spec "$@")" || exit 2; fi
+    [ -n "${draft//[[:space:]]/}" ] || { echo "dex-ui redraft: give the new draft (an argument, stdin, or --file)" >&2; exit 2; }
+    body="{\"sessionId\":\"${sid}\",\"id\":\"$(dex_esc "$card")\",\"item\":\"$(dex_esc "$item")\",\"draft\":\"$(dex_esc "$draft")\"}"
+    dex_post /dex/ui-update "$body"
+    exit $?
     ;;
   choose)
-    [ $# -ge 3 ] || usage
+    [ $# -ge 3 ] || fail_usage
     title="$1"; shift
     opts=""
     for o in "$@"; do opts="${opts}${opts:+,}\"$(dex_esc "$o")\""; done
     body="{\"sessionId\":\"${sid}\",\"widget\":{\"type\":\"ask\",\"title\":\"$(dex_esc "$title")\",\"fields\":[{\"kind\":\"choice\",\"options\":[${opts}]}]}}"
     ;;
   link|links)
-    if [ $# -lt 2 ] || [ $(( $# % 2 )) -ne 0 ]; then usage; fi
+    if [ $# -lt 2 ] || [ $(( $# % 2 )) -ne 0 ]; then fail_usage; fi
     btns=""
     while [ $# -ge 2 ]; do
       btns="${btns}${btns:+,}{\"label\":\"$(dex_esc "$1")\",\"url\":\"$(dex_esc "$2")\"}"
@@ -59,7 +94,7 @@ case "$op" in
     done
     body="{\"sessionId\":\"${sid}\",\"widget\":{\"type\":\"buttons\",\"buttons\":[${btns}]}}"
     ;;
-  *) usage ;;
+  *) echo "dex-ui: unknown verb '$op'" >&2; fail_usage ;;
 esac
 
 dex_post /dex/ui "$body"

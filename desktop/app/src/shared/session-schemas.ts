@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { WidgetSchema } from './widgets';
+import { TRIAGE_STATES } from './triage';
 
 // ---------------------------------------------------------------------------
 // Session status
@@ -375,6 +376,20 @@ export const HlEventWidgetSchema = z.object({
   widget: WidgetSchema,
 });
 
+// A change to a widget already in the chat: where each triaged message
+// stands (sending, sent, skipped…) and a redrafted reply (shared/triage.ts).
+// Folded into the widget it names, so the chat and the phone show it there.
+export const HlEventWidgetUpdateSchema = z.object({
+  ...WHEN,
+  type: z.literal('widget_update'),
+  id: z.string(),
+  items: z.record(z.string(), z.object({
+    state: z.enum(TRIAGE_STATES).optional(),
+    draft: z.string().max(3000).optional(),
+    note: z.string().max(200).optional(),
+  })),
+});
+
 // A change DEX made to the PC with the Windows tools (mcp-servers/windows,
 // its undo journal in <userData>/desktop/journal/<session>/). The chat shows
 // it with an Undo button while it can be undone; a later event for the same
@@ -417,6 +432,7 @@ export const HlEventSchema = z.discriminatedUnion('type', [
   HlEventSubagentDoneSchema,
   HlEventReactionSchema,
   HlEventWidgetSchema,
+  HlEventWidgetUpdateSchema,
   HlEventDeskChangeSchema,
 ]);
 

@@ -16,6 +16,8 @@ import {
   type AnswerValue, type AskField, type AskWidget, type Widget, type WidgetAction, type WidgetCard, type WidgetIcon,
 } from '../../../shared/widgets';
 import { WorkflowCards } from '../workflows/WorkflowCards';
+import { TriageView } from './Triage';
+import type { TriageWidget } from '../../../shared/triage';
 import './widgets.css';
 
 /* ── Glyphs: one clean, rounded line set ─────────────────────────────── */
@@ -496,13 +498,15 @@ function CardRow({ card, onReply, onOpenUrl }: { card: WidgetCard; onReply?: (t:
 
 export interface WidgetViewProps {
   widget: Widget;
+  /** The widget's own id (the event's): a triage card's answers name it. */
+  wid?: string;
   /** A later message exists: a question shows as answered. */
   answered: boolean;
   onReply?: (text: string) => void;
   onOpenUrl?: (url: string) => void;
 }
 
-export function WidgetView({ widget, answered, onReply, onOpenUrl }: WidgetViewProps): React.ReactElement {
+export function WidgetView({ widget, wid, answered, onReply, onOpenUrl }: WidgetViewProps): React.ReactElement {
   switch (widget.type) {
     case 'ask':
       return <AskView widget={widget as AskWidget} answered={answered} onReply={onReply} />;
@@ -536,5 +540,8 @@ export function WidgetView({ widget, answered, onReply, onOpenUrl }: WidgetViewP
       );
     case 'workflows':
       return <WorkflowCards title={widget.title} items={widget.items} />;
+    // Live however many messages follow: each answer is one of them.
+    case 'triage':
+      return <TriageView widget={widget as TriageWidget} wid={wid} onReply={onReply} />;
   }
 }

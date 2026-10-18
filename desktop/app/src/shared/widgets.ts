@@ -14,6 +14,7 @@
  */
 import { z } from 'zod';
 import { WorkflowSchema, workflowLine } from './workflows';
+import { TRIAGE_SHAPE, TriageWidgetSchema, normalizeTriage, triageLine, withItemIds } from './triage';
 
 /** Glyphs a widget may name; each platform draws its own clean version. */
 export const WIDGET_ICONS = [
@@ -84,6 +85,9 @@ export const WidgetSchema = z.discriminatedUnion('type', [
   // `dex-workflow show`: a card each with View (the graph) and Run now. Each
   // carries the whole workflow, so the phone can draw the graph too.
   z.object({ type: z.literal('workflows'), title: text(120).optional(), items: z.array(WorkflowSchema).max(12) }),
+  // Messages to answer, plotted by urgency and importance, each with a
+  // drafted reply and Yes / No / Specify (shared/triage.ts).
+  TriageWidgetSchema,
 ]);
 export type Widget = z.infer<typeof WidgetSchema>;
 export type AskWidget = Omit<Extract<Widget, { type: 'ask' }>, 'fields'> & { fields: AskField[] };
@@ -175,6 +179,7 @@ const TYPE_ALIASES: Record<string, Widget['type']> = {
   cards: 'cards', card: 'cards', results: 'cards', list: 'cards', options: 'cards',
   buttons: 'buttons', button: 'buttons', links: 'buttons', link: 'buttons',
   facts: 'facts', fact: 'facts', table: 'facts', summary: 'facts', details: 'facts',
+  triage: 'triage', matrix: 'triage', inbox: 'triage', priorities: 'triage', eisenhower: 'triage', replies: 'triage', messages: 'triage',
 };
 
 /**
@@ -187,16 +192,20 @@ const TYPE_ALIASES: Record<string, Widget['type']> = {
 export function normalizeWidget(raw: unknown, hint: { type?: string; title?: string } = {}): unknown {
   const hintType = hint.type ? TYPE_ALIASES[hint.type.toLowerCase()] : undefined;
   if (Array.isArray(raw)) {
-    const listKey = { ask: 'fields', cards: 'items', buttons: 'buttons', facts: 'rows', workflows: 'items' }[hintType ?? 'ask'];
+    const listKey = { ask: 'fields', cards: 'items', buttons: 'buttons', facts: 'rows', workflows: 'items', triage: 'items' }[hintType ?? 'ask'];
     raw = { [listKey]: raw };
   }
   if (!isObj(raw)) return raw;
   // An unknown type stays as given, so the schema refuses it rather than guessing.
   const typeGiven = typeof raw.type === 'string' ? TYPE_ALIASES[raw.type.toLowerCase()] ?? (raw.type as Widget['type']) : undefined;
-  const type = typeGiven ?? hintType ?? (raw.fields || raw.inputs ? 'ask' : raw.items || raw.cards || raw.results ? 'cards' : raw.buttons || raw.links ? 'buttons' : raw.rows || raw.facts ? 'facts' : 'ask');
+  // Items scored for urgency or importance are messages to triage, whatever the agent called them.
+  const listed = firstOf(raw, 'items', 'messages', 'emails');
+  const scored = Array.isArray(listed) && listed.some((i) => isObj(i) && ('urgency' in i || 'importance' in i));
+  const type = typeGiven ?? hintType ?? (scored ? 'triage' : raw.fields || raw.inputs ? 'ask' : raw.items || raw.cards || raw.results ? 'cards' : raw.buttons || raw.links ? 'buttons' : raw.rows || raw.facts ? 'facts' : 'ask');
   const w: Loose = { ...raw, type };
   const title = firstOf(raw, 'title', 'question', 'prompt', 'heading') ?? hint.title;
   if (title !== undefined) w.title = title;
+  if (type === 'triage') return normalizeTriage(w);
 
   if (type === 'ask') {
     let fields = firstOf(raw, 'fields', 'inputs', 'questions');
@@ -241,6 +250,7 @@ const SHAPES: Record<Widget['type'], string> = {
   buttons: '{"buttons":[{"label":"Open in Google Flights","url":"https://www.google.com/travel/flights?q=…"}]}',
   facts: '{"title":"Your booking","rows":[{"label":"Flight","value":"6E 2345"}]}',
   workflows: 'nothing: DEX draws the saved workflows itself — run `dex-workflow show`',
+  triage: TRIAGE_SHAPE,
 };
 
 function issueText(i: z.core.$ZodIssue): string {
@@ -274,6 +284,7 @@ export function parseWidget(raw: unknown, hint: { type?: string; title?: string 
     });
     if (widget.fields.length > 1 && !widget.submit) widget.submit = 'Send';
   }
+  if (widget.type === 'triage') widget.items = withItemIds(widget.items);
   return { widget, error: null };
 }
 
@@ -373,6 +384,7 @@ export function widgetLine(w: Widget): string {
     case 'buttons': return w.title ?? w.buttons.map((b) => b.label).join(' · ');
     case 'facts': return w.title ?? w.rows.map((r) => `${r.label}: ${r.value}`).join(' · ');
     case 'workflows': return w.title ?? (w.items.length ? w.items.map(workflowLine).join(' — ') : 'No workflows yet');
+    case 'triage': return triageLine(w);
   }
 }
 

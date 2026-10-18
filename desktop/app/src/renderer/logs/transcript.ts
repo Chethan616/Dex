@@ -15,6 +15,7 @@
 import { typedCommand } from '../../shared/slashCommands';
 import type { OrbState } from 'thinking-orbs';
 import { parseWidget, type Widget } from '../../shared/widgets';
+import { typedTriage, type TriageState } from '../../shared/triage';
 import { HOSTED_CONNECTORS, remoteConnectionId } from '../../shared/connectorCatalog';
 import { deskWords } from '../../shared/deskWords';
 
@@ -335,7 +336,8 @@ export interface BlockTimes {
 }
 
 export type Block = (
-  | { kind: 'user'; id: number; text: string; attachments?: Array<{ name: string; mime: string; size: number }> }
+  /** `answer`: a Yes or Specify on a triage card (shared/triage.ts), which the chat folds into that card's turn. */
+  | { kind: 'user'; id: number; text: string; attachments?: Array<{ name: string; mime: string; size: number }>; answer?: boolean }
   | { kind: 'text'; id: number; text: string }
   | { kind: 'tool'; id: number; name: string; meta: ToolMeta; summary: string; args: unknown; iteration: number; result?: ToolResult }
   /**
@@ -443,7 +445,9 @@ function fold(t: Transcript, raw: RawEvent, at: number | undefined): Transcript 
   switch (raw.type) {
     case 'user_input': {
       const text = str(raw.text).trim();
-      return text ? push(t, { kind: 'user', id, text }) : t;
+      // An expanded command shows as what the user did: "/scrape …", "Yes, send my reply to Priya".
+      if (!text) return t;
+      return push(t, { kind: 'user', id, text: typedCommand(text) ?? text, ...(typedTriage(text) ? { answer: true } : {}) });
     }
     case 'thinking': {
       const text = str(raw.text);
@@ -525,6 +529,29 @@ function fold(t: Transcript, raw: RawEvent, at: number | undefined): Transcript 
       return push(t, { kind: 'image', id, path: str(raw.path), caption: raw.caption ? str(raw.caption) : undefined });
     case 'canvas':
       return push(t, { kind: 'canvas', id, title: str(raw.title), markdown: str(raw.markdown) });
+    // Where each triaged message stands, and redrafted replies: folded into
+    // the widget it names (shared/triage.ts), so it redraws in place.
+    case 'widget_update': {
+      const wid = str(raw.id);
+      const i = t.blocks.findIndex((b) => b.kind === 'widget' && b.wid === wid);
+      const block = i >= 0 ? (t.blocks[i] as Extract<Block, { kind: 'widget' }>) : null;
+      if (!block || block.widget.type !== 'triage' || !raw.items || typeof raw.items !== 'object') return t;
+      const patch = raw.items as Record<string, { state?: TriageState; draft?: string; note?: string }>;
+      const items = block.widget.items.map((it) => {
+        const p = it.id ? patch[it.id] : undefined;
+        if (!p) return it;
+        return {
+          ...it,
+          ...(p.state ? { state: p.state } : {}),
+          ...(typeof p.draft === 'string' && p.draft.trim() ? { draft: p.draft.trim() } : {}),
+          // A new state drops the old note unless it brings its own.
+          ...(p.note ? { note: p.note } : p.state ? { note: undefined } : {}),
+        };
+      });
+      const blocks = t.blocks.slice();
+      blocks[i] = { ...block, widget: { ...block.widget, items } };
+      return { ...t, blocks };
+    }
     case 'desk_change': {
       const entry = str(raw.entry);
       if (!entry) return t;

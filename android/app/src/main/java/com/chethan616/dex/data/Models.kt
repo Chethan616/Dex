@@ -132,6 +132,10 @@ data class Block(
   val attachments: List<AttachmentMeta> = emptyList(),
   /** widget: the spec as JSON (desktop/app/src/shared/widgets.ts), rendered by ui/components/Widgets.kt. */
   val widget: String? = null,
+  /** widget: its own id on the PC, which a triage card's answers name. */
+  val wid: String? = null,
+  /** user: a Yes or Specify on a triage card — shown as a quiet line, not a bubble. */
+  val answer: Boolean = false,
 )
 
 data class AttachmentMeta(val name: String, val mime: String, val size: Long)

@@ -394,7 +394,7 @@ const TurnView = memo(function TurnView({ turn, sessionId, engineId, avatarMood,
       )}
 
       {turn.widgets.map((w) => (
-        <WidgetView key={w.id} widget={w.widget} answered={!isLast} onReply={onFollowUpChip} onOpenUrl={onOpenUrl} />
+        <WidgetView key={w.id} widget={w.widget} wid={w.wid} answered={!isLast} onReply={onFollowUpChip} onOpenUrl={onOpenUrl} />
       ))}
 
       {turn.resultCards.map((card, i) => <ResultCard key={i} card={card} onOpenUrl={onOpenUrl} />)}

@@ -21,10 +21,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Description
@@ -129,6 +131,19 @@ private fun UserBubbleText(text: String) {
         style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.onPrimaryContainer,
       )
+    }
+  }
+}
+
+/** An answer on a triage card ("Yes, send my reply to Priya"): the card shows where it stands, so this stays quiet. */
+@Composable
+private fun AnswerLine(text: String) {
+  Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+      Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Icon(Icons.Rounded.Check, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+      }
     }
   }
 }
@@ -491,7 +506,7 @@ fun CanvasCard(block: Block) {
 @Composable
 fun BlockView(block: Block, running: Boolean) {
   when (block.kind) {
-    "user" -> Reactable(messageKey(block)) { UserBubble(block.text.orEmpty(), block.attachments) }
+    "user" -> if (block.answer) AnswerLine(block.text.orEmpty()) else Reactable(messageKey(block)) { UserBubble(block.text.orEmpty(), block.attachments) }
     "text" -> AssistantText(block.text.orEmpty())
     "tool" -> ToolCard(block, running)
     "done" -> DoneCard(block)
