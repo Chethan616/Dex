@@ -53,6 +53,13 @@ describe('what DEX tells every engine about the user', () => {
     expect(other).not.toMatch(/Task Scheduler/);
   });
 
+  it('sends a batch of messages to the triage card, whatever needs a reply', () => {
+    for (const ask of ['Reply to my unread emails from the last 3 days', 'go through my WhatsApp messages', 'answer today’s Slack DMs']) {
+      expect(briefingLines([], [], [], ask).join('\n')).toContain('ONE `dex-ui triage` card');
+    }
+    expect(briefingLines([], [], [], 'write a poem about rain').join('\n')).not.toContain('dex-ui triage');
+  });
+
   it('always tells the agent to save what the user gives it, in DEX’s memory and not its own', () => {
     const text = briefingLines([], [], [], 'hi').join('\n');
     expect(text).toContain('save it at once: `dex-remember note "<one fact>"`');

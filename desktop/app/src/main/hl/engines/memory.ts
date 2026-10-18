@@ -30,7 +30,10 @@ const MAX_RELEVANT = 6;
 
 type Note = Pick<MemoryNote, 'id' | 'text' | 'topic'> & Partial<Pick<MemoryNote, 'core' | 'at'>>;
 
-const ROUTINE_WORDS = /\b(routines?|workflows?|automat\w*|schedul\w*|every (day|morning|evening|night|week|weekday|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|daily|weekly|remind\w*|trigger\w*)\b/i;
+/** "Reply to my unread mail", "go through my WhatsApp", "answer today's Slack DMs". */
+const REPLY_WORDS = /\b(repl(y|ies)|respond|answer|go through|triage|clear|handle|deal with)\b[\s\S]{0,60}\b(mails?|e-?mails?|inbox|messages?|whatsapp|telegram|slack|teams|dms?|chats?|texts?|notifications?)\b/i;
+
+const ROUTINE_WORDS =/\b(routines?|workflows?|automat\w*|schedul\w*|every (day|morning|evening|night|week|weekday|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|daily|weekly|remind\w*|trigger\w*)\b/i;
 
 /** The prompt lines for one task (pure: memoryBriefing reads the stores). */
 export function briefingLines(
@@ -63,6 +66,16 @@ export function briefingLines(
   lines.push(
     'When the user tells you something worth keeping — about themselves, how they like things done, what a phrase of theirs means — save it at once: `dex-remember note "<one fact>"` (`--replaces <id>` when it changes, `dex-remember forget-note <id>` when they say to forget). A site they use or a login they give: `dex-remember site` / `dex-remember login` (`./dex-tools/site-memory.md`). Not this task\'s details, and never a password or key in a note. Keep it in DEX\'s memory, not your own memory files: the other engines and DEX\'s Settings never see those.',
   );
+
+  // Answering a batch of messages: one triage card, always — even when none
+  // needs a reply, so the user sees what came in and decides. A live run
+  // found four automated mails, said "none need a reply" in prose and showed
+  // nothing; it hadn't opened ui.md.
+  if (REPLY_WORDS.test(prompt)) {
+    lines.push(
+      'Answering messages: unless the request names one message or person (then draft it and send it), show every message you fetched as ONE `dex-ui triage` card — read the Triage section of `./dex-tools/ui.md` first. Score each for urgency and importance, draft the replies, and put even the ones that need no reply on the card (no draft; they sit in Later). Then end your turn: the user answers each message with Yes / No / Specify. Never a list of drafts in prose, and never send without their Yes.',
+    );
+  }
 
   const aboutRoutines = ROUTINE_WORDS.test(prompt) || topicsIn(prompt).includes('routines') || relevant.some((n) => n.kind === 'routine');
   if (aboutRoutines) {
