@@ -116,8 +116,10 @@ what to change). Five or fewer show as a list instead of the plot.
    - Five and up counts as high on that axis.
    - **Category**, what it's about: `academics` (college, courses, exams,
      professors), `work` (job, clients, colleagues), `personal` (family,
-     friends, home) or `other` (shops, newsletters, notifications). Each
-     corner of the card is split into a lane per category on it.
+     friends, home) or `other` (shops, newsletters, notifications). It's the
+     point's colour, and opening a corner splits it into one small plot per
+     category. It never moves a point: the scores alone do that, so score
+     each message on its own merits, not by its category.
 4. **Draft each reply** as the user would write it, using their tone from
    memory. Keep it short, write in the language the message came in, and sign
    off the way they sign. No `draft` at all for something that needs no reply

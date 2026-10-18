@@ -12,7 +12,7 @@
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  CATEGORY_LABELS, PLOT_ABOVE, QUADRANTS, categoryOf, isSettled, lanesOf, quadrantOf, triageCommand, triageOrder,
+  CATEGORY_LABELS, PLOT_ABOVE, QUADRANTS, TRIAGE_CATEGORIES, categoryOf, cornerRange, isSettled, lanesOf, quadrantOf, triageCommand, triageOrder, withinCorner,
   type Quadrant, type TriageCategory, type TriageItem, type TriageState, type TriageWidget,
 } from '../../../shared/triage';
 import { Glyph } from './Widgets';
@@ -31,6 +31,16 @@ function initials(name: string): string {
 
 /* ── The plot ─────────────────────────────────────────────────────── */
 
+/*
+ * Two levels. The overview is honest: every message sits exactly where its
+ * urgency (across) and importance (up) put it — position means priority and
+ * nothing else; colour says what it's about. Tap a corner and it opens on its
+ * own, its axes in real numbers, split into one small plot per category with
+ * the same axes: the corner's work, personal, academic and other messages
+ * side by side, so neither the layout nor the category can make one look
+ * more pressing than it is.
+ */
+
 const W = 600;
 const H = 380;
 /** Room above for "Importance ↑" and below for "Urgency →". */
@@ -38,9 +48,9 @@ const PAD_T = 18;
 const PAD_B = 18;
 /** The gap between the corners, where the axes run. */
 const GAP = 12;
-/** A corner's own header: its name and how many. */
-const HEAD = 24;
-const INSET = 7;
+/** A corner's header: its name, count and category mix. */
+const HEAD = 34;
+const INSET = 8;
 const R = 11;
 
 const Q_ORDER: Quadrant[] = ['plan', 'now', 'later', 'quick'];
@@ -57,85 +67,156 @@ function cornerBox(q: Quadrant): Box {
   return { x: right ? qw + GAP : 0, y: PAD_T + (top ? 0 : qh + GAP), w: qw, h: qh };
 }
 
-/** A corner's lanes, one per category on the card: each a small plot of its own. */
-function laneBox(q: Quadrant, lane: number, lanes: number): Box {
-  const c = cornerBox(q);
-  const w = (c.w - INSET * 2) / lanes;
-  return { x: c.x + INSET + lane * w, y: c.y + HEAD, w, h: c.h - HEAD - INSET };
+/** A message's spot in a box drawn for its corner's range: urgency across, importance up, both exact. */
+function spot(item: TriageItem, b: Box, r: number): { x: number; y: number } {
+  const [fu, fi] = withinCorner(item);
+  return { x: b.x + r + (b.w - 2 * r) * fu, y: b.y + r + (b.h - 2 * r) * (1 - fi) };
 }
 
-/**
- * Each message in its corner's lane for its category, where its scores put
- * it within that corner (urgency across, importance up — the same axes,
- * smaller), nudged off any point it would cover without leaving the lane.
- */
-function place(items: TriageItem[], lanes: TriageCategory[]): Placed[] {
+/** Points that would cover each other are nudged apart a little, never out of their box. */
+function spread(items: TriageItem[], boxOf: (it: TriageItem) => Box, r: number): Placed[] {
   const placed: Placed[] = [];
   for (const item of triageOrder(items)) {
-    const q = quadrantOf(item);
-    const lane = Math.max(0, lanes.indexOf(categoryOf(item)));
-    const b = laneBox(q, lane, Math.max(1, lanes.length));
-    const uLo = item.urgency >= 5 ? 5 : 0;
-    const iLo = item.importance >= 5 ? 5 : 0;
-    const fu = Math.min(1, Math.max(0, (item.urgency - uLo) / 5));
-    const fi = Math.min(1, Math.max(0, (item.importance - iLo) / 5));
-    const minX = b.x + R;
-    const maxX = Math.max(minX, b.x + b.w - R);
-    const minY = b.y + R;
-    const maxY = Math.max(minY, b.y + b.h - R);
-    const bx = minX + (maxX - minX) * fu;
-    const by = minY + (maxY - minY) * (1 - fi);
-    let x = bx;
-    let y = by;
-    for (let k = 1, a = 0; k < 48 && placed.some((p) => Math.hypot(p.x - x, p.y - y) < 2 * R + 2); k += 1) {
+    const b = boxOf(item);
+    const base = spot(item, b, r);
+    const minX = b.x + r;
+    const maxX = Math.max(minX, b.x + b.w - r);
+    const minY = b.y + r;
+    const maxY = Math.max(minY, b.y + b.h - r);
+    let { x, y } = base;
+    for (let k = 1, a = 0; k < 48 && placed.some((p) => Math.hypot(p.x - x, p.y - y) < 2 * r + 2); k += 1) {
       a += 2.4;
-      x = Math.min(maxX, Math.max(minX, bx + Math.cos(a) * (3 + k * 2.5)));
-      y = Math.min(maxY, Math.max(minY, by + Math.sin(a) * (3 + k * 2.5)));
+      x = Math.min(maxX, Math.max(minX, base.x + Math.cos(a) * (2 + k * 2)));
+      y = Math.min(maxY, Math.max(minY, base.y + Math.sin(a) * (2 + k * 2)));
     }
     placed.push({ item, x, y });
   }
   return placed;
 }
 
-function Plot({ items, selected, onSelect }: { items: TriageItem[]; selected: string | null; onSelect: (id: string) => void }): React.ReactElement {
-  const lanes = useMemo(() => lanesOf(items), [items]);
-  const placed = useMemo(() => place(items, lanes), [items, lanes]);
-  const [hover, setHover] = useState<string | null>(null);
+const fmt = (n: number): string => String(Number(n.toFixed(1)));
+
+const scoreLine = (it: TriageItem): string =>
+  `Urgency ${fmt(it.urgency)} · Importance ${fmt(it.importance)} · ${CATEGORY_LABELS[categoryOf(it)]}`;
+
+function Point({ item, x, y, r, on, dim, onSelect, onHover }: {
+  item: TriageItem; x: number; y: number; r: number; on: boolean; dim: boolean;
+  onSelect: (id: string) => void; onHover: (id: string | null) => void;
+}): React.ReactElement {
+  const state = item.state ?? 'open';
+  return (
+    <g
+      className={`tri-pt tri-cat--${categoryOf(item)} tri-pt--${state}${on ? ' tri-pt--on' : ''}${dim ? ' tri-pt--dim' : ''}`}
+      transform={`translate(${x} ${y})`}
+      role="button"
+      tabIndex={0}
+      aria-label={`${item.from}${item.subject ? `: ${item.subject}` : ''} — ${QUADRANTS[quadrantOf(item)].label}, ${scoreLine(item)}${state === 'sent' ? ', sent' : state === 'skipped' ? ', skipped' : ''}`}
+      aria-pressed={on}
+      onClick={(e) => { e.stopPropagation(); onSelect(item.id); }}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onSelect(item.id); } }}
+      onMouseEnter={() => onHover(item.id)}
+      onMouseLeave={() => onHover(null)}
+      onFocus={() => onHover(item.id)}
+      onBlur={() => onHover(null)}
+    >
+      {on && <circle className="tri-pt__ring" r={r + 4} />}
+      <circle className="tri-pt__dot" r={r} />
+      {state === 'sent' ? (
+        <path className="tri-pt__mark" d={`M${-r * 0.42} ${r * 0.05}l${r * 0.28} ${r * 0.28}L${r * 0.44} ${-r * 0.33}`} />
+      ) : (
+        <text className="tri-pt__ini" textAnchor="middle" dy="0.35em" style={{ fontSize: r * 0.86 }}>{initials(item.from)}</text>
+      )}
+    </g>
+  );
+}
+
+function Tip({ placed, hover, w, h }: { placed: Placed[]; hover: string | null; w: number; h: number }): React.ReactElement | null {
   const tip = placed.find((p) => p.item.id === hover);
+  if (!tip) return null;
+  return (
+    <div className="tri-tip" style={{ left: `${(tip.x / w) * 100}%`, top: `${(tip.y / h) * 100}%` }} aria-hidden="true">
+      <b>{tip.item.from}</b>
+      {(tip.item.subject ?? tip.item.preview) && <span>{tip.item.subject ?? tip.item.preview}</span>}
+      <em>{scoreLine(tip.item)}</em>
+    </div>
+  );
+}
+
+/** The categories on the card, with counts: tap one to pick out its messages everywhere. */
+function Legend({ items, lanes, focus, onFocus }: {
+  items: TriageItem[]; lanes: TriageCategory[]; focus: TriageCategory | null; onFocus: (c: TriageCategory | null) => void;
+}): React.ReactElement | null {
+  if (lanes.length < 2) return null;
+  return (
+    <div className="tri-legend" role="group" aria-label="Show one kind of message">
+      {lanes.map((c) => (
+        <button
+          key={c}
+          type="button"
+          className={`tri-legend__item tri-cat--${c}`}
+          aria-pressed={focus === c}
+          onClick={() => onFocus(focus === c ? null : c)}
+        >
+          <i aria-hidden="true" />{CATEGORY_LABELS[c]}<b>{items.filter((it) => categoryOf(it) === c).length}</b>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** A corner's category mix as one thin bar: what it's mostly about, at a glance. */
+function MixBar({ items, x, y, w }: { items: TriageItem[]; x: number; y: number; w: number }): React.ReactElement {
+  const total = items.length;
+  if (total === 0) return <rect className="tri-mix__empty" x={x} y={y} width={w} height="4" rx="2" />;
+  let at = x;
+  const parts = TRIAGE_CATEGORIES.map((c) => ({ c, n: items.filter((it) => categoryOf(it) === c).length })).filter((p) => p.n > 0);
+  return (
+    <g>
+      {parts.map(({ c, n }, i) => {
+        const pw = (w * n) / total;
+        const rect = <rect key={c} className={`tri-mix__part tri-cat--${c}`} x={at + (i ? 1 : 0)} y={y} width={Math.max(0, pw - (i ? 1 : 0))} height="4" rx="2"><title>{`${CATEGORY_LABELS[c]}: ${n}`}</title></rect>;
+        at += pw;
+        return rect;
+      })}
+    </g>
+  );
+}
+
+function Overview({ items, selected, focus, onSelect, onZoom }: {
+  items: TriageItem[]; selected: string | null; focus: TriageCategory | null;
+  onSelect: (id: string) => void; onZoom: (q: Quadrant) => void;
+}): React.ReactElement {
+  const placed = useMemo(() => spread(items, (it) => {
+    const c = cornerBox(quadrantOf(it));
+    return { x: c.x + INSET, y: c.y + HEAD, w: c.w - INSET * 2, h: c.h - HEAD - INSET };
+  }, R), [items]);
+  const [hover, setHover] = useState<string | null>(null);
   const cx = W / 2;
   const cy = PAD_T + (H - PAD_T - PAD_B) / 2;
-  const n = Math.max(1, lanes.length);
   return (
-    <div className="tri-plot">
-      {lanes.length > 1 && (
-        <div className="tri-legend" aria-label="Lanes in each corner">
-          {lanes.map((c) => (
-            <span key={c} className={`tri-legend__item tri-cat--${c}`}>
-              <i aria-hidden="true" />{CATEGORY_LABELS[c]}<b>{items.filter((it) => categoryOf(it) === c).length}</b>
-            </span>
-          ))}
-        </div>
-      )}
-      <div className="tri-plot__area">
-      <svg viewBox={`0 0 ${W} ${H}`} role="group" aria-label="Messages by urgency and importance, each corner split by what they're about">
+    <div className="tri-plot__area">
+      <svg viewBox={`0 0 ${W} ${H}`} role="group" aria-label="Messages by urgency and importance">
         {Q_ORDER.map((q) => {
           const c = cornerBox(q);
-          const count = items.filter((it) => quadrantOf(it) === q).length;
+          const inQ = items.filter((it) => quadrantOf(it) === q);
+          // An empty corner has nothing to open.
+          const opens = inQ.length > 0;
           return (
-            <g key={q} className={`tri-corner tri-corner--${q}`}>
+            <g
+              key={q}
+              className={`tri-corner tri-corner--${q}${opens ? ' tri-corner--opens' : ''}`}
+              {...(opens ? {
+                role: 'button',
+                tabIndex: 0,
+                'aria-label': `Open ${QUADRANTS[q].label}: ${inQ.length} message${inQ.length === 1 ? '' : 's'}, by category`,
+                onClick: () => onZoom(q),
+                onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onZoom(q); } },
+              } : {})}
+            >
               <rect className="tri-corner__bg" x={c.x} y={c.y} width={c.w} height={c.h} rx="12" />
               <text className="tri-corner__name" x={c.x + 10} y={c.y + 16}>{QUADRANTS[q].label}</text>
-              <text className="tri-corner__count" x={c.x + c.w - 10} y={c.y + 16} textAnchor="end">{count || ''}</text>
-              {/* Each lane keyed by its category's colour, and divided from the next. */}
-              {lanes.length > 1 && lanes.map((cat, i) => {
-                const b = laneBox(q, i, n);
-                return (
-                  <g key={cat}>
-                    <rect className={`tri-lane__key tri-cat--${cat}`} x={b.x + 3} y={b.y - 3} width={Math.max(0, b.w - 6)} height="2.5" rx="1.25"><title>{CATEGORY_LABELS[cat]}</title></rect>
-                    {i > 0 && <line className="tri-lane__div" x1={b.x} y1={b.y + 2} x2={b.x} y2={b.y + b.h} />}
-                  </g>
-                );
-              })}
+              {opens && <text className="tri-corner__count" x={c.x + c.w - 10} y={c.y + 16} textAnchor="end">{inQ.length}<tspan className="tri-corner__chev" dx="4">›</tspan></text>}
+              <MixBar items={inQ} x={c.x + 10} y={c.y + 22} w={c.w - 20} />
             </g>
           );
         })}
@@ -146,48 +227,77 @@ function Plot({ items, selected, onSelect }: { items: TriageItem[]; selected: st
         </g>
         <text className="tri-al" x={cx + 9} y={11}>Importance</text>
         <text className="tri-al" x={W - 2} y={H - 4} textAnchor="end">Urgency →</text>
-        {placed.map(({ item, x, y }) => {
-          const q = quadrantOf(item);
-          const state = item.state ?? 'open';
-          const on = item.id === selected;
+        {placed.map(({ item, x, y }) => (
+          <Point key={item.id} item={item} x={x} y={y} r={R} on={item.id === selected} dim={Boolean(focus && categoryOf(item) !== focus)} onSelect={onSelect} onHover={setHover} />
+        ))}
+      </svg>
+      <Tip placed={placed} hover={hover} w={W} h={H} />
+    </div>
+  );
+}
+
+/* One corner, opened: a small plot per category, the same exact axes. */
+const ZW = 600;
+const ZH = 250;
+const Z_HEAD = 24;
+const Z_FOOT = 16;
+/** Room on the left for the importance scale. */
+const Z_LEFT = 22;
+const Z_GAP = 10;
+const ZR = 13;
+const TICKS = [0, 0.5, 1];
+
+function Breakdown({ q, items, lanes, selected, focus, onSelect }: {
+  q: Quadrant; items: TriageItem[]; lanes: TriageCategory[]; selected: string | null; focus: TriageCategory | null;
+  onSelect: (id: string) => void;
+}): React.ReactElement {
+  const cats = lanes.length ? lanes : (['other'] as TriageCategory[]);
+  const k = cats.length;
+  const cw = (ZW - Z_LEFT - Z_GAP * (k - 1)) / k;
+  const inQ = useMemo(() => items.filter((it) => quadrantOf(it) === q), [items, q]);
+  const boxFor = (c: TriageCategory): Box => {
+    const i = cats.indexOf(c);
+    return { x: Z_LEFT + i * (cw + Z_GAP), y: Z_HEAD, w: cw, h: ZH - Z_HEAD - Z_FOOT };
+  };
+  const plotH = ZH - Z_HEAD - Z_FOOT;
+  const placed = useMemo(() => spread(inQ, (it) => boxFor(categoryOf(it)), ZR), [inQ, k]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [hover, setHover] = useState<string | null>(null);
+  const [uLo, uHi, iLo, iHi] = cornerRange(q);
+  return (
+    <div className="tri-plot__area">
+      <svg viewBox={`0 0 ${ZW} ${ZH}`} role="group" aria-label={`${QUADRANTS[q].label}, by category`}>
+        {TICKS.map((t) => (
+          <text key={t} className="tri-sub__tick" x={Z_LEFT - 5} y={Z_HEAD + ZR + (plotH - 2 * ZR) * (1 - t)} dy="0.35em" textAnchor="end">{fmt(iLo + (iHi - iLo) * t)}</text>
+        ))}
+        {cats.map((c) => {
+          const b = boxFor(c);
+          const n = inQ.filter((it) => categoryOf(it) === c).length;
           return (
-            <g
-              key={item.id}
-              className={`tri-pt tri-cat--${categoryOf(item)} tri-pt--${state}${on ? ' tri-pt--on' : ''}`}
-              transform={`translate(${x} ${y})`}
-              role="button"
-              tabIndex={0}
-              aria-label={`${item.from}${item.subject ? `: ${item.subject}` : ''} — ${QUADRANTS[q].label}, ${CATEGORY_LABELS[categoryOf(item)]}${state === 'sent' ? ', sent' : state === 'skipped' ? ', skipped' : ''}`}
-              aria-pressed={on}
-              onClick={() => onSelect(item.id)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(item.id); } }}
-              onMouseEnter={() => setHover(item.id)}
-              onMouseLeave={() => setHover((h) => (h === item.id ? null : h))}
-              onFocus={() => setHover(item.id)}
-              onBlur={() => setHover((h) => (h === item.id ? null : h))}
-            >
-              {on && <circle className="tri-pt__ring" r={R + 4} />}
-              <circle className="tri-pt__dot" r={R} />
-              {state === 'sent' ? (
-                <path className="tri-pt__mark" d="M-4.5 0.5l3 3L4.8-3.6" />
-              ) : (
-                <text className="tri-pt__ini" textAnchor="middle" dy="0.35em">{initials(item.from)}</text>
-              )}
+            <g key={c} className={`tri-sub tri-cat--${c}${focus && focus !== c ? ' tri-sub--dim' : ''}`}>
+              <circle className="tri-sub__dot" cx={b.x + 6} cy={12} r="4" />
+              <text className="tri-sub__name" x={b.x + 15} y={16}>{CATEGORY_LABELS[c]}</text>
+              <text className="tri-sub__count" x={b.x + b.w} y={16} textAnchor="end">{n}</text>
+              <rect className="tri-sub__bg" x={b.x} y={b.y} width={b.w} height={b.h} rx="10" />
+              {/* Quarter lines, so a point's place reads as a number. */}
+              {[0.25, 0.5, 0.75].map((t) => (
+                <g key={t}>
+                  <line className="tri-sub__grid" x1={b.x + b.w * t} y1={b.y + 4} x2={b.x + b.w * t} y2={b.y + b.h - 4} />
+                  <line className="tri-sub__grid" x1={b.x + 4} y1={b.y + b.h * t} x2={b.x + b.w - 4} y2={b.y + b.h * t} />
+                </g>
+              ))}
+              {TICKS.map((t) => (
+                <text key={t} className="tri-sub__tick" x={b.x + ZR + (b.w - 2 * ZR) * t} y={ZH - 3} textAnchor="middle">{fmt(uLo + (uHi - uLo) * t)}</text>
+              ))}
+              {n === 0 && <text className="tri-sub__none" x={b.x + b.w / 2} y={b.y + b.h / 2} textAnchor="middle">None</text>}
             </g>
           );
         })}
+        {placed.map(({ item, x, y }) => (
+          <Point key={item.id} item={item} x={x} y={y} r={ZR} on={item.id === selected} dim={Boolean(focus && categoryOf(item) !== focus)} onSelect={onSelect} onHover={setHover} />
+        ))}
       </svg>
-      {tip && (
-        <div
-          className="tri-tip"
-          style={{ left: `${(tip.x / W) * 100}%`, top: `${(tip.y / H) * 100}%` }}
-          aria-hidden="true"
-        >
-          <b>{tip.item.from}</b>
-          <span>{tip.item.subject ?? tip.item.preview ?? ''}</span>
-        </div>
-      )}
-      </div>
+      <Tip placed={placed} hover={hover} w={ZW} h={ZH} />
+      <div className="tri-zoom__axes">In each: urgency {uLo}–{uHi} across, importance {iLo}–{iHi} up</div>
     </div>
   );
 }
@@ -251,8 +361,9 @@ function Message({ item, source, onAnswer, inRow }: {
           <div className="tri-msg__tags">
             <span className={`tri-chip tri-chip--${q}`}>{QUADRANTS[q].label}</span>
             <span className={`tri-chip tri-chip--cat tri-cat--${categoryOf(item)}`}><i aria-hidden="true" />{CATEGORY_LABELS[categoryOf(item)]}</span>
-            {item.why && <span className="tri-msg__why">{item.why}</span>}
+            <span className="tri-msg__score">Urgency {fmt(item.urgency)} · Importance {fmt(item.importance)}</span>
           </div>
+          {item.why && <div className="tri-msg__why">{item.why}</div>}
           {item.subject && <div className="tri-msg__subject">{item.subject}</div>}
         </>
       )}
@@ -320,6 +431,9 @@ export function TriageView({ widget, wid, onReply }: { widget: TriageWidget; wid
   const order = useMemo(() => triageOrder(items), [items]);
   const plotted = items.length > PLOT_ABOVE;
   const [view, setView] = useState<'plot' | 'list'>(plotted ? 'plot' : 'list');
+  const [zoom, setZoom] = useState<Quadrant | null>(null);
+  const [focus, setFocus] = useState<TriageCategory | null>(null);
+  const lanes = useMemo(() => lanesOf(items), [items]);
   const [selected, setSelected] = useState<string | null>(() => order.find((i) => !isSettled(i))?.id ?? order[0]?.id ?? null);
   const handled = items.filter(isSettled).length;
   const nowLeft = items.filter((i) => quadrantOf(i) === 'now' && !isSettled(i)).length;
@@ -359,7 +473,25 @@ export function TriageView({ widget, wid, onReply }: { widget: TriageWidget; wid
 
       {view === 'plot' ? (
         <>
-          <Plot items={items} selected={selected} onSelect={setSelected} />
+          <div className="tri-plot">
+            <div className="tri-plot__bar">
+              {zoom ? (
+                <>
+                  <button type="button" className="tri-back" onClick={() => setZoom(null)} aria-label="Back to all corners">‹ All corners</button>
+                  <span className={`tri-plot__where tri-plot__where--${zoom}`}>{QUADRANTS[zoom].label}</span>
+                  <span className="tri-plot__hint">{QUADRANTS[zoom].hint}</span>
+                </>
+              ) : (
+                <span className="tri-plot__hint">Click a corner to see it by category</span>
+              )}
+            </div>
+            <Legend items={items} lanes={lanes} focus={focus} onFocus={setFocus} />
+            <div key={zoom ?? 'all'} className="tri-plot__stage" onKeyDown={(e) => { if (e.key === 'Escape' && zoom) setZoom(null); }}>
+              {zoom
+                ? <Breakdown q={zoom} items={items} lanes={lanes} selected={selected} focus={focus} onSelect={setSelected} />
+                : <Overview items={items} selected={selected} focus={focus} onSelect={setSelected} onZoom={setZoom} />}
+            </div>
+          </div>
           {open ? (
             <Message key={open.id} item={open} source={widget.source} onAnswer={(d, t) => answer(open, d, t)} />
           ) : (

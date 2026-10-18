@@ -62,6 +62,57 @@ describe('the triage card', () => {
     expect((host.querySelector('.tri-reply__text') as HTMLTextAreaElement).value).toBe('Reply to Priya Shah');
   });
 
+  it('puts a point where its scores say, whatever it is about', () => {
+    const { widget } = parseWidget({
+      type: 'triage',
+      items: [
+        { id: 'a', from: 'Boss', urgency: 8, importance: 6, category: 'work' },
+        { id: 'b', from: 'Sister', urgency: 8, importance: 9, category: 'personal' },
+        { id: 'c', from: 'Shop', urgency: 1, importance: 1, category: 'other' },
+        { id: 'd', from: 'Prof', urgency: 2, importance: 8, category: 'academics' },
+        { id: 'e', from: 'Team', urgency: 6, importance: 2, category: 'work' },
+        { id: 'f', from: 'Friend', urgency: 3, importance: 3, category: 'personal' },
+      ],
+    });
+    render(widget!);
+    const at = (name: string): [number, number] => {
+      const g = [...host.querySelectorAll('.tri-pt')].find((p) => p.getAttribute('aria-label')?.startsWith(name))!;
+      const [, x, y] = /translate\(([\d.]+) ([\d.]+)\)/.exec(g.getAttribute('transform')!)!;
+      return [Number(x), Number(y)];
+    };
+    // Same urgency, different category: the same distance across.
+    expect(at('Boss')[0]).toBeCloseTo(at('Sister')[0], 5);
+    // More important is higher up, in the same corner.
+    expect(at('Sister')[1]).toBeLessThan(at('Boss')[1]);
+    expect(host.querySelector('[aria-label^="Boss"]')?.getAttribute('aria-label')).toContain('Urgency 8 · Importance 6 · Work');
+  });
+
+  it('opens a corner as one plot per category on the card, and comes back', () => {
+    render(card(8));
+    const corner = host.querySelector('.tri-corner--now') as SVGGElement;
+    act(() => { corner.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(host.querySelector('.tri-plot__where')?.textContent).toBe('Reply now');
+    // Priya (9, 9), Prof. Iyer (8, 9), Mom (6, 8): the corner's three.
+    expect(host.querySelectorAll('.tri-pt')).toHaveLength(3);
+    expect(host.querySelectorAll('.tri-sub').length).toBeGreaterThan(0);
+    expect(host.textContent).toContain('urgency 5–10 across, importance 5–10 up');
+    act(() => button(/All corners/).click());
+    expect(host.querySelectorAll('.tri-pt')).toHaveLength(8);
+  });
+
+  it('picks out one category from the legend, fading the rest', () => {
+    const { widget } = parseWidget({
+      type: 'triage',
+      items: people.slice(0, 6).map((from, i) => ({ id: `m${i}`, from, urgency: i + 2, importance: 8 - i, category: i % 2 ? 'work' : 'personal' })),
+    });
+    render(widget!);
+    act(() => button(/^Work/).click());
+    expect(host.querySelectorAll('.tri-pt--dim')).toHaveLength(3);
+    expect(host.querySelectorAll('.tri-cat--work.tri-pt--dim')).toHaveLength(0);
+    act(() => button(/^Work/).click());
+    expect(host.querySelectorAll('.tri-pt--dim')).toHaveLength(0);
+  });
+
   it('lists five or fewer instead', () => {
     render(card(4));
     expect(host.querySelector('svg.tri-pt, .tri-plot')).toBeNull();

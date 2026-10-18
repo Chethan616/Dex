@@ -20,6 +20,27 @@
 
 ## ▶ RESUME HERE — live work log (keep this block current; newest first)
 
+**2026-10-18, owner's PC: the triage graph, made honest.** The owner reported that the category lanes made urgency wrong: Work looked more urgent only because of its lane.
+- **Overview.**
+  - Every point sits at its exact urgency (across) and importance (up) within its corner (`withinCorner` / `cornerRange` in `shared/triage.ts`). Category is colour only.
+  - Each corner shows its name, count and a thin bar of its category mix.
+  - The legend chips filter: pick one category and the rest fade.
+  - Hover shows "Urgency 9 · Importance 8 · Work". The opened message shows the scores too.
+- **Opening a corner** (click on the hub; tap on the phone, which opens the sheet on that corner):
+  - one small plot per category on the card, all on the same axes, with real tick numbers (e.g. 5–10);
+  - "None" where a category has none;
+  - "‹ All corners" (or Back on the phone) returns.
+  - On the phone, Yes/No moves to the next message in the opened corner first.
+- **Code:**
+  - `hub/chat/Triage.tsx` (`Overview`, `Breakdown`, `Legend`, `MixBar`) and `triage.css`.
+  - Phone: `ui/components/Triage.kt` (`Overview`, `Breakdown`, `MiniPlot` two to a row, `Legend` as toggles).
+  - ui.md now says category never moves a point.
+- **Checked:**
+  - The hub rendered headless (overview, filter, both corners, hover) in dark and light.
+  - The phone rendered with Robolectric (card, filter, sheet, corners) in dark and light.
+  - 1271 desktop tests and the phone unit tests pass.
+- **Robolectric note:** after `performClick()`, call `rule.waitForIdle()` before reading state; a paused clock alone doesn't flush the change.
+
 **2026-10-18, owner's PC: the reviewer's triage card.** Pushed in `c01c677d`.
 - **The feature.** "Reply to my unread mail / WhatsApp / Slack" gives one card:
   - each message is a point on urgency (across) and importance (up), with the axes through the middle;

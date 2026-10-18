@@ -1,5 +1,6 @@
 package com.chethan616.dex.ui.components
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -61,14 +63,21 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -92,7 +101,8 @@ import kotlin.math.sin
  * In the chat it's a compact card — the plot, or the rows when there are
  * five or fewer. Answering happens in a full-screen sheet that stays open
  * while you go through them, each message turning to "Sending…" then a tick
- * as the PC's updates arrive.
+ * as the PC's updates arrive. Tap a corner of the plot and the sheet opens on
+ * that corner, one small plot per category.
  */
 
 data class TItem(
@@ -110,7 +120,7 @@ data class TItem(
   val source: String?,
   val state: String?,
   val note: String?,
-  /** What it's about: academics, work, personal or other — its lane in the quadrant. */
+  /** What it's about: academics, work, personal or other — its colour, and its own small plot when a corner opens. */
   val category: String = "other",
 )
 
@@ -137,11 +147,11 @@ internal fun parseTriageItem(o: JSONObject, i: Int): TItem? {
   )
 }
 
-/** The lanes, in the desktop's order (shared/triage.ts TRIAGE_CATEGORIES). */
+/** The categories, in the desktop's order (shared/triage.ts TRIAGE_CATEGORIES). */
 internal val CATEGORIES = listOf("academics", "work", "personal", "other")
 private val CATEGORY_LABELS = mapOf("academics" to "Academics", "work" to "Work", "personal" to "Personal", "other" to "Other")
 
-/** The categories a card's messages have, in order: its quadrants' lanes. */
+/** The categories a card's messages have, in order: the legend, and the small plots of an opened corner. */
 internal fun lanesOf(items: List<TItem>): List<String> = CATEGORIES.filter { c -> items.any { it.category == c } }
 
 /* ── The four corners (the same split as shared/triage.ts) ─────────── */
@@ -189,6 +199,24 @@ internal fun quadOf(i: TItem): Quad = when {
   else -> Quad.Later
 }
 
+/** A corner's scores: urgency from, to; importance from, to (shared/triage.ts cornerRange). */
+internal fun cornerRange(q: Quad): List<Double> {
+  val urgent = q == Quad.Now || q == Quad.Quick
+  val important = q == Quad.Now || q == Quad.Plan
+  return listOf(if (urgent) 5.0 else 0.0, if (urgent) 10.0 else 5.0, if (important) 5.0 else 0.0, if (important) 10.0 else 5.0)
+}
+
+/** Where a message sits inside its corner, 0–1 each way: its exact scores, nothing else (shared/triage.ts withinCorner). */
+internal fun withinCorner(i: TItem): Pair<Float, Float> {
+  val (uLo, uHi, iLo, iHi) = cornerRange(quadOf(i))
+  return ((i.urgency - uLo) / (uHi - uLo)).coerceIn(0.0, 1.0).toFloat() to ((i.importance - iLo) / (iHi - iLo)).coerceIn(0.0, 1.0).toFloat()
+}
+
+private fun num(d: Double): String = if (d % 1.0 == 0.0) d.toInt().toString() else "%.1f".format(d).trimEnd('0').trimEnd('.')
+
+/** "Urgency 9 · Importance 8": a message's scores in words. */
+internal fun scores(i: TItem): String = "Urgency ${num(i.urgency)} · Importance ${num(i.importance)}"
+
 /** Reply now first, then quick ones, then the rest; within each, highest first. */
 internal fun triageOrder(items: List<TItem>): List<TItem> =
   items.sortedWith(compareBy<TItem> { quadOf(it).ordinal }.thenByDescending { it.urgency + it.importance })
@@ -226,7 +254,10 @@ internal fun TriageCard(title: String?, source: String?, cardItems: List<TItem>,
     if (mine != null && it.state == mine.second) it.copy(state = mine.first) else it
   }
   val order = triageOrder(items)
+  val lanes = lanesOf(items)
   var openAt by remember { mutableStateOf<String?>(null) }
+  var openOn by remember { mutableStateOf<Quad?>(null) }
+  var focus by remember { mutableStateOf<String?>(null) }
   val handled = items.count(::settled)
   val nowLeft = items.count { quadOf(it) == Quad.Now && !settled(it) }
   val sub = listOfNotNull("${items.size} message${if (items.size == 1) "" else "s"}", SOURCE_NAME[source], if (nowLeft > 0) "$nowLeft to reply now" else null, if (handled > 0) "$handled answered" else null).joinToString(" · ")
@@ -250,7 +281,13 @@ internal fun TriageCard(title: String?, source: String?, cardItems: List<TItem>,
       }
       Progress(handled, items.size)
       if (items.size > PLOT_ABOVE) {
-        TriagePlot(items, selected = null, onSelect = { haptics.click(); openAt = it })
+        if (lanes.size > 1) Legend(items, lanes, focus) { haptics.tick(); focus = it }
+        Overview(
+          items, selected = null, focus = focus,
+          onSelect = { haptics.click(); openOn = null; openAt = it },
+          onZoom = { q -> haptics.click(); openOn = q; openAt = (order.firstOrNull { quadOf(it) == q && !settled(it) } ?: order.first { quadOf(it) == q }).id },
+        )
+        Text("Tap a corner to see it by category, or a point to answer it", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
       } else {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
           order.forEach { item -> TriageRow(item, selected = false, onClick = { haptics.click(); openAt = item.id }) }
@@ -258,7 +295,7 @@ internal fun TriageCard(title: String?, source: String?, cardItems: List<TItem>,
       }
       val first = order.firstOrNull { !settled(it) }
       if (first != null) {
-        Button(onClick = { haptics.click(); openAt = first.id }, modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp)) {
+        Button(onClick = { haptics.click(); openOn = null; openAt = first.id }, modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp)) {
           Text(if (handled == 0) "Answer them" else "Keep going · ${items.size - handled} left")
         }
       } else {
@@ -272,8 +309,8 @@ internal fun TriageCard(title: String?, source: String?, cardItems: List<TItem>,
 
   openAt?.let { start ->
     TriageSheet(
-      title = title, source = source, items = items, order = order, start = start, canAnswer = wid != null,
-      onAnswer = answer, onDismiss = { openAt = null },
+      title = title, source = source, items = items, order = order, start = start, startOn = openOn, canAnswer = wid != null,
+      focus = focus, onFocus = { focus = it }, onAnswer = answer, onDismiss = { openAt = null },
     )
   }
 }
@@ -327,6 +364,14 @@ private fun TriageRow(item: TItem, selected: Boolean, onClick: () -> Unit) {
 
 /* ── The plot ─────────────────────────────────────────────────────── */
 
+/*
+ * Two levels, as on the desktop (Triage.tsx). The overview is honest: each
+ * message sits exactly where its urgency (across) and importance (up) put it
+ * in its corner, and its colour says what it's about — a category never moves
+ * a point. Tap a corner and it opens as one small plot per category, the same
+ * axes with real numbers on them.
+ */
+
 private data class Placed(val item: TItem, val x: Float, val y: Float)
 private data class Box4(val x: Float, val y: Float, val w: Float, val h: Float)
 
@@ -339,24 +384,12 @@ private fun corner(q: Quad, w: Float, top: Float, plotH: Float, gap: Float): Box
   return Box4(if (right) qw + gap else 0f, top + if (upper) 0f else qh + gap, qw, qh)
 }
 
-/** One category's lane in a corner: a small plot of its own, the same axes. */
-private fun lane(c: Box4, i: Int, n: Int, head: Float, inset: Float): Box4 {
-  val lw = (c.w - inset * 2) / n
-  return Box4(c.x + inset + i * lw, c.y + head, lw, c.h - head - inset)
-}
-
-/**
- * Each message in its corner's lane for its category, where its scores put it
- * within the corner, nudged off any point it would cover without leaving the
- * lane (as Triage.tsx does).
- */
-private fun place(items: List<TItem>, lanes: List<String>, w: Float, top: Float, plotH: Float, gap: Float, head: Float, inset: Float, r: Float): List<Placed> {
+/** Each message where its scores put it in its box, nudged off any point it would cover without leaving the box (as Triage.tsx does). */
+private fun spread(items: List<TItem>, boxOf: (TItem) -> Box4, r: Float): List<Placed> {
   val out = mutableListOf<Placed>()
-  val n = maxOf(1, lanes.size)
   for (item in triageOrder(items)) {
-    val b = lane(corner(quadOf(item), w, top, plotH, gap), maxOf(0, lanes.indexOf(item.category)), n, head, inset)
-    val fu = ((item.urgency - if (item.urgency >= 5) 5.0 else 0.0) / 5.0).coerceIn(0.0, 1.0).toFloat()
-    val fi = ((item.importance - if (item.importance >= 5) 5.0 else 0.0) / 5.0).coerceIn(0.0, 1.0).toFloat()
+    val b = boxOf(item)
+    val (fu, fi) = withinCorner(item)
     val minX = b.x + r
     val maxX = maxOf(minX, b.x + b.w - r)
     val minY = b.y + r
@@ -378,103 +411,206 @@ private fun place(items: List<TItem>, lanes: List<String>, w: Float, top: Float,
   return out
 }
 
-/** The categories with their colours and counts — what the lanes' colour keys mean. */
+/** The categories on the card, as filters: one on fades the rest, in every view. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Legend(items: List<TItem>, lanes: List<String>) {
-  FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+private fun Legend(items: List<TItem>, lanes: List<String>, focus: String?, onFocus: (String?) -> Unit) {
+  val scheme = MaterialTheme.colorScheme
+  FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
     lanes.forEach { c ->
-      Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-        Box(Modifier.size(8.dp).clip(CircleShape).background(catColors(c).first))
-        Text(CATEGORY_LABELS[c] ?: c, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("${items.count { it.category == c }}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.outline)
+      val fill = catColors(c).first
+      val on = focus == c
+      Row(
+        Modifier
+          .clip(CircleShape)
+          .background(if (on) fill.copy(alpha = 0.2f) else scheme.surfaceContainerHighest.copy(alpha = 0.7f))
+          .then(if (on) Modifier.border(1.dp, fill.copy(alpha = 0.7f), CircleShape) else Modifier)
+          // One toggle to a screen reader too: "Personal, 3, checked".
+          .toggleable(value = on, role = Role.Checkbox) { onFocus(if (on) null else c) }
+          .padding(horizontal = 10.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+      ) {
+        Box(Modifier.size(8.dp).clip(CircleShape).background(fill))
+        Text(CATEGORY_LABELS[c] ?: c, style = MaterialTheme.typography.labelMedium, color = if (on) scheme.onSurface else scheme.onSurfaceVariant)
+        Text("${items.count { it.category == c }}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = scheme.outline)
       }
     }
   }
 }
 
+/** A message on a plot: its initials in its category's colour, a tick once sent. */
 @Composable
-private fun TriagePlot(items: List<TItem>, selected: String?, onSelect: (String) -> Unit) {
+private fun PlotPoint(p: Placed, rDp: Int, on: Boolean, dim: Boolean, onSelect: (String) -> Unit) {
+  val density = LocalDensity.current
+  val r = with(density) { rDp.dp.toPx() }
+  Box(
+    Modifier
+      .offset { IntOffset((p.x - r).roundToInt(), (p.y - r).roundToInt()) }
+      .size((rDp * 2).dp)
+      .alpha(if (dim) 0.18f else if (p.item.state == "skipped") 0.35f else 1f)
+      .then(if (on) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape) else Modifier)
+      .clip(CircleShape)
+      .clickable { onSelect(p.item.id) }
+      .semantics { contentDescription = "${p.item.from}${p.item.subject?.let { ": $it" } ?: ""}, ${quadOf(p.item).label}, ${scores(p.item)}, ${CATEGORY_LABELS[p.item.category]}" },
+    contentAlignment = Alignment.Center,
+  ) {
+    Avatar(p.item, size = if (on) rDp * 2 - 4 else rDp * 2)
+  }
+}
+
+/** All four corners: where each message is, and what each corner is mostly about. */
+@Composable
+private fun Overview(items: List<TItem>, selected: String?, focus: String?, onSelect: (String) -> Unit, onZoom: (Quad) -> Unit) {
   val scheme = MaterialTheme.colorScheme
   val density = LocalDensity.current
-  val lanes = remember(items) { lanesOf(items) }
-  val n = maxOf(1, lanes.size)
   val colors = CATEGORIES.associateWith { catColors(it).first }
   val quads = Quad.entries.associateWith { quadColor(it) }
-  Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-    if (lanes.size > 1) Legend(items, lanes)
-    // Compact on a phone: a little taller than wide, so each lane keeps room for its points.
-    BoxWithConstraints(Modifier.fillMaxWidth().aspectRatio(1.08f)) {
-      val wPx = constraints.maxWidth.toFloat()
-      val hPx = constraints.maxHeight.toFloat()
-      val padT = with(density) { 16.dp.toPx() }
-      val padB = with(density) { 16.dp.toPx() }
-      val gap = with(density) { 8.dp.toPx() }
-      val head = with(density) { 20.dp.toPx() }
-      val inset = with(density) { 4.dp.toPx() }
-      val r = with(density) { 11.dp.toPx() }
-      val plotH = hPx - padT - padB
-      val cx = wPx / 2
-      val cy = padT + plotH / 2
-      val placed = remember(items, lanes, wPx, hPx) { place(items, lanes, wPx, padT, plotH, gap, head, inset, r) }
-      val axis = scheme.outline
-      val panel = scheme.surfaceContainerHigh
-      val divider = scheme.outlineVariant.copy(alpha = 0.6f)
-      Canvas(Modifier.fillMaxSize()) {
-        val round = CornerRadius(12.dp.toPx())
-        Quad.entries.forEach { q ->
-          val c = corner(q, wPx, padT, plotH, gap)
-          val fill = if (q == Quad.Now) quads.getValue(q).copy(alpha = 0.12f) else panel.copy(alpha = 0.55f)
-          drawRoundRect(fill, Offset(c.x, c.y), Size(c.w, c.h), round)
-          if (lanes.size > 1) {
-            lanes.forEachIndexed { i, cat ->
-              val b = lane(c, i, n, head, inset)
-              drawRoundRect(colors.getValue(cat).copy(alpha = 0.6f), Offset(b.x + 2.dp.toPx(), b.y - 3.dp.toPx()), Size(maxOf(0f, b.w - 4.dp.toPx()), 2.dp.toPx()), CornerRadius(1.dp.toPx()))
-              if (i > 0) drawLine(divider, Offset(b.x, b.y + 2.dp.toPx()), Offset(b.x, b.y + b.h), 1.dp.toPx(), pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx())))
-            }
-          }
-        }
-        val stroke = Stroke(width = 1.4.dp.toPx(), cap = StrokeCap.Round)
-        drawLine(axis, Offset(2f, cy), Offset(wPx - 2f, cy), stroke.width, StrokeCap.Round)
-        drawLine(axis, Offset(cx, padT + plotH), Offset(cx, padT - 4.dp.toPx()), stroke.width, StrokeCap.Round)
-        val a = 6.dp.toPx()
-        drawPath(Path().apply { moveTo(wPx - 2f - a, cy - a * 0.8f); lineTo(wPx - 2f, cy); lineTo(wPx - 2f - a, cy + a * 0.8f) }, axis, style = stroke)
-        drawPath(Path().apply { moveTo(cx - a * 0.8f, padT - 4.dp.toPx() + a); lineTo(cx, padT - 4.dp.toPx()); lineTo(cx + a * 0.8f, padT - 4.dp.toPx() + a) }, axis, style = stroke)
-      }
-      val label = MaterialTheme.typography.labelSmall
-      // Each corner's name and count, inside it.
+  // Compact on a phone: a little taller than wide.
+  BoxWithConstraints(Modifier.fillMaxWidth().aspectRatio(1.08f)) {
+    val wPx = constraints.maxWidth.toFloat()
+    val hPx = constraints.maxHeight.toFloat()
+    fun px(d: Dp) = with(density) { d.toPx() }
+    val padT = px(16.dp)
+    val gap = px(8.dp)
+    val head = px(28.dp)
+    val inset = px(6.dp)
+    val rDp = 11
+    val r = px(rDp.dp)
+    val plotH = hPx - padT - px(16.dp)
+    val cx = wPx / 2
+    val cy = padT + plotH / 2
+    val placed = remember(items, wPx, hPx) {
+      spread(items, { val c = corner(quadOf(it), wPx, padT, plotH, gap); Box4(c.x + inset, c.y + head, c.w - inset * 2, c.h - head - inset) }, r)
+    }
+    val axis = scheme.outline
+    val panel = scheme.surfaceContainerHigh
+    val empty = scheme.outlineVariant.copy(alpha = 0.35f)
+    Canvas(Modifier.fillMaxSize()) {
+      val round = CornerRadius(12.dp.toPx())
       Quad.entries.forEach { q ->
         val c = corner(q, wPx, padT, plotH, gap)
-        val count = items.count { quadOf(it) == q }
-        Row(
-          Modifier.offset { IntOffset((c.x + with(density) { 8.dp.toPx() }).roundToInt(), (c.y + with(density) { 4.dp.toPx() }).roundToInt()) }
-            .width(with(density) { (c.w - 16.dp.toPx()).toDp() }),
-          verticalAlignment = Alignment.CenterVertically,
-        ) {
+        drawRoundRect(if (q == Quad.Now) quads.getValue(q).copy(alpha = 0.12f) else panel.copy(alpha = 0.55f), Offset(c.x, c.y), Size(c.w, c.h), round)
+        // The corner's mix of categories, one thin bar.
+        val inQ = items.filter { quadOf(it) == q }
+        val bx = c.x + 8.dp.toPx()
+        val bw = c.w - 16.dp.toPx()
+        val by = c.y + 19.dp.toPx()
+        val bh = 3.dp.toPx()
+        if (inQ.isEmpty()) drawRoundRect(empty, Offset(bx, by), Size(bw, bh), CornerRadius(bh / 2))
+        var at = bx
+        CATEGORIES.map { cat -> cat to inQ.count { it.category == cat } }.filter { it.second > 0 }.forEachIndexed { i, (cat, n) ->
+          val pw = bw * n / inQ.size
+          val gapPx = if (i > 0) 1.5.dp.toPx() else 0f
+          drawRoundRect(colors.getValue(cat).copy(alpha = 0.85f), Offset(at + gapPx, by), Size(maxOf(0f, pw - gapPx), bh), CornerRadius(bh / 2))
+          at += pw
+        }
+      }
+      val stroke = Stroke(width = 1.4.dp.toPx(), cap = StrokeCap.Round)
+      drawLine(axis, Offset(2f, cy), Offset(wPx - 2f, cy), stroke.width, StrokeCap.Round)
+      drawLine(axis, Offset(cx, padT + plotH), Offset(cx, padT - 4.dp.toPx()), stroke.width, StrokeCap.Round)
+      val a = 6.dp.toPx()
+      drawPath(Path().apply { moveTo(wPx - 2f - a, cy - a * 0.8f); lineTo(wPx - 2f, cy); lineTo(wPx - 2f - a, cy + a * 0.8f) }, axis, style = stroke)
+      drawPath(Path().apply { moveTo(cx - a * 0.8f, padT - 4.dp.toPx() + a); lineTo(cx, padT - 4.dp.toPx()); lineTo(cx + a * 0.8f, padT - 4.dp.toPx() + a) }, axis, style = stroke)
+    }
+    val label = MaterialTheme.typography.labelSmall
+    // Each corner: its name and count, and the whole of it a tap that opens it.
+    Quad.entries.forEach { q ->
+      val c = corner(q, wPx, padT, plotH, gap)
+      val count = items.count { quadOf(it) == q }
+      Box(
+        Modifier
+          .offset { IntOffset(c.x.roundToInt(), c.y.roundToInt()) }
+          .size(with(density) { c.w.toDp() }, with(density) { c.h.toDp() })
+          .clip(RoundedCornerShape(12.dp))
+          .then(if (count > 0) Modifier.clickable { onZoom(q) }.semantics { contentDescription = "Open ${q.label}: $count message${if (count == 1) "" else "s"}, by category" } else Modifier),
+      ) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
           Text(q.short.uppercase(), style = label, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = quads.getValue(q), maxLines = 1, modifier = Modifier.weight(1f))
-          if (count > 0) Text("$count", style = label, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, color = scheme.outline)
+          if (count > 0) Text("$count ›", style = label, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, color = scheme.outline)
         }
       }
-      Text("Importance", style = label, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = scheme.onSurfaceVariant,
-        modifier = Modifier.offset { IntOffset((cx + with(density) { 8.dp.toPx() }).roundToInt(), 0) })
-      Text("Urgency →", style = label, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = scheme.onSurfaceVariant, modifier = Modifier.align(Alignment.BottomEnd))
-      val dot = with(density) { (r * 2).toDp() }
-      placed.forEach { p ->
-        val on = p.item.id == selected
-        Box(
-          Modifier
-            .offset { IntOffset((p.x - r).roundToInt(), (p.y - r).roundToInt()) }
-            .size(dot)
-            .alpha(if (p.item.state == "skipped") 0.35f else 1f)
-            .then(if (on) Modifier.border(2.dp, scheme.onSurface, CircleShape) else Modifier)
-            .clip(CircleShape)
-            .clickable { onSelect(p.item.id) }
-            .semantics { contentDescription = "${p.item.from}${p.item.subject?.let { ": $it" } ?: ""}, ${quadOf(p.item).label}, ${CATEGORY_LABELS[p.item.category]}" },
-          contentAlignment = Alignment.Center,
-        ) {
-          Avatar(p.item, size = if (on) 18 else 22)
+    }
+    Text("Importance", style = label, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = scheme.onSurfaceVariant,
+      modifier = Modifier.offset { IntOffset((cx + px(8.dp)).roundToInt(), 0) })
+    Text("Urgency →", style = label, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = scheme.onSurfaceVariant, modifier = Modifier.align(Alignment.BottomEnd))
+    placed.forEach { p -> PlotPoint(p, rDp, on = p.item.id == selected, dim = focus != null && p.item.category != focus, onSelect = onSelect) }
+  }
+}
+
+/** One corner, opened: a small plot per category on the card, two to a row, each on the corner's own axes. */
+@Composable
+private fun Breakdown(q: Quad, items: List<TItem>, lanes: List<String>, selected: String?, focus: String?, onSelect: (String) -> Unit) {
+  val cats = lanes.ifEmpty { listOf("other") }
+  val inQ = items.filter { quadOf(it) == q }
+  val (uLo, uHi, iLo, iHi) = cornerRange(q)
+  Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    if (cats.size == 1) {
+      MiniPlot(cats[0], q, inQ, selected, dim = false, onSelect = onSelect, plotHeight = 210.dp)
+    } else {
+      cats.chunked(2).forEach { row ->
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+          row.forEach { c ->
+            Box(Modifier.weight(1f)) { MiniPlot(c, q, inQ.filter { it.category == c }, selected, dim = focus != null && focus != c, onSelect = onSelect, plotHeight = 140.dp) }
+          }
+          if (row.size == 1) Spacer(Modifier.weight(1f))
         }
       }
+    }
+    Text(
+      "In each: urgency ${num(uLo)}–${num(uHi)} across, importance ${num(iLo)}–${num(iHi)} up",
+      style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+      textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
+    )
+  }
+}
+
+@Composable
+private fun MiniPlot(cat: String, q: Quad, items: List<TItem>, selected: String?, dim: Boolean, onSelect: (String) -> Unit, plotHeight: Dp) {
+  val scheme = MaterialTheme.colorScheme
+  val density = LocalDensity.current
+  val fill = catColors(cat).first
+  val measurer = rememberTextMeasurer()
+  val tick = TextStyle(fontSize = 9.sp, color = scheme.onSurfaceVariant)
+  val none = TextStyle(fontSize = 11.sp, color = scheme.outline)
+  val grid = scheme.outlineVariant.copy(alpha = 0.45f)
+  val (uLo, uHi, iLo, iHi) = cornerRange(q)
+  Column(Modifier.alpha(if (dim) 0.4f else 1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+      Box(Modifier.size(8.dp).clip(CircleShape).background(fill))
+      Text(CATEGORY_LABELS[cat] ?: cat, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), maxLines = 1)
+      Text("${items.size}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = scheme.outline)
+    }
+    BoxWithConstraints(Modifier.fillMaxWidth().height(plotHeight + 14.dp)) {
+      val wPx = constraints.maxWidth.toFloat()
+      fun px(d: Dp) = with(density) { d.toPx() }
+      val left = px(18.dp)
+      val rDp = 12
+      val r = px(rDp.dp)
+      val box = Box4(left, 0f, wPx - left, px(plotHeight))
+      val placed = remember(items, wPx) { spread(items, { box }, r) }
+      Canvas(Modifier.fillMaxSize()) {
+        val round = CornerRadius(10.dp.toPx())
+        drawRoundRect(fill.copy(alpha = 0.07f), Offset(box.x, box.y), Size(box.w, box.h), round)
+        drawRoundRect(fill.copy(alpha = 0.35f), Offset(box.x, box.y), Size(box.w, box.h), round, style = Stroke(1.dp.toPx()))
+        val dash = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 4.dp.toPx()))
+        listOf(0.25f, 0.5f, 0.75f).forEach { t ->
+          drawLine(grid, Offset(box.x + box.w * t, box.y + 4.dp.toPx()), Offset(box.x + box.w * t, box.y + box.h - 4.dp.toPx()), 1.dp.toPx(), pathEffect = dash)
+          drawLine(grid, Offset(box.x + 4.dp.toPx(), box.y + box.h * t), Offset(box.x + box.w - 4.dp.toPx(), box.y + box.h * t), 1.dp.toPx(), pathEffect = dash)
+        }
+        // Real numbers on both axes, where a point at that score would sit.
+        listOf(0f, 0.5f, 1f).forEach { t ->
+          val u = measurer.measure(num(uLo + (uHi - uLo) * t), tick)
+          drawText(u, topLeft = Offset(box.x + r + (box.w - 2 * r) * t - u.size.width / 2f, box.h + 2.dp.toPx()))
+          val i = measurer.measure(num(iLo + (iHi - iLo) * t), tick)
+          drawText(i, topLeft = Offset(left - 3.dp.toPx() - i.size.width, box.y + r + (box.h - 2 * r) * (1 - t) - i.size.height / 2f))
+        }
+        if (items.isEmpty()) {
+          val n = measurer.measure("None", none)
+          drawText(n, topLeft = Offset(box.x + (box.w - n.size.width) / 2f, box.y + (box.h - n.size.height) / 2f))
+        }
+      }
+      placed.forEach { p -> PlotPoint(p, rDp, on = p.item.id == selected, dim = false, onSelect = onSelect) }
     }
   }
 }
@@ -488,18 +624,29 @@ private fun TriageSheet(
   items: List<TItem>,
   order: List<TItem>,
   start: String,
+  startOn: Quad?,
   canAnswer: Boolean,
+  focus: String?,
+  onFocus: (String?) -> Unit,
   onAnswer: (TItem, String, String?) -> String?,
   onDismiss: () -> Unit,
 ) {
   val haptics = LocalHaptics.current
   val scheme = MaterialTheme.colorScheme
+  val lanes = lanesOf(items)
   var selected by remember { mutableStateOf(start) }
+  var zoom by remember { mutableStateOf(startOn) }
   var next by remember { mutableStateOf<String?>(null) }
-  // Yes and No settle a message: a beat to see it land, then the next.
+  // Yes and No settle a message: a beat to see it land, then the next — in the opened corner while it has one.
   LaunchedEffect(next) { next?.let { delay(260); selected = it; next = null } }
   val open = items.firstOrNull { it.id == selected }
-  Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+  val answered: (TItem, String, String?) -> Unit = { item, d, t ->
+    onAnswer(item, d, t)?.let { after ->
+      if (after != item.id) next = order.firstOrNull { it.id != item.id && !settled(it) && zoom != null && quadOf(it) == zoom }?.id ?: after
+    }
+  }
+  // Back from an opened corner goes to all four first.
+  Dialog(onDismissRequest = { if (zoom != null) zoom = null else onDismiss() }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
     Surface(Modifier.fillMaxSize(), color = scheme.surfaceContainerLowest) {
       Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
         Row(Modifier.padding(start = 20.dp, end = 12.dp, top = 12.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -512,12 +659,27 @@ private fun TriageSheet(
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
           if (items.size > PLOT_ABOVE) {
-            TriagePlot(items, selected = selected, onSelect = { haptics.click(); selected = it })
-            open?.let { item -> TriageMessage(item, source, canAnswer) { d, t -> onAnswer(item, d, t)?.let { if (it != item.id) next = it } } }
+            Row(Modifier.heightIn(min = 32.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+              val at = zoom
+              if (at != null) {
+                FilledTonalButton(onClick = { haptics.tick(); zoom = null }, modifier = Modifier.height(32.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp)) {
+                  Text("‹ All corners", style = MaterialTheme.typography.labelLarge)
+                }
+                Text(at.label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = quadColor(at).takeIf { at != Quad.Later } ?: scheme.onSurface)
+              } else {
+                Text("Tap a corner to see it by category", style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+              }
+            }
+            if (lanes.size > 1) Legend(items, lanes, focus) { haptics.tick(); onFocus(it) }
+            Crossfade(targetState = zoom, label = "corner") { at ->
+              if (at != null) Breakdown(at, items, lanes, selected, focus) { haptics.click(); selected = it }
+              else Overview(items, selected, focus, onSelect = { haptics.click(); selected = it }, onZoom = { haptics.click(); zoom = it })
+            }
+            open?.let { item -> TriageMessage(item, source, canAnswer) { d, t -> answered(item, d, t) } }
           } else {
             order.forEach { item ->
               TriageRow(item, selected = item.id == selected, onClick = { haptics.click(); selected = item.id })
-              if (item.id == selected) TriageMessage(item, source, canAnswer, inRow = true) { d, t -> onAnswer(item, d, t)?.let { if (it != item.id) next = it } }
+              if (item.id == selected) TriageMessage(item, source, canAnswer, inRow = true) { d, t -> answered(item, d, t) }
             }
           }
           Spacer(Modifier.height(24.dp))
@@ -565,8 +727,9 @@ private fun TriageMessage(item: TItem, source: String?, canAnswer: Boolean, inRo
             Text(CATEGORY_LABELS[item.category] ?: "Other", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = scheme.onSurfaceVariant)
           }
         }
-        item.why?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant, modifier = Modifier.align(Alignment.CenterVertically)) }
+        Text(scores(item), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = scheme.onSurfaceVariant, modifier = Modifier.align(Alignment.CenterVertically))
       }
+      item.why?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant) }
       if (inRow) listOfNotNull(item.address, via, item.at).joinToString(" · ").takeIf { it.isNotEmpty() }?.let {
         Text(it, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
       }

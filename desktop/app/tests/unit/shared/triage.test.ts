@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
-  normalizeScore, parseTriageCommand, quadrantOf, triageCommand, triageOrder, triagePrompt, typedTriage,
+  cornerRange, normalizeScore, parseTriageCommand, quadrantOf, withinCorner, triageCommand, triageOrder, triagePrompt, typedTriage,
   type TriageItem,
 } from '../../../src/shared/triage';
 import { parseWidget, widgetLine } from '../../../src/shared/widgets';
@@ -15,6 +15,18 @@ const priya: TriageItem = {
   id: 'i1', from: 'Priya Shah', address: 'priya@acme.com', subject: 'Q3 budget sign-off',
   urgency: 9, importance: 9, draft: 'Hi Priya, signed off. Thanks!',
 };
+
+describe('where a message sits', () => {
+  it('is its scores, inside its corner: urgency across, importance up', () => {
+    expect(cornerRange('now')).toEqual([5, 10, 5, 10]);
+    expect(cornerRange('later')).toEqual([0, 5, 0, 5]);
+    expect(withinCorner({ urgency: 9, importance: 9 })).toEqual([0.8, 0.8]);
+    expect(withinCorner({ urgency: 5, importance: 10 })).toEqual([0, 1]);
+    expect(withinCorner({ urgency: 2.5, importance: 0 })).toEqual([0.5, 0]);
+    // 4.9 urgent is "not urgent", at the far edge of its corner.
+    expect(withinCorner({ urgency: 4.9, importance: 7 })[0]).toBeCloseTo(0.98);
+  });
+});
 
 describe('reading what agents send', () => {
   it('takes the shapes agents write: senders as objects, words for scores, replies by other names', () => {

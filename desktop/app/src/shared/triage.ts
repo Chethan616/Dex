@@ -79,9 +79,9 @@ export const PLOT_ABOVE = 5;
 export const categoryOf = (item: Pick<TriageItem, 'category'>): TriageCategory => item.category ?? 'other';
 
 /**
- * The lanes a card's quadrants split into: the categories its messages have,
- * in canonical order. One category (or none given): no lanes, the whole
- * quadrant is one plot.
+ * The categories a card's messages have, in canonical order: the legend, and
+ * one small plot each when a corner is opened. One category (or none given):
+ * no legend, and an opened corner is one plot.
  */
 export function lanesOf(items: Array<Pick<TriageItem, 'category'>>): TriageCategory[] {
   const present = new Set(items.map(categoryOf));
@@ -107,6 +107,20 @@ export function quadrantOf(item: Pick<TriageItem, 'urgency' | 'importance'>): Qu
   if (urgent) return 'quick';
   if (important) return 'plan';
   return 'later';
+}
+
+/** A corner's scores: [urgency from, to, importance from, to]. */
+export function cornerRange(q: Quadrant): [number, number, number, number] {
+  const urgent = q === 'now' || q === 'quick';
+  const important = q === 'now' || q === 'plan';
+  return [urgent ? 5 : 0, urgent ? 10 : 5, important ? 5 : 0, important ? 10 : 5];
+}
+
+/** Where a message sits inside its corner, 0–1 on each axis: its exact urgency and importance, nothing else. */
+export function withinCorner(item: Pick<TriageItem, 'urgency' | 'importance'>): [number, number] {
+  const [uLo, uHi, iLo, iHi] = cornerRange(quadrantOf(item));
+  const at = (v: number, lo: number, hi: number): number => Math.max(0, Math.min(1, (v - lo) / (hi - lo)));
+  return [at(item.urgency, uLo, uHi), at(item.importance, iLo, iHi)];
 }
 
 const RANK: Record<Quadrant, number> = { now: 0, quick: 1, plan: 2, later: 3 };

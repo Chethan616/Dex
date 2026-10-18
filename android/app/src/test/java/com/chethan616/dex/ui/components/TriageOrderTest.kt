@@ -22,6 +22,15 @@ class TriageOrderTest {
     assertEquals(listOf("top", "now", "quick", "plan", "later"), order.map { it.id })
   }
 
+  @Test fun sitsWhereItsScoresSayInsideItsCorner() {
+    assertEquals(listOf(5.0, 10.0, 5.0, 10.0), cornerRange(Quad.Now))
+    assertEquals(listOf(0.0, 5.0, 0.0, 5.0), cornerRange(Quad.Later))
+    assertEquals(0.8f to 0.8f, withinCorner(item("a", 9.0, 9.0)))
+    assertEquals(0f to 1f, withinCorner(item("a", 5.0, 10.0)))
+    assertEquals(0.5f to 0f, withinCorner(item("a", 2.5, 0.0)))
+    assertEquals("Urgency 7.5 · Importance 8", scores(item("a", 7.5, 8.0)))
+  }
+
   @Test fun sentSkippedAndSendingAreSettled() {
     assertTrue(settled(item("a", 1.0, 1.0, "sent")))
     assertTrue(settled(item("a", 1.0, 1.0, "skipped")))
