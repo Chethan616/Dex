@@ -72,6 +72,8 @@ export const CardSchema = z.object({
   price: text(30).optional(),
   badge: text(24).optional(),
   icon: Icon.optional(),
+  /** The card's own page: the whole card opens it, like a calendar event's card. */
+  url: z.string().max(2000).regex(SAFE_URL, 'a url starts with https://, http://, mailto:, tel: or geo:').optional(),
   actions: z.array(WidgetActionSchema).max(3).optional(),
 });
 export type WidgetCard = z.infer<typeof CardSchema>;
@@ -223,12 +225,17 @@ export function normalizeWidget(raw: unknown, hint: { type?: string; title?: str
   } else if (type === 'cards') {
     const items = firstOf(raw, 'items', 'cards', 'results', 'options');
     if (Array.isArray(items)) {
-      w.items = items.map((c) => (isObj(c) ? {
-        ...c,
-        title: firstOf(c, 'title', 'name', 'label'),
-        subtitle: firstOf(c, 'subtitle', 'description', 'detail', 'summary'),
-        actions: Array.isArray(firstOf(c, 'actions', 'buttons', 'links')) ? (firstOf(c, 'actions', 'buttons', 'links') as unknown[]).map(normAction) : undefined,
-      } : c));
+      w.items = items.map((c) => {
+        if (!isObj(c)) return c;
+        const actions = Array.isArray(firstOf(c, 'actions', 'buttons', 'links')) ? (firstOf(c, 'actions', 'buttons', 'links') as unknown[]).map(normAction) : undefined;
+        return {
+          ...c,
+          title: firstOf(c, 'title', 'name', 'label'),
+          subtitle: firstOf(c, 'subtitle', 'description', 'detail', 'summary'),
+          url: cardUrl(c, actions),
+          actions,
+        };
+      });
     }
   } else if (type === 'buttons') {
     const buttons = firstOf(raw, 'buttons', 'links', 'actions');
@@ -243,10 +250,23 @@ export function normalizeWidget(raw: unknown, hint: { type?: string; title?: str
   return w;
 }
 
+/**
+ * A card's page: its own link, or else its first link button's. A card that
+ * stands for something with a page — a repo, a product, a place — opens it
+ * with one tap anywhere on it. A link that isn't safe to open is dropped,
+ * not a reason to lose the card.
+ */
+function cardUrl(c: Loose, actions: unknown[] | undefined): string | undefined {
+  const own = firstOf(c, 'url', 'link', 'href', 'website', 'page');
+  if (typeof own === 'string' && SAFE_URL.test(own.trim())) return own.trim();
+  const first = actions?.find((a): a is Loose => isObj(a) && typeof a.url === 'string' && SAFE_URL.test(a.url));
+  return first ? String(first.url) : undefined;
+}
+
 /** What each kind looks like, for an error the agent can act on. */
 const SHAPES: Record<Widget['type'], string> = {
   ask: '{"title":"Where and when are you flying?","fields":[{"id":"from","kind":"place","label":"From","suggestions":["Hyderabad (HYD)"]},{"id":"date","kind":"date","label":"Date"},{"id":"pax","kind":"number","label":"Travellers","min":1,"default":1}]} — kinds: choice (options), place (suggestions), date, time (slots "HH:MM"), number, text',
-  cards: '{"title":"Flights","items":[{"title":"IndiGo 6E 2345","subtitle":"07:05 → 09:15","price":"₹4,850","actions":[{"label":"Select","reply":"Book 6E 2345"},{"label":"Open","url":"https://…"}]}]}',
+  cards: '{"title":"Flights","items":[{"title":"IndiGo 6E 2345","subtitle":"07:05 → 09:15","price":"₹4,850","url":"https://…","actions":[{"label":"Select","reply":"Book 6E 2345"}]}]} — give every card that has a page its url: the whole card opens it',
   buttons: '{"buttons":[{"label":"Open in Google Flights","url":"https://www.google.com/travel/flights?q=…"}]}',
   facts: '{"title":"Your booking","rows":[{"label":"Flight","value":"6E 2345"}]}',
   workflows: 'nothing: DEX draws the saved workflows itself — run `dex-workflow show`',

@@ -1,5 +1,6 @@
 package com.chethan616.dex.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -163,7 +164,7 @@ data class WField(
   val showIfField: String? = null,
   val showIfIs: List<String> = emptyList(),
 )
-data class WCard(val title: String, val subtitle: String?, val lines: List<String>, val price: String?, val badge: String?, val icon: String?, val actions: List<WAction>)
+data class WCard(val title: String, val subtitle: String?, val lines: List<String>, val price: String?, val badge: String?, val icon: String?, val actions: List<WAction>, val url: String? = null)
 
 sealed interface Widget {
   data class Ask(val title: String, val note: String?, val icon: String?, val fields: List<WField>, val submit: String?) : Widget
@@ -224,7 +225,7 @@ fun parseWidget(json: String?): Widget? = runCatching {
       },
     )
     "cards" -> Widget.Cards(o.str("title"), o.str("icon"), o.optJSONArray("items").objects().map { c ->
-      WCard(c.optString("title"), c.str("subtitle"), c.optJSONArray("lines").strings(), c.str("price"), c.str("badge"), c.str("icon"), c.optJSONArray("actions").objects().map { it.action() })
+      WCard(c.optString("title"), c.str("subtitle"), c.optJSONArray("lines").strings(), c.str("price"), c.str("badge"), c.str("icon"), c.optJSONArray("actions").objects().map { it.action() }, c.str("url"))
     })
     "buttons" -> Widget.Buttons(o.str("title"), o.optJSONArray("buttons").objects().map { it.action() })
     "facts" -> Widget.Facts(
@@ -800,7 +801,9 @@ private fun CardsCard(w: Widget.Cards, open: (String) -> Unit, reply: (String) -
       CardHeader(w.title, w.icon)
       w.items.forEachIndexed { i, c ->
         if (i > 0 || w.title != null) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // A card with a page opens it from anywhere on the card; its buttons still do their own thing.
+        val tap = c.url?.let { url -> Modifier.clickable { open(url) } } ?: Modifier
+        Column(Modifier.fillMaxWidth().then(tap).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
           Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             GlyphTile(widgetIcon(c.icon ?: w.icon), size = 40)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -819,8 +822,14 @@ private fun CardsCard(w: Widget.Cards, open: (String) -> Unit, reply: (String) -
                 }
               }
             }
+            if (c.url != null) {
+              Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.size(32.dp)) {
+                Box(contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Rounded.OpenInNew, "Open", Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer) }
+              }
+            }
           }
-          if (c.actions.isNotEmpty()) Box(Modifier.padding(start = 52.dp)) { ActionRow(c.actions, open, reply, small = true) }
+          val actions = c.actions.filterNot { c.url != null && it.url == c.url }
+          if (actions.isNotEmpty()) Box(Modifier.padding(start = 52.dp)) { ActionRow(actions, open, reply, small = true) }
         }
       }
     }

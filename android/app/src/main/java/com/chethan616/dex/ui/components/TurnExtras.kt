@@ -1,5 +1,8 @@
 package com.chethan616.dex.ui.components
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -69,9 +72,12 @@ data class CardRow(
   val link: String? = null,
   val unread: Boolean = false,
   val done: Boolean = false,
+  /** The item's own id, to keep it once when a turn shows it twice. */
+  val id: String? = null,
 )
 
-data class ResultCardData(val kind: String, val provider: String, val rows: List<CardRow>) {
+/** `wrote`: the tool created or changed these (an event added) rather than listing them. */
+data class ResultCardData(val kind: String, val provider: String, val rows: List<CardRow>, val wrote: Boolean = false) {
   val label: String
     get() = when (kind) {
       "calendar" -> if (provider == "microsoft") "Outlook Calendar" else "Calendar"
@@ -103,13 +109,13 @@ internal fun eventTime(start: String?, end: String?, zone: ZoneId = ZoneId.syste
 private fun googleEvent(o: JSONObject?): CardRow? {
   val title = o?.s("summary") ?: return null
   val when_ = eventTime(o.s("start"), o.s("end"))
-  return CardRow(title, listOfNotNull(when_, o.s("location")).joinToString(" · ").ifEmpty { null }, link = o.s("link") ?: o.s("meetLink"))
+  return CardRow(title, listOfNotNull(when_, o.s("location")).joinToString(" · ").ifEmpty { null }, link = o.s("link") ?: o.s("meetLink"), id = o.s("id"))
 }
 
 private fun msEvent(o: JSONObject?): CardRow? {
   val title = o?.s("subject") ?: return null
   val when_ = eventTime(o.s("start"), o.s("end"))
-  return CardRow(title, listOfNotNull(when_, o.s("location")).joinToString(" · ").ifEmpty { null }, link = o.s("joinUrl"))
+  return CardRow(title, listOfNotNull(when_, o.s("location")).joinToString(" · ").ifEmpty { null }, link = o.s("joinUrl"), id = o.s("id"))
 }
 
 private fun googleMail(o: JSONObject?): CardRow? {
@@ -119,6 +125,8 @@ private fun googleMail(o: JSONObject?): CardRow? {
     listOfNotNull(o.s("from"), o.s("date")).joinToString(" · ").ifEmpty { null },
     snippet = o.s("snippet"),
     unread = o.optBoolean("unread"),
+    link = o.s("link") ?: o.s("id")?.let { "https://mail.google.com/mail/u/0/#all/" + java.net.URLEncoder.encode(it, "UTF-8") },
+    id = o.s("id"),
   )
 }
 
@@ -129,6 +137,8 @@ private fun msMail(o: JSONObject?): CardRow? {
     listOfNotNull(o.s("fromName") ?: o.s("from"), o.s("received")).joinToString(" · ").ifEmpty { null },
     snippet = o.s("preview"),
     unread = o.has("isRead") && !o.optBoolean("isRead", true),
+    link = o.s("webLink") ?: "https://outlook.office.com/mail/",
+    id = o.s("id"),
   )
 }
 
@@ -138,10 +148,14 @@ private fun dueText(due: String?): String? {
   return "Due " + date.format(DateTimeFormatter.ofPattern("MMM d", Locale.getDefault()))
 }
 
-private fun task(o: JSONObject?, dueKey: String): CardRow? {
+private fun task(o: JSONObject?, dueKey: String, link: String): CardRow? {
   val title = o?.s("title") ?: return null
-  return CardRow(title, dueText(o.s(dueKey)), done = o.s("status") == "completed")
+  return CardRow(title, dueText(o.s(dueKey)), done = o.s("status") == "completed", link = o.s("webViewLink") ?: link, id = o.s("id"))
 }
+
+private const val GOOGLE_TASKS = "https://tasks.google.com/"
+private const val MS_TODO = "https://to-do.office.com/tasks/"
+
 
 private fun JSONArray.objs(): List<JSONObject?> = (0 until length()).map { optJSONObject(it) }
 
@@ -157,23 +171,38 @@ fun detectResultCard(toolName: String, preview: String): ResultCardData? {
   val tool = m.groupValues[2]
   val data = runCatching { JSONTokener(preview).nextValue() }.getOrNull() ?: return null
   fun card(kind: String, rows: List<CardRow>?) = rows?.let { ResultCardData(kind, provider, it) }
-  fun one(kind: String, row: CardRow?) = row?.let { ResultCardData(kind, provider, listOf(it)) }
+  fun one(kind: String, row: CardRow?) = row?.let { ResultCardData(kind, provider, listOf(it), wrote = true) }
   val obj = data as? JSONObject
   return if (provider == "google") when (tool) {
     "calendar_list_events" -> card("calendar", rowsOf(obj?.optJSONArray("events"), ::googleEvent))
     "calendar_create_event", "calendar_update_event", "meet_create" -> one("calendar", googleEvent(obj))
     "gmail_search" -> card("mail", rowsOf(data, ::googleMail))
-    "tasks_list" -> card("tasks", rowsOf(data) { task(it, "due") })
-    "tasks_create" -> one("tasks", task(obj, "due"))
+    "tasks_list" -> card("tasks", rowsOf(data) { task(it, "due", GOOGLE_TASKS) })
+    "tasks_create" -> one("tasks", task(obj, "due", GOOGLE_TASKS))
     else -> null
   } else when (tool) {
     "calendar_list" -> card("calendar", rowsOf(data, ::msEvent))
     "calendar_create", "calendar_update" -> one("calendar", msEvent(obj))
     "mail_list" -> card("mail", rowsOf(data, ::msMail))
-    "todo_tasks" -> card("tasks", rowsOf(data) { task(it, "dueDate") })
+    "todo_tasks" -> card("tasks", rowsOf(data) { task(it, "dueDate", MS_TODO) })
     else -> null
   }
 }
+
+/**
+ * A turn's cards, one per kind (mcpResults.ts mergeResultCards). An event
+ * added and then the day listed to check it showed twice; a retry added a
+ * third. Each row is kept once, by id or else title and time; when the turn
+ * created or changed something, that is the card.
+ */
+fun mergeResultCards(cards: List<ResultCardData>): List<ResultCardData> =
+  cards.map { it.kind }.distinct().map { kind ->
+    val same = cards.filter { it.kind == kind }
+    val wrote = same.filter { it.wrote }
+    val use = wrote.ifEmpty { same }
+    val rows = use.flatMap { it.rows }.distinctBy { it.id ?: (it.title + "\u0000" + it.subtitle) }
+    ResultCardData(kind, use.last().provider, rows, wrote = wrote.isNotEmpty())
+  }
 
 /* ── Follow-up chips ─────────────────────────────────────────────────── */
 
@@ -235,7 +264,7 @@ internal fun withTurnExtras(blocks: List<Block>, live: Boolean): List<Block> {
     val anchor = turn.last()
     val base = -(anchor.seq * 8 + 8)
     val at = anchor.at ?: turn.lastOrNull { it.at != null }?.at
-    val cards = tools.mapNotNull { t -> t.result?.takeIf { it.ok }?.let { r -> t.name?.let { n -> detectResultCard(n, r.preview) } } }
+    val cards = mergeResultCards(tools.mapNotNull { t -> t.result?.takeIf { it.ok }?.let { r -> t.name?.let { n -> detectResultCard(n, r.preview) } } })
     val echoDone = anchor.kind == "done" && anchor.echo
     val cut = if (echoDone) turn.lastIndex else turn.size
     out += turn.subList(0, cut)
@@ -291,7 +320,9 @@ fun ResultCardBlock(block: Block) {
       }
       card.rows.forEachIndexed { i, row ->
         if (i > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-        Row(Modifier.fillMaxWidth().padding(Space.l), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.m)) {
+        // A row with a link opens it from anywhere on the row, like a calendar app's event.
+        val tap = row.link?.let { url -> Modifier.clickable { haptics.click(); runCatching { uri.openUri(url) } } } ?: Modifier
+        Row(Modifier.fillMaxWidth().then(tap).padding(Space.l), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.m)) {
           Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
               (if (row.unread) "● " else "") + row.title,
@@ -305,9 +336,9 @@ fun ResultCardBlock(block: Block) {
             row.subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis) }
             row.snippet?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis) }
           }
-          row.link?.let { url ->
-            FilledTonalIconButton(onClick = { haptics.click(); runCatching { uri.openUri(url) } }, modifier = Modifier.size(36.dp)) {
-              Icon(Icons.AutoMirrored.Rounded.OpenInNew, "Open", Modifier.size(18.dp))
+          if (row.link != null) {
+            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.size(32.dp)) {
+              Box(contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Rounded.OpenInNew, "Open", Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer) }
             }
           }
         }

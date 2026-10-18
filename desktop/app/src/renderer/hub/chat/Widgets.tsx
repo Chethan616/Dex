@@ -473,8 +473,20 @@ function ActionButton({ action, onReply, onOpenUrl, small }: { action: WidgetAct
 }
 
 function CardRow({ card, onReply, onOpenUrl }: { card: WidgetCard; onReply?: (t: string) => void; onOpenUrl?: (u: string) => void }): React.ReactElement {
+  // A card with a page opens it from anywhere on the card; its buttons still do their own thing.
+  const link = card.url && onOpenUrl ? card.url : undefined;
+  const open = (): void => { if (link) onOpenUrl?.(link); };
   return (
-    <div className="cx-wc__item">
+    <div
+      className={`cx-wc__item${link ? ' cx-wc__item--link' : ''}`}
+      {...(link ? {
+        role: 'link',
+        tabIndex: 0,
+        title: 'Open',
+        onClick: open,
+        onKeyDown: (e: React.KeyboardEvent) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); open(); } },
+      } : {})}
+    >
       <span className="cx-wc__icon"><Glyph name={card.icon ?? 'star'} size={17} /></span>
       <div className="cx-wc__text">
         <span className="cx-wc__title">{card.title}</span>
@@ -488,9 +500,14 @@ function CardRow({ card, onReply, onOpenUrl }: { card: WidgetCard; onReply?: (t:
         </div>
       )}
       {card.actions && card.actions.length > 0 && (
-        <div className="cx-wc__actions">
-          {card.actions.map((a, i) => <ActionButton key={i} action={a} onReply={onReply} onOpenUrl={onOpenUrl} small />)}
+        <div className="cx-wc__actions" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+          {card.actions.filter((a) => !(link && a.url === link)).map((a, i) => <ActionButton key={i} action={a} onReply={onReply} onOpenUrl={onOpenUrl} small />)}
         </div>
+      )}
+      {link && (
+        <span className="cx-wc__go" aria-hidden="true">
+          <svg viewBox="0 0 16 16" width="13" height="13"><path d="M6.5 4.5h-2a1.5 1.5 0 00-1.5 1.5v5a1.5 1.5 0 001.5 1.5h5A1.5 1.5 0 0011 11v-2M9.5 3h3.5v3.5M12.7 3.3L7.5 8.5" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </span>
       )}
     </div>
   );

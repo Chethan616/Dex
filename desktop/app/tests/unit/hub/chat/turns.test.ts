@@ -106,7 +106,7 @@ describe('chat turns: MCP result cards and follow-up chips', () => {
       { id: 'm1', subject: 'Invoice', fromName: 'Billing', received: '2026-10-01', isRead: false, preview: 'Your invoice is ready' },
     ]);
     expect(turn.resultCards).toEqual([
-      { kind: 'mail', provider: 'microsoft', items: [{ id: 'm1', subject: 'Invoice', from: 'Billing', date: '2026-10-01', unread: true, snippet: 'Your invoice is ready' }] },
+      { kind: 'mail', provider: 'microsoft', items: [{ id: 'm1', subject: 'Invoice', from: 'Billing', date: '2026-10-01', unread: true, snippet: 'Your invoice is ready', link: 'https://outlook.office.com/mail/' }] },
     ]);
   });
 

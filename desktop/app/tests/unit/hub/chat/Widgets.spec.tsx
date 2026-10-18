@@ -36,6 +36,28 @@ describe('widgets in the chat', () => {
   const render = (w: Widget, answered = false) => act(() => root.render(<WidgetView widget={w} answered={answered} onReply={onReply} onOpenUrl={onOpenUrl} />));
   const button = (text: string) => [...host.querySelectorAll('button')].find((b) => b.textContent?.includes(text)) as HTMLButtonElement;
 
+  it('opens a card with a page from anywhere on it, its own link button folded in', () => {
+    render(spec({ type: 'cards', title: 'Trending', items: [
+      { title: 'anthropics/claude-plugins-official', subtitle: 'Official plugins', actions: [{ label: 'Open', url: 'https://github.com/anthropics/claude-plugins-official' }, { label: 'Star it', reply: 'Star it' }] },
+      { name: 'anomalyco/opencode', description: 'The open source coding agent', link: 'https://github.com/anomalyco/opencode' },
+      { title: 'No page', subtitle: 'just text' },
+    ] }));
+    const rows = [...host.querySelectorAll('.cx-wc__item')];
+    expect(rows.map((r) => r.classList.contains('cx-wc__item--link'))).toEqual([true, true, false]);
+    act(() => (rows[1].querySelector('.cx-wc__title') as HTMLElement).click());
+    expect(onOpenUrl).toHaveBeenLastCalledWith('https://github.com/anomalyco/opencode');
+    // The card's own link isn't repeated as a button; its other buttons still work alone.
+    expect(button('Open')).toBeUndefined();
+    act(() => button('Star it').click());
+    expect(onReply).toHaveBeenCalledWith('Star it');
+    expect(onOpenUrl).toHaveBeenCalledTimes(1);
+  });
+
+  it('drops a link that is not safe to open instead of the card', () => {
+    const w = spec({ type: 'cards', items: [{ title: 'Odd', url: 'javascript:alert(1)' }] });
+    expect(w.type === 'cards' && w.items[0].url).toBeFalsy();
+  });
+
   it('answers a one-field choice in one tap, then folds to "answered"', () => {
     render(spec({ type: 'ask', title: 'Which cabin?', fields: [{ kind: 'choice', options: ['Economy', 'Business'] }] }));
     act(() => button('Business').click());
@@ -89,7 +111,8 @@ describe('widgets in the chat', () => {
     expect(host.textContent).toContain('₹4,850');
     act(() => button('Select').click());
     expect(onReply).toHaveBeenCalledWith('Book IndiGo 6E 2345 at 07:05');
-    act(() => button('Open').click());
+    // Its Open link became the card's own: a tap anywhere on the card opens it.
+    act(() => (host.querySelector('.cx-wc__item--link .cx-wc__title') as HTMLElement).click());
     expect(onOpenUrl).toHaveBeenCalledWith('https://www.google.com/travel/flights?q=x');
 
     render(spec({ type: 'buttons', buttons: [{ label: 'Directions', url: 'geo:17.385,78.4867' }] }));

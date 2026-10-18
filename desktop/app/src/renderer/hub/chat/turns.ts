@@ -7,7 +7,7 @@
  * and pulls out what the minibar lists (outputs, sources).
  */
 import type { Block } from '../../logs/transcript';
-import { detectResultCard, type ResultCardData } from './mcpResults';
+import { detectResultCard, mergeResultCards, type ResultCardData } from './mcpResults';
 
 type Of<K extends Block['kind']> = Extract<Block, { kind: K }>;
 
@@ -157,11 +157,13 @@ function buildTurn(user: Of<'user'> | null, agent: Block[], live: boolean, fallb
   // rows — only once the tool is actually done, and only for a turn that has
   // settled into its reply, so a card never flashes up mid-stream.
   if (!live) {
+    const found: ResultCardData[] = [];
     for (const b of turn.work) {
       if (b.kind !== 'tool' || !b.result || !b.result.ok) continue;
       const card = detectResultCard(b.name, b.result.preview);
-      if (card) turn.resultCards.push(card);
+      if (card) found.push(card);
     }
+    turn.resultCards = mergeResultCards(found);
     if (turn.reply) turn.chips = chipsForTools(turn.work.filter((b): b is Of<'tool'> => b.kind === 'tool').map((b) => b.name));
   }
   return turn;

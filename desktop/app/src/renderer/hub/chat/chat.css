@@ -1021,6 +1021,12 @@
 
 .cx-card__row:first-child { border-top: none; }
 
+/* A row with a link: the whole row opens it. */
+.cx-card__row--link { cursor: pointer; transition: background 0.15s ease; outline: none; }
+.cx-card__row--link:hover { background: rgba(var(--highlight-rgb), 0.04); }
+.cx-card__row--link:focus-visible { box-shadow: inset 0 0 0 2px var(--cx-w-ring); }
+.cx-card__row--link:hover .cx-card__action { color: var(--color-fg-primary); }
+
 .cx-card__row-text {
   flex: 1;
   min-width: 0;

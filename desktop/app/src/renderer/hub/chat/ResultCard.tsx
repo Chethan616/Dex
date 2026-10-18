@@ -63,43 +63,62 @@ function formatEventTime(start: string | undefined, end: string | undefined): st
   return endTime ? `${day} · ${startTime} – ${endTime}` : `${day} · ${startTime}`;
 }
 
-function CalendarRow({ item, onOpenUrl }: { item: CalendarCardItem; onOpenUrl?: (url: string) => void }): React.ReactElement {
-  const when = formatEventTime(item.start, item.end);
-  const subtitle = [when, item.location].filter(Boolean).join(' · ') || undefined;
+/**
+ * One row; with a link, the whole row opens it (a tap anywhere, like a
+ * calendar app's event), with the ↗ mark saying so.
+ */
+function Row({ link, onOpenUrl, children }: { link?: string; onOpenUrl?: (url: string) => void; children: React.ReactNode }): React.ReactElement {
+  if (!link || !onOpenUrl) return <div className="cx-card__row">{children}</div>;
+  const open = (): void => onOpenUrl(link);
   return (
-    <div className="cx-card__row">
-      <div className="cx-card__row-text">
-        <span className="cx-card__row-title">{item.title}</span>
-        {subtitle && <span className="cx-card__row-sub">{subtitle}</span>}
-      </div>
-      {item.link && onOpenUrl && (
-        <button type="button" className="cx-card__action" title="Open" onClick={() => onOpenUrl(item.link!)}><OpenIcon /></button>
-      )}
+    <div
+      className="cx-card__row cx-card__row--link"
+      role="link"
+      tabIndex={0}
+      title="Open"
+      onClick={open}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } }}
+    >
+      {children}
+      <span className="cx-card__action" aria-hidden="true"><OpenIcon /></span>
     </div>
   );
 }
 
-function MailRow({ item }: { item: MailCardItem }): React.ReactElement {
+function CalendarRow({ item, onOpenUrl }: { item: CalendarCardItem; onOpenUrl?: (url: string) => void }): React.ReactElement {
+  const when = formatEventTime(item.start, item.end);
+  const subtitle = [when, item.location].filter(Boolean).join(' · ') || undefined;
   return (
-    <div className="cx-card__row">
+    <Row link={item.link} onOpenUrl={onOpenUrl}>
+      <div className="cx-card__row-text">
+        <span className="cx-card__row-title">{item.title}</span>
+        {subtitle && <span className="cx-card__row-sub">{subtitle}</span>}
+      </div>
+    </Row>
+  );
+}
+
+function MailRow({ item, onOpenUrl }: { item: MailCardItem; onOpenUrl?: (url: string) => void }): React.ReactElement {
+  return (
+    <Row link={item.link} onOpenUrl={onOpenUrl}>
       <div className="cx-card__row-text">
         <span className="cx-card__row-title">{item.unread && <span className="cx-card__unread-dot" aria-hidden="true" />}{item.subject}</span>
         <span className="cx-card__row-sub">{[item.from, item.date].filter(Boolean).join(' · ')}</span>
         {item.snippet && <span className="cx-card__row-snippet">{item.snippet}</span>}
       </div>
-    </div>
+    </Row>
   );
 }
 
-function TaskRow({ item }: { item: TaskCardItem }): React.ReactElement {
+function TaskRow({ item, onOpenUrl }: { item: TaskCardItem; onOpenUrl?: (url: string) => void }): React.ReactElement {
   const done = item.status === 'completed';
   return (
-    <div className="cx-card__row">
+    <Row link={item.link} onOpenUrl={onOpenUrl}>
       <div className="cx-card__row-text">
         <span className={`cx-card__row-title${done ? ' cx-card__row-title--done' : ''}`}>{item.title}</span>
         {item.due && <span className="cx-card__row-sub">Due {new Date(item.due).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>}
       </div>
-    </div>
+    </Row>
   );
 }
 
@@ -114,8 +133,8 @@ export function ResultCard({ card, onOpenUrl }: { card: ResultCardData; onOpenUr
       </div>
       <div className="cx-card__body">
         {card.kind === 'calendar' && card.items.map((it, i) => <CalendarRow key={it.id ?? i} item={it} onOpenUrl={onOpenUrl} />)}
-        {card.kind === 'mail' && card.items.map((it, i) => <MailRow key={it.id ?? i} item={it} />)}
-        {card.kind === 'tasks' && card.items.map((it, i) => <TaskRow key={it.id ?? i} item={it} />)}
+        {card.kind === 'mail' && card.items.map((it, i) => <MailRow key={it.id ?? i} item={it} onOpenUrl={onOpenUrl} />)}
+        {card.kind === 'tasks' && card.items.map((it, i) => <TaskRow key={it.id ?? i} item={it} onOpenUrl={onOpenUrl} />)}
       </div>
     </div>
   );

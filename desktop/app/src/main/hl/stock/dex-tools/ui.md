@@ -68,15 +68,18 @@ dex-ui cards <<'EOF'
 {"title": "Hyderabad → Delhi · Fri 9 Oct", "icon": "flight",
  "items": [
    {"title": "IndiGo 6E 2345", "subtitle": "07:05 → 09:15 · 2h 10m · Non-stop", "price": "₹4,850", "badge": "Cheapest",
-    "actions": [{"label": "Select", "reply": "Book IndiGo 6E 2345 at 07:05", "primary": true},
-                {"label": "Open", "url": "https://www.google.com/travel/flights?..."}]}
+    "url": "https://www.google.com/travel/flights?...",
+    "actions": [{"label": "Select", "reply": "Book IndiGo 6E 2345 at 07:05", "primary": true}]}
  ]}
 EOF
 ```
 
 `cards` — `title`, `icon`, and 1–8 `items`: `title`, `subtitle`, up to 3
 `lines`, `price`, `badge` (≤24 chars: "Cheapest", "4.6 ★", "Open now"),
-`icon`, and up to 3 `actions`.
+`icon`, `url` and up to 3 `actions`. **Give every card that stands for
+something with a page its `url`** (the repo, product, listing, article,
+place): the whole card opens it with one tap, like a calendar event's card.
+Its actions are for the other things (Select, Book this).
 
 `buttons` — `title`, 1–6 `buttons`.
 

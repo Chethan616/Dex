@@ -31,6 +31,7 @@ import type {
 import type { HlEvent } from '../../../shared/session-schemas';
 import type { WebContents } from 'electron';
 import { isScratchFile } from './outputs';
+import { artifactTracker } from './artifacts';
 import { withDebugger } from '../../cdpLease';
 
 async function resolveTargetIdForWebContents(wc: WebContents): Promise<string> {
@@ -466,6 +467,8 @@ ${opts.prompt}`;
   // 5. Outputs watcher — emits file_output events for any file written to the
   //    session's outputs dir. Deduped by (name, size).
   const seenOutputs = new Map<string, number>();
+  // Result files saved anywhere else get their cards from the paths the agent names.
+  const artifacts = artifactTracker({ startedAt: Date.now(), cwd: opts.harnessDir, skipDir: outputsDir });
   let outputsWatcher: ReturnType<typeof fs.watch> | null = null;
   let harnessWatcher: ReturnType<typeof fs.watch> | null = null;
   const harnessCheckTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -588,8 +591,20 @@ ${opts.prompt}`;
   //    metadata.
   const skillPathRe = /(?:domain-skills|interaction-skills)\/([^/]+)\/([^/]+)\.md$/;
 
+  /** Files the event names that this run made, as file cards. */
+  function madeIn(e: HlEvent): HlEvent[] {
+    const [text, own] = e.type === 'tool_result' ? [e.preview, false]
+      : e.type === 'thinking' ? [e.text, true]
+      : e.type === 'done' ? [e.summary, true]
+      : ['', false];
+    if (!text) return [];
+    return artifacts.take(text, own).map((f) => ({ type: 'file_output' as const, name: f.name, path: f.path, size: f.size, mime: mimeFromExt(f.name) }));
+  }
+
   function postProcess(e: HlEvent): HlEvent[] {
-    if (e.type !== 'tool_call') return [e];
+    const made = madeIn(e);
+    if (e.type === 'done') return [...made, e];
+    if (e.type !== 'tool_call') return [e, ...made];
     const args = e.args as Record<string, unknown> | undefined;
     if (!args) return [e];
     const rawPath = typeof args.file_path === 'string' ? args.file_path

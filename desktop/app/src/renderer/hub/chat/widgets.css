@@ -314,6 +314,26 @@
 
 .cx-wc__item + .cx-wc__item { border-top: 1px solid var(--cx-card-line); }
 
+/* A card with a page: tap anywhere on it (its buttons still do their own thing). */
+.cx-wc__item--link { position: relative; padding-right: calc(var(--space-8) + 34px); cursor: pointer; transition: background 0.15s ease; outline: none; }
+.cx-wc__item--link:hover { background: rgba(var(--highlight-rgb), 0.04); }
+.cx-wc__item--link:focus-visible { box-shadow: inset 0 0 0 2px var(--cx-w-ring); }
+.cx-wc__item--link:active { background: rgba(var(--highlight-rgb), 0.07); }
+.cx-wc__go {
+  position: absolute;
+  top: var(--space-6);
+  right: var(--space-6);
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--cx-tile);
+  color: var(--color-fg-secondary);
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+.cx-wc__item--link:hover .cx-wc__go { color: var(--color-fg-primary); transform: translate(1px, -1px); }
+
 .cx-wc__icon {
   width: 30px;
   height: 30px;
