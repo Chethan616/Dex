@@ -28,3 +28,4 @@
 - [Desktop UI, headless](desktop-ui-headless-render.md) — render the hub with sample data in headless Edge (Vite + electronAPI mock), no window; README images
 - [Plain words for steps](plain-words-steps.md) — owner wants live island/chat steps and titles in plain words, never raw commands or /tmp paths
 - [DEX's user memory](dex-memory-design.md) — generic (no hard-coded uni), optional About-you questions + ChatGPT/Claude import, indexed recall not full dumps; built 0972e13c
+- [Triage reply card](triage-reply-card.md) — urgency × importance plot of messages with drafted replies + Yes/No/Specify; built c01c677d (hub + phone)

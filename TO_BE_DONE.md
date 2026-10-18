@@ -20,6 +20,28 @@
 
 ## ▶ RESUME HERE — live work log (keep this block current; newest first)
 
+**2026-10-18, owner's PC: the reviewer's triage card.** Pushed in `c01c677d`.
+- **The feature.** "Reply to my unread mail / WhatsApp / Slack" gives one card:
+  - each message is a point on urgency (across) and importance (up), with the axes through the middle;
+  - four corners: Reply now, Quick reply, Plan a reply, Later;
+  - a tap opens the message with DEX's editable draft and Yes / No / Specify;
+  - five or fewer messages show as a list;
+  - replying to one named message or person is still drafted and sent at once.
+- **Code:**
+  - `shared/triage.ts`: schema, corners, the agent's shapes read leniently, `/triage` commands → `triagePrompt`.
+  - `main/index.ts`: `answerTriage`, called from `sessions:resume` and the phone's followUp; No is local, with no agent turn.
+  - Route `/dex/ui-update`, for `dex-ui mark` and `dex-ui redraft`.
+  - `widget_update` HlEvent, folded into the widget. Turns fold each answer's work into the card's turn.
+  - Hub: `hub/chat/Triage.tsx`. Phone: `ui/components/Triage.kt` (card plus a full-screen answer sheet).
+  - Bridge: `wid` and `answer` fields.
+- **Agent docs:** ui.md's Triage section (fetch → recall who matters → score → draft → `dex-ui triage`) and an AGENTS.md row.
+- **Checked:** the hub rendered headless in dark and light; the phone rendered with Robolectric. 1265 tests pass.
+- **Still to do:**
+  - A live run on real mail.
+  - A phone APK (versionName above 2.0.1; the next Play upload is versionCode 40).
+  - WhatsApp and Telegram reading go through their Windows apps, which hasn't been tried live yet.
+- **Patent work** (the reviewer's hardware suggestion) is kept only on the owner's PC, in `review/` (git-excluded). Nothing about it goes in this public repo before filing.
+
 **2026-10-16, owner's PC, session `baacd51d`: memory, and why no workflow ever saved.** Pushed in `0972e13c`.
 - **Workflows, the real cause:** Claude Code now runs commands through its **PowerShell** tool. Windows PowerShell puts a BOM in front of anything it pipes, so every `dex-workflow create` spec arrived as `"spec":﻿{…}`.
   - The BOM is now stripped in `dex-lib.sh` (`dex_stdin`, `dex_file`) and in `localTaskServer.readBody`.
