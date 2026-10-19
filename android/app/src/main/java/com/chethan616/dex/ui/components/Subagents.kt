@@ -143,7 +143,7 @@ fun SubagentMentionRow(group: SubagentMentionGroup) {
 @Composable
 fun SubagentsButton(count: Int, activeCount: Int, onClick: () -> Unit) {
   if (count == 0) return
-  IconButton(onClick = onClick) {
+  IconButton(onClick = onClick, shapes = androidx.compose.material3.IconButtonDefaults.shapes()) {
     BadgedBox(badge = { if (activeCount > 0) Badge { Text("$activeCount") } }) {
       Icon(Icons.Rounded.Groups, "Subagents")
     }

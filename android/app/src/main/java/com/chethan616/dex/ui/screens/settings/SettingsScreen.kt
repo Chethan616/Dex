@@ -112,7 +112,7 @@ fun SettingsScreen(
     verticalArrangement = Arrangement.spacedBy(12.dp),
   ) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 8.dp)) {
-      IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") }
+      IconButton(onClick = onBack, shapes = androidx.compose.material3.IconButtonDefaults.shapes()) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") }
       Text("Settings", style = MaterialTheme.typography.headlineMedium)
     }
 

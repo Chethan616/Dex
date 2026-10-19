@@ -213,7 +213,7 @@ private fun TopBar(showSkip: Boolean, onSkip: () -> Unit) {
     )
     Spacer(Modifier.weight(1f))
     AnimatedVisibility(showSkip, enter = fadeIn(), exit = fadeOut()) {
-      TextButton(onClick = onSkip) { Text("Skip") }
+      TextButton(onClick = onSkip, shapes = androidx.compose.material3.ButtonDefaults.shapes()) { Text("Skip") }
     }
   }
 }

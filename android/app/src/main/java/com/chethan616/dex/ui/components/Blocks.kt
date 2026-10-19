@@ -224,7 +224,7 @@ private fun CodeSection(label: String, body: String?, error: Boolean = false) {
     Row(verticalAlignment = Alignment.CenterVertically) {
       Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
       if (body != null) {
-        IconButton(onClick = { clipboard.setText(AnnotatedString(body)); haptics.confirm() }, modifier = Modifier.size(32.dp)) {
+        IconButton(onClick = { clipboard.setText(AnnotatedString(body)); haptics.confirm() }, modifier = Modifier.size(32.dp), shapes = androidx.compose.material3.IconButtonDefaults.shapes()) {
           Icon(Icons.Rounded.ContentCopy, "Copy", Modifier.size(16.dp))
         }
       }

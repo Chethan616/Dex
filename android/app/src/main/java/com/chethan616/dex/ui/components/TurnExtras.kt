@@ -360,7 +360,7 @@ fun CopyAndTime(text: String, at: Long?, modifier: Modifier = Modifier) {
   var copied by remember { mutableStateOf(false) }
   androidx.compose.runtime.LaunchedEffect(copied) { if (copied) { delay(1500); copied = false } }
   Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-    IconButton(onClick = { clipboard.setText(AnnotatedString(text)); haptics.confirm(); copied = true }, modifier = Modifier.size(36.dp)) {
+    IconButton(onClick = { clipboard.setText(AnnotatedString(text)); haptics.confirm(); copied = true }, modifier = Modifier.size(36.dp), shapes = androidx.compose.material3.IconButtonDefaults.shapes()) {
       Icon(if (copied) Icons.Rounded.Check else Icons.Rounded.ContentCopy, if (copied) "Copied" else "Copy answer", Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     timeOfDay(at)?.let {

@@ -181,7 +181,7 @@ fun SignInScreen(container: AppContainer) {
               label = { Text("Password") },
               leadingIcon = { Icon(Icons.Rounded.Lock, null) },
               trailingIcon = {
-                IconButton(onClick = { haptics.tick(); showPassword = !showPassword }) {
+                IconButton(onClick = { haptics.tick(); showPassword = !showPassword }, shapes = androidx.compose.material3.IconButtonDefaults.shapes()) {
                   Icon(if (showPassword) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility, if (showPassword) "Hide password" else "Show password")
                 }
               },
@@ -235,6 +235,7 @@ fun SignInScreen(container: AppContainer) {
                   }
                 },
                 modifier = Modifier.align(Alignment.CenterHorizontally),
+                shapes = androidx.compose.material3.ButtonDefaults.shapes(),
               ) { Text("Forgot password?") }
             }
           }

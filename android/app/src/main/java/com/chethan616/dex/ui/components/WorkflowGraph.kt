@@ -176,10 +176,10 @@ internal fun WorkflowsCard(title: String?, items: List<WWorkflow>, reply: (Strin
           }
           Row(Modifier.padding(start = 52.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val pad = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
-            Button(onClick = { haptics.click(); open = w }, contentPadding = pad, modifier = Modifier.heightIn(min = 36.dp)) {
+            Button(onClick = { haptics.click(); open = w }, contentPadding = pad, modifier = Modifier.heightIn(min = 36.dp), shapes = androidx.compose.material3.ButtonDefaults.shapes()) {
               Icon(Icons.Rounded.AccountTree, null, Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("View")
             }
-            FilledTonalButton(onClick = { run(w) }, contentPadding = pad, modifier = Modifier.heightIn(min = 36.dp)) {
+            FilledTonalButton(onClick = { run(w) }, contentPadding = pad, modifier = Modifier.heightIn(min = 36.dp), shapes = androidx.compose.material3.ButtonDefaults.shapes()) {
               Icon(Icons.Rounded.PlayArrow, null, Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("Run now")
             }
           }
@@ -326,6 +326,7 @@ fun WorkflowGraphDialog(workflow: WWorkflow, onRun: () -> Unit, onDismiss: () ->
       Button(
         onClick = onRun,
         modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 20.dp).heightIn(min = 48.dp),
+        shapes = androidx.compose.material3.ButtonDefaults.shapes(),
       ) {
         Icon(Icons.Rounded.PlayArrow, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Run now")
       }

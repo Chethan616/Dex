@@ -493,7 +493,7 @@ private fun AskCard(w: Widget.Ask, answered: Boolean, key: Long, reply: (String)
           }
           if (!solo || (w.fields.first().kind == "choice" && w.fields.first().multi)) {
             val ready = w.fields.filter { fieldShown(w, it, values) }.all { it.optional || filled(it, values[it.id]) }
-            Button(onClick = { send() }, enabled = ready, modifier = Modifier.align(Alignment.End).heightIn(min = Sizes.control)) {
+            Button(onClick = { send() }, enabled = ready, modifier = Modifier.align(Alignment.End).heightIn(min = Sizes.control), shapes = androidx.compose.material3.ButtonDefaults.shapes()) {
               Text(w.submit ?: "Send")
               Spacer(Modifier.width(8.dp))
               Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, Modifier.size(18.dp))
@@ -656,9 +656,9 @@ private fun DateInput(f: WField, value: Answer?, solo: Boolean, onChange: (Answe
           TextButton(enabled = state.selectedStartDateMillis != null && state.selectedEndDateMillis != null, onClick = {
             picker = false
             onChange(Answer.Day(state.selectedStartDateMillis!!.day(), state.selectedEndDateMillis!!.day()), solo)
-          }) { Text("Done") }
+          }, shapes = androidx.compose.material3.ButtonDefaults.shapes()) { Text("Done") }
         },
-        dismissButton = { TextButton(onClick = { picker = false }) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = { picker = false }, shapes = androidx.compose.material3.ButtonDefaults.shapes()) { Text("Cancel") } },
       ) { DateRangePicker(state, modifier = Modifier.heightIn(max = 520.dp)) }
     } else {
       val state = rememberDatePickerState(initialSelectedDateMillis = sel?.start?.let { runCatching { LocalDate.parse(it).millis() }.getOrNull() }, selectableDates = selectable)
@@ -668,9 +668,9 @@ private fun DateInput(f: WField, value: Answer?, solo: Boolean, onChange: (Answe
           TextButton(enabled = state.selectedDateMillis != null, onClick = {
             picker = false
             onChange(Answer.Day(state.selectedDateMillis!!.day()), solo)
-          }) { Text("Done") }
+          }, shapes = androidx.compose.material3.ButtonDefaults.shapes()) { Text("Done") }
         },
-        dismissButton = { TextButton(onClick = { picker = false }) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = { picker = false }, shapes = androidx.compose.material3.ButtonDefaults.shapes()) { Text("Cancel") } },
       ) { DatePicker(state) }
     }
   }
@@ -695,9 +695,9 @@ private fun TimeInput(f: WField, value: Answer?, solo: Boolean, onChange: (Answe
         TextButton(onClick = {
           picker = false
           onChange(Answer.Clock("${state.hour.toString().padStart(2, '0')}:${state.minute.toString().padStart(2, '0')}"), solo)
-        }) { Text("Done") }
+        }, shapes = androidx.compose.material3.ButtonDefaults.shapes()) { Text("Done") }
       },
-      dismissButton = { TextButton(onClick = { picker = false }) { Text("Cancel") } },
+      dismissButton = { TextButton(onClick = { picker = false }, shapes = androidx.compose.material3.ButtonDefaults.shapes()) { Text("Cancel") } },
       text = { TimePicker(state) },
     )
   }
@@ -712,19 +712,19 @@ private fun NumberInput(f: WField, value: Answer?, solo: Boolean, onChange: (Ans
   Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
     Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
       Row(Modifier.padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
-        FilledTonalIconButton(onClick = { onChange(Answer.Num(maxOf(min, n - step)), false) }, enabled = n > min) { Icon(Icons.Rounded.Remove, "Less") }
+        FilledTonalIconButton(onClick = { onChange(Answer.Num(maxOf(min, n - step)), false) }, enabled = n > min, shapes = androidx.compose.material3.IconButtonDefaults.shapes()) { Icon(Icons.Rounded.Remove, "Less") }
         Text(
           numText(n) + (f.unit?.let { " ${unitFor(it, n)}" } ?: ""),
           style = MaterialTheme.typography.titleMedium,
           modifier = Modifier.widthIn(min = 88.dp).padding(horizontal = 8.dp),
           textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
-        FilledTonalIconButton(onClick = { onChange(Answer.Num(minOf(max, n + step)), false) }, enabled = n < max) { Icon(Icons.Rounded.Add, "More") }
+        FilledTonalIconButton(onClick = { onChange(Answer.Num(minOf(max, n + step)), false) }, enabled = n < max, shapes = androidx.compose.material3.IconButtonDefaults.shapes()) { Icon(Icons.Rounded.Add, "More") }
       }
     }
     if (solo) {
       Spacer(Modifier.weight(1f))
-      Button(onClick = { onChange(Answer.Num(n), true) }) { Text("Send") }
+      Button(onClick = { onChange(Answer.Num(n), true) }, shapes = androidx.compose.material3.ButtonDefaults.shapes()) { Text("Send") }
     }
   }
 }
@@ -747,7 +747,7 @@ private fun TypeField(value: String, onValue: (String) -> Unit, placeholder: Str
     placeholder = { Text(placeholder) },
     leadingIcon = icon?.let { { Icon(it, null, tint = scheme.onSurfaceVariant) } },
     trailingIcon = if (send) {
-      { IconButton(onClick = { if (value.isNotBlank()) onSend(value.trim()) }, enabled = value.isNotBlank()) { Icon(Icons.AutoMirrored.Rounded.Send, "Send") } }
+      { IconButton(onClick = { if (value.isNotBlank()) onSend(value.trim()) }, enabled = value.isNotBlank(), shapes = androidx.compose.material3.IconButtonDefaults.shapes()) { Icon(Icons.AutoMirrored.Rounded.Send, "Send") } }
     } else null,
     singleLine = !multiline,
     minLines = if (multiline) 3 else 1,
@@ -784,9 +784,9 @@ private fun ActionRow(actions: List<WAction>, open: (String) -> Unit, reply: (St
         }
       }
       when {
-        a.primary -> Button(onClick = onClick, contentPadding = padding, modifier = Modifier.heightIn(min = if (small) 36.dp else 44.dp)) { content() }
-        small -> FilledTonalButton(onClick = onClick, contentPadding = padding, modifier = Modifier.heightIn(min = 36.dp)) { content() }
-        else -> FilledTonalButton(onClick = onClick, contentPadding = padding, modifier = Modifier.heightIn(min = 44.dp)) { content() }
+        a.primary -> Button(onClick = onClick, contentPadding = padding, modifier = Modifier.heightIn(min = if (small) 36.dp else 44.dp), shapes = androidx.compose.material3.ButtonDefaults.shapes()) { content() }
+        small -> FilledTonalButton(onClick = onClick, contentPadding = padding, modifier = Modifier.heightIn(min = 36.dp), shapes = androidx.compose.material3.ButtonDefaults.shapes()) { content() }
+        else -> FilledTonalButton(onClick = onClick, contentPadding = padding, modifier = Modifier.heightIn(min = 44.dp), shapes = androidx.compose.material3.ButtonDefaults.shapes()) { content() }
       }
     }
   }

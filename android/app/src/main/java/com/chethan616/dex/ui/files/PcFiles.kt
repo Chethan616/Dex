@@ -1,5 +1,6 @@
 package com.chethan616.dex.ui.files
 
+import com.chethan616.dex.ui.components.squishOnPress
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -417,7 +418,7 @@ fun PcFileCard(item: TaskItem) {
   Surface(
     shape = RoundedCornerShape(22.dp),
     color = scheme.surfaceContainerLow,
-    modifier = Modifier.fillMaxWidth(),
+    modifier = Modifier.fillMaxWidth().squishOnPress(0.97f),
     onClick = { haptics.tick(); files?.open(scope, item) },
   ) {
     Column {
@@ -461,7 +462,7 @@ fun PcFileCard(item: TaskItem) {
             overflow = TextOverflow.Ellipsis,
           )
         }
-        IconButton(onClick = { haptics.tick(); files?.open(scope, item, share = true) }) {
+        IconButton(onClick = { haptics.tick(); files?.open(scope, item, share = true) }, shapes = androidx.compose.material3.IconButtonDefaults.shapes()) {
           Icon(Icons.Rounded.Share, "Share", tint = scheme.onSurfaceVariant)
         }
       }
@@ -500,7 +501,7 @@ fun collectTaskItems(blocks: List<Block>, session: Session?): Triple<List<TaskIt
 @Composable
 fun FilesButton(count: Int, onClick: () -> Unit) {
   if (count == 0) return
-  IconButton(onClick = onClick) {
+  IconButton(onClick = onClick, shapes = androidx.compose.material3.IconButtonDefaults.shapes()) {
     BadgedBox(badge = { Badge { Text("$count") } }) { Icon(Icons.Rounded.PermMedia, "Files from this task") }
   }
 }
@@ -577,7 +578,7 @@ fun FilesSheet(blocks: List<Block>, session: Session?, onDismiss: () -> Unit) {
             shape = RoundedCornerShape(22.dp),
             color = MaterialTheme.colorScheme.surfaceContainerLow,
             onClick = { haptics.tick(); reading = doc },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().squishOnPress(0.97f),
           ) {
             Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
               Box(Modifier.size(38.dp).background(MaterialTheme.colorScheme.tertiaryContainer, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {

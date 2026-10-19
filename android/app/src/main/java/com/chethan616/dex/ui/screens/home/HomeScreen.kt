@@ -95,6 +95,9 @@ import com.chethan616.dex.ui.avatar.rememberBotMood
 import com.chethan616.dex.ui.components.ShapeBadge
 import com.chethan616.dex.ui.components.springDrag
 import com.chethan616.dex.ui.components.springPress
+import com.chethan616.dex.ui.components.squishOnPress
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.animation.core.Animatable
@@ -312,17 +315,28 @@ internal fun HomeContent(
   val haptics = LocalHaptics.current
   var fabExpanded by rememberSaveable { mutableStateOf(false) }
   BackHandler(fabExpanded) { fabExpanded = false }
+  // As the menu fans out, a light tick for each item that pops in.
+  LaunchedEffect(fabExpanded) {
+    if (fabExpanded) repeat(4) { delay(55); haptics.tick() }
+  }
   Scaffold(
     floatingActionButton = {
       FloatingActionButtonMenu(
         expanded = fabExpanded,
         button = {
+          // The button squishes under your thumb, morphs to a circle with a
+          // wobble (the theme's springs, theme/Motion.kt), and its + swings
+          // round into an × — overshooting, then settling.
           ToggleFloatingActionButton(
             checked = fabExpanded,
             onCheckedChange = { haptics.toggle(it); fabExpanded = it },
+            modifier = Modifier.squishOnPress(0.88f),
           ) {
-            val icon = if (checkedProgress > 0.5f) Icons.Rounded.Close else Icons.Rounded.Add
-            Icon(rememberVectorPainter(icon), contentDescription = "New", modifier = Modifier.animateIcon({ checkedProgress }))
+            Icon(
+              rememberVectorPainter(Icons.Rounded.Add),
+              contentDescription = if (fabExpanded) "Close" else "New",
+              modifier = Modifier.animateIcon({ checkedProgress }).graphicsLayer { rotationZ = checkedProgress * 135f },
+            )
           }
         },
       ) {
@@ -404,7 +418,7 @@ internal fun HomeContent(
         if (state.needsYou.isNotEmpty()) {
           item(key = "h-needs") { Box(Modifier.padding(top = GAP)) { SectionTitle("Needs you", state.needsYou.size) } }
           items(state.needsYou, key = { "n-" + it.id }) { s ->
-            Box(Modifier.animateItem().padding(top = GAP)) {
+            Box(Modifier.animateItem(placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec()).padding(top = GAP)) {
               ApprovalCard(s, onOpen = { onOpenSession(s.id) }, onAnswer = { ok ->
                 if (ok) haptics.confirm() else haptics.reject()
                 onAnswer(s, ok)
@@ -415,7 +429,7 @@ internal fun HomeContent(
         if (state.running.isNotEmpty()) {
           item(key = "h-running") { Box(Modifier.padding(top = GAP)) { SectionTitle("Running", state.running.size) } }
           items(state.running, key = { "r-" + it.id }) { s ->
-            Box(Modifier.animateItem().padding(top = GAP)) {
+            Box(Modifier.animateItem(placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec()).padding(top = GAP)) {
               RunningCard(s) { haptics.tick(); onOpenSession(s.id) }
             }
           }
@@ -433,6 +447,19 @@ internal fun HomeContent(
           item(key = "empty") { Box(Modifier.padding(top = GAP)) { EmptyState() } }
         }
       }
+    }
+    // Behind the open menu the page dims, and a tap anywhere closes it.
+    androidx.compose.animation.AnimatedVisibility(
+      visible = fabExpanded,
+      enter = androidx.compose.animation.fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+      exit = androidx.compose.animation.fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()),
+    ) {
+      Box(
+        Modifier
+          .fillMaxSize()
+          .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.32f))
+          .pointerInput(Unit) { detectTapGestures { fabExpanded = false } },
+      )
     }
   }
 

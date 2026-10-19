@@ -1,5 +1,6 @@
 package com.chethan616.dex.ui.profile
 
+import com.chethan616.dex.ui.components.squishOnPress
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -193,7 +194,7 @@ fun ProfilePicker(
         Text("Shuffle")
       }
       Spacer(Modifier.weight(1f))
-      if (onCancel != null) TextButton(onClick = onCancel) { Text("Cancel") }
+      if (onCancel != null) TextButton(onClick = onCancel, shapes = androidx.compose.material3.ButtonDefaults.shapes()) { Text("Cancel") }
       Button(
         onClick = {
           if (saving) return@Button
@@ -219,7 +220,7 @@ private fun BotTile(type: String, selected: Boolean, color: Color?, modifier: Mo
     shape = RoundedCornerShape(corner),
     color = if (selected) scheme.primaryContainer else scheme.surfaceContainerHigh,
     border = if (selected) androidx.compose.foundation.BorderStroke(2.dp, scheme.primary) else null,
-    modifier = modifier.aspectRatio(1f).scale(scale),
+    modifier = modifier.aspectRatio(1f).scale(scale).squishOnPress(0.92f),
   ) {
     Box(contentAlignment = Alignment.Center) {
       BotAvatar(type = type, mood = if (selected) BotMood.Working else BotMood.Idle, size = 52.dp, interactive = false, color = color)

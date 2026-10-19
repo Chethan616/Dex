@@ -295,7 +295,7 @@ internal fun TriageCard(title: String?, source: String?, cardItems: List<TItem>,
       }
       val first = order.firstOrNull { !settled(it) }
       if (first != null) {
-        Button(onClick = { haptics.click(); openOn = null; openAt = first.id }, modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp)) {
+        Button(onClick = { haptics.click(); openOn = null; openAt = first.id }, modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp), shapes = androidx.compose.material3.ButtonDefaults.shapes()) {
           Text(if (handled == 0) "Answer them" else "Keep going · ${items.size - handled} left")
         }
       } else {
@@ -349,7 +349,7 @@ private fun TriageRow(item: TItem, selected: Boolean, onClick: () -> Unit) {
     onClick = onClick,
     shape = RoundedCornerShape(16.dp),
     color = if (selected) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surfaceContainer,
-    modifier = Modifier.fillMaxWidth().alpha(if (item.state == "skipped") 0.55f else 1f),
+    modifier = Modifier.fillMaxWidth().squishOnPress(0.97f).alpha(if (item.state == "skipped") 0.55f else 1f),
   ) {
     Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
       Avatar(item)
@@ -655,14 +655,14 @@ private fun TriageSheet(
             val left = items.count { !settled(it) }
             Text(if (left == 0) "All answered" else "$left of ${items.size} left", style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
           }
-          FilledTonalIconButton(onClick = { haptics.tick(); onDismiss() }) { Icon(Icons.Rounded.Close, "Close") }
+          FilledTonalIconButton(onClick = { haptics.tick(); onDismiss() }, shapes = androidx.compose.material3.IconButtonDefaults.shapes()) { Icon(Icons.Rounded.Close, "Close") }
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
           if (items.size > PLOT_ABOVE) {
             Row(Modifier.heightIn(min = 32.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
               val at = zoom
               if (at != null) {
-                FilledTonalButton(onClick = { haptics.tick(); zoom = null }, modifier = Modifier.height(32.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp)) {
+                FilledTonalButton(onClick = { haptics.tick(); zoom = null }, modifier = Modifier.height(32.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp), shapes = androidx.compose.material3.ButtonDefaults.shapes()) {
                   Text("‹ All corners", style = MaterialTheme.typography.labelLarge)
                 }
                 Text(at.label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = quadColor(at).takeIf { at != Quad.Later } ?: scheme.onSurface)
@@ -768,19 +768,19 @@ private fun TriageMessage(item: TItem, source: String?, canAnswer: Boolean, inRo
             maxLines = 4,
           )
           Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { onAnswer("change", ask.trim()); ask = ""; asking = false }, enabled = ask.isNotBlank()) {
+            Button(onClick = { onAnswer("change", ask.trim()); ask = ""; asking = false }, enabled = ask.isNotBlank(), shapes = androidx.compose.material3.ButtonDefaults.shapes()) {
               Icon(Icons.Rounded.Edit, null, Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("Redraft")
             }
-            TextButton(onClick = { asking = false }) { Text("Cancel") }
+            TextButton(onClick = { asking = false }, shapes = androidx.compose.material3.ButtonDefaults.shapes()) { Text("Cancel") }
           }
         } else {
           Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { onAnswer("yes", edited) }, enabled = !busy, modifier = Modifier.heightIn(min = 44.dp)) {
+            Button(onClick = { onAnswer("yes", edited) }, enabled = !busy, modifier = Modifier.heightIn(min = 44.dp), shapes = androidx.compose.material3.ButtonDefaults.shapes()) {
               Icon(Icons.Rounded.Check, null, Modifier.size(16.dp)); Spacer(Modifier.width(6.dp))
               Text(if (item.draft != null || draft.isNotBlank()) (if (edited != null) "Send my edit" else "Yes, send") else "Reply anyway")
             }
-            FilledTonalButton(onClick = { onAnswer("no", null) }, enabled = !busy && state != "skipped", modifier = Modifier.heightIn(min = 44.dp)) { Text("No") }
-            OutlinedButton(onClick = { asking = true }, enabled = !busy, modifier = Modifier.heightIn(min = 44.dp)) { Text("Specify…") }
+            FilledTonalButton(onClick = { onAnswer("no", null) }, enabled = !busy && state != "skipped", modifier = Modifier.heightIn(min = 44.dp), shapes = androidx.compose.material3.ButtonDefaults.shapes()) { Text("No") }
+            OutlinedButton(onClick = { asking = true }, enabled = !busy, modifier = Modifier.heightIn(min = 44.dp), shapes = androidx.compose.material3.ButtonDefaults.shapes()) { Text("Specify…") }
           }
         }
       }

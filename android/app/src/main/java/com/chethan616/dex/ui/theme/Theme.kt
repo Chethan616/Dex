@@ -4,7 +4,6 @@ import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialExpressiveTheme
-import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
@@ -106,7 +105,7 @@ fun DexTheme(mode: ThemeMode, dynamicColor: Boolean, content: @Composable () -> 
   androidx.compose.runtime.CompositionLocalProvider(LocalStatusColors provides status, LocalIsDark provides dark) {
     MaterialExpressiveTheme(
       colorScheme = scheme,
-      motionScheme = MotionScheme.expressive(),
+      motionScheme = DexMotion,
       shapes = DexShapes,
       typography = DexTypography,
       content = content,

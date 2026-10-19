@@ -370,7 +370,7 @@ fun SessionScreen(
       confirmButton = {
         Button(onClick = { confirmStop = false; haptics.reject(); vm.stop() }, shapes = ButtonDefaults.shapes()) { Text("Stop") }
       },
-      dismissButton = { TextButton(onClick = { confirmStop = false }) { Text("Keep going") } },
+      dismissButton = { TextButton(onClick = { confirmStop = false }, shapes = androidx.compose.material3.ButtonDefaults.shapes()) { Text("Keep going") } },
     )
   }
 }
@@ -474,7 +474,7 @@ internal fun SessionTopBar(
       Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 4.dp, vertical = 6.dp),
       verticalAlignment = Alignment.CenterVertically,
     ) {
-      IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") }
+      IconButton(onClick = onBack, shapes = androidx.compose.material3.IconButtonDefaults.shapes()) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") }
       // Where the bot lands when it flies in from Home (BotFlight).
       val flight = com.chethan616.dex.ui.avatar.LocalBotFlight.current
       val type = botTypeFor(session?.engine, sessionId)
@@ -505,7 +505,7 @@ internal fun SessionTopBar(
       SubagentsButton(subagentCount, activeSubagentCount, onSubagents)
       FilesButton(fileCount, onFiles)
       Box {
-        IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, "More") }
+        IconButton(onClick = { menu = true }, shapes = androidx.compose.material3.IconButtonDefaults.shapes()) { Icon(Icons.Rounded.MoreVert, "More") }
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, shape = RoundedCornerShape(20.dp)) {
           DropdownMenuItem(
             text = { Text("Reload from PC") },
