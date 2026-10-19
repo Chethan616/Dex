@@ -20,6 +20,16 @@
 
 ## ▶ RESUME HERE — live work log (keep this block current; newest first)
 
+**2026-10-19, owner's PC: release 2.1.1, the README shrine gallery, the demo video.**
+- **Release:**
+  - desktop 2.1.1 and phone 2.1.1 (41);
+  - contains `db80199b`: every file a task makes gets a card, cards open their page, one card per kind;
+  - the demo video `DEX-demo.mp4` is attached to the release.
+- **README:** a "Made by DEX, in 3D" section showing a shrine scene Opus built in Blender from one sentence. The hero is the agent's final render; the four other angles were rendered from the same `.blend` with Cycles on the CPU (`docs/images/readme/shrine/`).
+- **The demo video's sources:** a HyperFrames project at `C:\Users\cheth\Videos\DEX-demo\edit\dex-demo`, outside the repo; raw recordings sit next to it.
+- **This PC:** it crashed twice during long Blender GPU work. The cause was an AMD driver timeout on the 2021 driver. Keep Cycles on the CPU until the driver is updated.
+- **Next:** a benchmark (OSWorld-style) comparing DEX with Agent S2/S3, Copilot and an OpenAI agent, on Opus.
+
 **2026-10-18, owner's PC: the triage graph, made honest.** The owner reported that the category lanes made urgency wrong: Work looked more urgent only because of its lane.
 - **Overview.**
   - Every point sits at its exact urgency (across) and importance (up) within its corner (`withinCorner` / `cornerRange` in `shared/triage.ts`). Category is colour only.

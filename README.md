@@ -27,6 +27,11 @@ anything risky. Answers come back as things you can act on — flight cards with
 
 ## See it
 
+<p align="center">
+  <a href="https://github.com/Chethan616/Dex/releases/download/v2.1.1/DEX-demo.mp4"><img src="docs/images/readme/demo-teaser.webp" width="85%" alt="DEX at work: a task typed in plain words, GitHub results as cards, a poem typed live in Notepad, the inbox sorted by urgency and importance, and a 3D shrine rendered in Blender"></a>
+  <br><sub><b><a href="https://github.com/Chethan616/Dex/releases/download/v2.1.1/DEX-demo.mp4">▶ Watch the 76-second demo</a></b></sub>
+</p>
+
 <table>
   <tr>
     <td width="50%"><img src="docs/images/readme/desktop-answers.png" alt="Ask in plain words, tap the answer: flight results as cards with Select and Open"></td>
@@ -40,6 +45,34 @@ anything risky. Answers come back as things you can act on — flight cards with
     <td colspan="2"><img src="docs/images/readme/desktop-3d.png" alt="Design in 3D from a sentence: a reading nook DEX modelled and rendered in Blender, open in the task's 3D viewer"></td>
   </tr>
 </table>
+
+### Made by DEX, in 3D
+
+> *"In Blender, build a 3D scene of a Japanese shrine in a misty forest: a red torii gate, stone lanterns, a small wooden shrine and cherry blossom trees. Light it beautifully, render it, and show me the render and the 3D model."*
+
+<p align="center">
+  <img src="docs/images/readme/shrine/shrine-hero.jpg" alt="A Japanese shrine in a misty forest, rendered by DEX in Blender: a red torii gate over a stone path, glowing stone lanterns, a small wooden shrine and cherry blossom trees">
+</p>
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/readme/shrine/shrine-low.jpg" alt="Low on the path, looking up through the torii gate to the shrine"></td>
+    <td width="50%"><img src="docs/images/readme/shrine/shrine-lantern.jpg" alt="A lit stone lantern up close, the torii gate and blossoms behind it"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/readme/shrine/shrine-side.jpg" alt="From the side: the gate, the shrine on its stone base and the cherry trees"></td>
+    <td width="50%"><img src="docs/images/readme/shrine/shrine-high.jpg" alt="From above: the stone path, the lanterns, the gate and the shrine in the forest clearing"></td>
+  </tr>
+</table>
+
+One sentence, one task. DEX (Claude Code on Opus) planned the shot, modelled
+the torii, the lanterns and the shrine, placed and recoloured Poly Haven trees
+into cherry blossom, added the mist and the morning light, checked its own
+renders along the way and rendered the final frame in Cycles, all in DEX's
+background Blender while the PC stayed free. The views above are the same
+`.blend` from other angles.
+
+**[▶ Watch the demo](https://github.com/Chethan616/Dex/releases/download/v2.1.1/DEX-demo.mp4)**: browsing, Notepad, the inbox card and this scene, in 76 seconds.
 
 **On your phone** ([DEX for Android](https://github.com/Chethan616/Dex/releases/latest)):
 
