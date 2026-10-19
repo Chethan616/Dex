@@ -85,12 +85,13 @@ like in their own Chrome:
 - **Pages can look different from what you expect**: ads missing, colours
   dark, a library-proxy address in the URL. That's the user's setup; don't
   undo it.
-- **An extension's own page** (its options, its popup) can be opened as a
-  tab: `dex-tab new chrome-extension://<id>/<page>`. Ask the user first; it's
-  their extension.
-- **Password managers are off limits.** Their pages don't appear among your
-  tabs, and extensions' frames inside a page (an inline password menu, a
-  writing assistant's panel) aren't reachable. Never ask the user to paste a
-  password from one.
-- You can't add or remove extensions. If an extension would help, tell the
-  user its name; they add it from the Chrome Web Store.
+- **Use them with `dex-ext`** (see `extensions.md`): `dex-ext list` shows
+  what's installed, `dex-ext click <name>` presses one's button (its popup
+  opens as a background tab you drive like any tab, while your page stays
+  its current tab), `dex-ext menu` / `menu-click` use its right-click items,
+  `dex-ext install <store link>` asks the user to add one a site needs.
+- Extensions' frames inside a page (a translator's bubble, a writing
+  assistant's panel) are reachable like the page's own.
+- **Password managers and wallets are off limits.** Their pages and frames
+  aren't reachable and their buttons can't be pressed. Never ask the user to
+  paste a password from one, never approve anything in a wallet.

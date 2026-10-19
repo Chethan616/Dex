@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# dex-ext — the user's Chrome extensions in DEX's browser: what's installed,
+# pressing an extension's button, its right-click items, its options page, and
+# adding one from the Chrome Web Store (the user confirms).
+#
+# See extensions.md in this directory.
+
+set -uo pipefail
+. "$(dirname "$0")/dex-lib.sh"
+
+usage() {
+  cat >&2 <<'USAGE'
+usage:
+  dex-ext list                       what's installed and on: what each does, its button,
+                                     where it runs, its right-click items on this page
+  dex-ext click <name|id>            press its toolbar button on the task's current page
+                                     (a popup or side panel opens as a background tab)
+  dex-ext menu [--link URL] [--image URL] [--selection "text"]
+                                     extensions' right-click items for the page (or a link,
+                                     picture or selected text on it)
+  dex-ext menu-click <name|id> "<item>" [--link URL] [--image URL] [--selection "text"]
+                                     pick one of them
+  dex-ext options <name|id>          open its settings page as a background tab
+  dex-ext install <store link|id>    add one from the Chrome Web Store (the user is asked)
+USAGE
+  exit 2
+}
+
+[ $# -ge 1 ] || usage
+op="$1"; shift
+
+session="$(dex_session_id)"
+[ -n "$session" ] || { echo "dex-ext: no session id in the environment (DEX_SESSION_ID)" >&2; exit 3; }
+sid="\"sessionId\":\"$(dex_esc "$session")\""
+
+# --link / --image / --selection, wherever they are; the rest are positional.
+link=""; image=""; selection=""; args=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --link)      link="${2:-}"; shift 2 ;;
+    --image)     image="${2:-}"; shift 2 ;;
+    --selection) selection="${2:-}"; shift 2 ;;
+    *)           args+=("$1"); shift ;;
+  esac
+done
+at="\"link\":\"$(dex_esc "$link")\",\"image\":\"$(dex_esc "$image")\",\"selection\":\"$(dex_esc "$selection")\""
+
+case "$op" in
+  list)
+    body="{${sid},\"op\":\"list\"}"
+    ;;
+  click|options|install)
+    [ ${#args[@]} -ge 1 ] || usage
+    body="{${sid},\"op\":\"${op}\",\"ext\":\"$(dex_esc "${args[*]}")\"}"
+    ;;
+  menu)
+    body="{${sid},\"op\":\"menu\",${at}}"
+    ;;
+  menu-click)
+    [ ${#args[@]} -ge 2 ] || usage
+    item="${args[*]:1}"
+    body="{${sid},\"op\":\"menu-click\",\"ext\":\"$(dex_esc "${args[0]}")\",\"item\":\"$(dex_esc "$item")\",${at}}"
+    ;;
+  -h|--help|help) usage ;;
+  *) echo "dex-ext: unknown verb '$op'" >&2; usage ;;
+esac
+
+dex_post /dex/ext "$body"

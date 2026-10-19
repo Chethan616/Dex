@@ -1222,6 +1222,10 @@ public static class DexDesk {
   [DllImport("user32.dll")] static extern IntPtr WindowFromPoint(POINT p);
   [DllImport("user32.dll")] static extern IntPtr GetAncestor(IntPtr h, uint flags);
   [DllImport("user32.dll")] static extern bool AttachThreadInput(uint a, uint b, bool attach);
+  [DllImport("shell32.dll")] static extern int SHQueryUserNotificationState(out int state);
+  [DllImport("user32.dll")] static extern IntPtr MonitorFromWindow(IntPtr h, uint flags);
+  [DllImport("user32.dll")] static extern bool GetMonitorInfo(IntPtr monitor, ref MONITORINFO info);
+  [StructLayout(LayoutKind.Sequential)] struct MONITORINFO { public int cbSize; public RECT rcMonitor; public RECT rcWork; public uint dwFlags; }
   [DllImport("kernel32.dll")] static extern uint GetCurrentThreadId();
   [DllImport("user32.dll")] static extern IntPtr SetWindowsHookEx(int id, LowLevelProc fn, IntPtr mod, uint thread);
   [DllImport("user32.dll")] static extern bool UnhookWindowsHookEx(IntPtr h);
@@ -1372,6 +1376,33 @@ public static class DexDesk {
     try { glow.Invoke(new Action(() => glow.Close())); } catch { }
   }
 
+  /**
+   * Is the user watching or playing something full-screen (a film, a game, a
+   * slideshow)? Then borrowing would pull a window over it. Windows' own
+   * answer first (the state that holds back toasts), then the shape of the
+   * window in front: one that covers its whole monitor, taskbar included.
+   */
+  static string FullScreenInFront(Win target) {
+    try {
+      int state;
+      if (SHQueryUserNotificationState(out state) == 0 && (state == 2 || state == 3 || state == 4))
+        return state == 4 ? "presentation" : "fullscreen";
+    } catch { }
+    IntPtr fg = GetForegroundWindow();
+    if (fg == IntPtr.Zero || fg == target.H) return null;
+    uint pid; GetWindowThreadProcessId(fg, out pid);
+    if (pid == target.Pid) return null;
+    var cls = new StringBuilder(64);
+    GetClassName(fg, cls, 64);
+    string c = cls.ToString();
+    if (c == "Progman" || c == "WorkerW" || c == "Shell_TrayWnd") return null;
+    RECT r; if (!GetWindowRect(fg, out r)) return null;
+    var mi = new MONITORINFO { cbSize = Marshal.SizeOf(typeof(MONITORINFO)) };
+    if (!GetMonitorInfo(MonitorFromWindow(fg, 2 /* MONITOR_DEFAULTTONEAREST */), ref mi)) return null;
+    bool covers = r.Left <= mi.rcMonitor.Left && r.Top <= mi.rcMonitor.Top && r.Right >= mi.rcMonitor.Right && r.Bottom >= mi.rcMonitor.Bottom;
+    return covers ? "fullscreen" : null;
+  }
+
   static uint IdleMs() {
     var li = new LASTINPUTINFO { cbSize = (uint)Marshal.SizeOf(typeof(LASTINPUTINFO)) };
     GetLastInputInfo(ref li);
@@ -1417,6 +1448,13 @@ public static class DexDesk {
       if (step.ContainsKey("key")) foreach (var part in Convert.ToString(step["key"]).Split('+')) Vk(part.Trim());
       if (step.ContainsKey("click") && Str((Dictionary<string, object>)step["click"], "target") != null) Element(w, Str((Dictionary<string, object>)step["click"], "target"));
     }
+
+    // Never over a film, a game or a slideshow: a still mouse there means watching, not away.
+    string busy = FullScreenInFront(w);
+    if (busy != null)
+      return new Dictionary<string, object> { { "borrowed", false }, { "reason", "user_fullscreen" }, { "hint", busy == "presentation"
+        ? "The user is presenting. Don't borrow input now: do what you can the background way, and tell them what's left for later."
+        : "The user is watching or playing something full-screen. Don't borrow input now: do what you can the background way (ui_invoke, menu items, keyboard shortcuts through the app's menus), and tell them what's left for when they're done." } };
 
     // Only in a pause in the user's own input.
     var waited = Stopwatch.StartNew();

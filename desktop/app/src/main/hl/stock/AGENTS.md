@@ -17,6 +17,7 @@ a less structured one only when the structured one cannot.
 |---|---|---|
 | A service with a connected integration (Drive, Gmail, GitHub, Slack) | its MCP tools | the browser |
 | A website | the DOM, through `browser-harness-js` | a screenshot, then coordinates |
+| A site that needs a Chrome extension (a library proxy, a reference manager's save button, "install our extension", a wallet), or one of the user's extensions that would help | `dex-ext list`, then its button (`dex-ext click`) or right-click item (`dex-ext menu-click`); a popup opens as a background tab you drive like any tab; not installed → `dex-ext install <store link>` (the user confirms). See `./dex-tools/extensions.md` | — never a password manager or a wallet: tell the user what to do in it |
 | A Windows app — Spotify, Settings, Office, anything with a window | `mcp__windows__*`: in the background, never taking the user's mouse, keyboard or focus. Read `./dex-tools/desktop.md` first | tell the user what's blocking you. **Never** SendKeys, SendInput, pyautogui, coordinate clicks, or starting a GUI app from your shell — the user is using this PC |
 | Music or video playing on the PC | `mcp__windows__media` | — |
 | Checking the PC: network, Wi-Fi, devices, drivers, touchpad, installed apps, event logs | `mcp__windows__system_info` | your shell, read-only |

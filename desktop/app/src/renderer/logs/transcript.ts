@@ -174,6 +174,7 @@ const DEX_CLI: Record<string, [string, string]> = {
   'dex-canvas': ['Writing it up', 'Wrote it up'], 'dex-open': ['Opening a file', 'Opened a file'],
   'dex-find': ['Searching your files', 'Searched your files'], 'dex-websearch': ['Searching the web', 'Searched the web'],
   'dex-send': ['Sending it to you', 'Sent it to you'], 'dex-tab': ['Using a browser tab', 'Used a browser tab'],
+  'dex-ext': ['Using a browser extension', 'Used a browser extension'],
   'dex-remember': ['Remembering it', 'Remembered it'], 'dex-recall': ['Recalling what it knows', 'Recalled what it knows'],
   'dex-state': ['Updating its plan', 'Updated its plan'], 'dex-react': ['Reacting', 'Reacted'],
   'dex-3d': ['Making a 3D model', 'Made a 3D model'], 'dex-blender': ['Working in Blender', 'Worked in Blender'],

@@ -168,6 +168,7 @@ import {
 import { WhatsAppAdapter } from './channels/WhatsAppAdapter';
 import { TelegramAdapter } from './channels/TelegramAdapter';
 import { DiscordAdapter } from './channels/DiscordAdapter';
+import { setExtensionsForPrompt } from './hl/engines/extensions';
 import { ChannelRouter } from './channels/ChannelRouter';
 import { WorkflowStore } from './workflows/store';
 import { startWorkflowScheduler } from './workflows/scheduler';
@@ -472,9 +473,10 @@ function agentMayReachPage(url: string): boolean {
 
 const workspaceHooks: BrokerHooks = {
   pageAllowed: agentMayReachPage,
-  // Extensions' frames inside a web page belong to the extension (a password
-  // manager's inline menu, a writing assistant's panel), not to the page.
-  childAllowed: (url) => !url.startsWith('chrome-extension://'),
+  // Extensions' frames inside a web page (a translator's bubble, a writing
+  // assistant's panel) are the agent's to use like the page — except a
+  // password manager's inline menu or a wallet's, which stay the user's.
+  childAllowed: agentMayReachPage,
   async beforeCommand(wc, method, params, { child }) {
     // Paused on Windows (cooperative, desktop/deskState.ts): the agent's
     // commands to the page wait until Resume.
@@ -639,6 +641,9 @@ function startExtensions(webSes: Electron.Session): void {
     uiLocale: app.getLocale(),
     log: (event, data) => mainLogger.info(event, data),
   });
+  setExtensionsForPrompt(() => manager.list()
+    .filter((x) => x.enabled && x.loaded)
+    .map((x) => ({ name: x.name, description: x.description, offLimits: ExtensionHost.offLimits(x.name) })));
   const host = new ExtensionHost({
     session: webSes,
     manager,
@@ -2306,6 +2311,93 @@ app.whenReady().then(async () => {
       // The `dex-tab` CLI: the agent's view of its workspace tabs (docs/unify
       // PLAN.md §4.2). Tabs it opens are background scratch tabs unless it
       // shows or keeps them; `targetId` is what `session.use()` takes.
+      // `dex-ext`: the user's Chrome extensions, for the agent (dex-tools/extensions.md):
+      // what's installed, its button (a popup opens as a background tab, so the
+      // page stays the extension's current tab), its right-click items, its
+      // options, and adding one from the Chrome Web Store (the user confirms).
+      'POST /dex/ext': async (raw) => {
+        let p: { sessionId?: unknown; op?: unknown; ext?: unknown; item?: unknown; link?: unknown; image?: unknown; selection?: unknown };
+        try { p = JSON.parse(raw); } catch { throw new Error('request body must be JSON'); }
+        const id = assertString(p.sessionId, 'sessionId', 100);
+        const host = extensionHost;
+        const manager = extensionManager;
+        if (!host || !manager) throw new Error("DEX's browser has no extensions running (Settings › Extensions).");
+        const str = (v: unknown, max = 2000) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : undefined);
+        const at = { linkUrl: str(p.link), srcUrl: str(p.image), selectionText: str(p.selection, 500) };
+        const hasBrowser = () => { if (!browserPool.getWebContents(id)) throw new Error('This task has no browser open yet: open the page first.'); };
+        // An extension by id, or by (part of) its name.
+        const pick = () => {
+          const q = str(p.ext, 200);
+          if (!q) throw new Error('name the extension (its name, or its id from `dex-ext list`)');
+          const all = host.agentList(id);
+          const found = all.find((e) => e.id === q) ?? all.find((e) => e.name.toLowerCase() === q.toLowerCase()) ?? all.find((e) => e.name.toLowerCase().includes(q.toLowerCase()));
+          if (!found) throw new Error(`No extension called “${q}” is on in DEX. Installed and on: ${all.map((e) => e.name).join(', ') || 'none'}.`);
+          if (found.offLimits) throw new Error(`${found.name} is the user's ${found.offLimits}: DEX keeps it in their hands. Tell them what to do in it.`);
+          return found;
+        };
+        const openPage = async (url: string) => {
+          const tab = browserPool.openTab(id, { url, openedBy: 'agent', activate: false, temporary: true });
+          if (!tab) throw new Error('Could not open a tab for it.');
+          await new Promise((r) => setTimeout(r, 120));
+          const wc = browserPool.getTabWebContents(id, tab);
+          let targetId: string | null = null;
+          if (wc) {
+            try { targetId = ((await withDebugger(wc, () => wc.debugger.sendCommand('Target.getTargetInfo'))) as { targetInfo?: { targetId?: string } }).targetInfo?.targetId ?? null; } catch { /* still loading */ }
+          }
+          return { tab, targetId, url };
+        };
+        switch (p.op) {
+          case 'list':
+            return { extensions: host.agentList(id) };
+          case 'click': {
+            hasBrowser();
+            const ext = pick();
+            const r = host.agentPress(ext.id, id);
+            if (r.kind === 'disabled') return { pressed: ext.name, result: 'disabled', hint: 'Its button is greyed out on this page: it has nothing to do here.' };
+            if (r.kind === 'clicked') return { pressed: ext.name, result: 'acted on the page', hint: 'Take a screenshot of the page to see what it changed (it may reload or redirect).' };
+            const opened = await openPage(r.url as string);
+            return {
+              pressed: ext.name,
+              result: r.kind === 'popup' ? 'popup opened' : 'side panel opened',
+              opened,
+              hint: `Its ${r.kind === 'popup' ? 'popup' : 'side panel'} is open as a background tab: drive it like any tab (session.use("${opened.targetId ?? '<targetId from dex-tab list>'}")). The page you were on stays its current tab, so it acts there. Close it with \`dex-tab close ${opened.tab}\` when done.`,
+            };
+          }
+          case 'menu':
+            hasBrowser();
+            return { items: host.agentMenu(id, at) };
+          case 'menu-click': {
+            hasBrowser();
+            const ext = pick();
+            const want = str(p.item, 300);
+            if (!want) throw new Error('name the menu item (as `dex-ext menu` lists it)');
+            const items = host.agentMenu(id, at).filter((m) => m.extensionId === ext.id);
+            const item = items.find((m) => m.path.toLowerCase() === want.toLowerCase()) ?? items.find((m) => m.path.toLowerCase().endsWith(want.toLowerCase()));
+            if (!item) throw new Error(`${ext.name} has no menu item “${want}” here. It has: ${items.map((m) => m.path).join(' | ') || 'none on this page'}.`);
+            if (!host.agentMenuClick(id, ext.id, item.id, at)) throw new Error(`“${item.path}” is greyed out here.`);
+            return { clicked: `${ext.name} › ${item.path}`, hint: 'Take a screenshot to see what it did.' };
+          }
+          case 'options': {
+            hasBrowser();
+            const ext = pick();
+            if (!ext.options) throw new Error(`${ext.name} has no options page.`);
+            return { opened: await openPage(ext.options), hint: 'Its settings are the user\'s: change one only when they asked you to.' };
+          }
+          case 'install': {
+            const q = str(p.ext, 300) ?? '';
+            const storeId = /([a-p]{32})/.exec(q)?.[1];
+            if (!storeId) throw new Error('give the extension\'s Chrome Web Store link or its 32-letter id (find it with a web search: "<name> chrome web store")');
+            const result = await manager.installFromStore(storeId);
+            const name = manager.summary(storeId)?.name ?? storeId;
+            if (result === 'user_cancelled') return { installed: false, hint: 'The user said no. Don\'t ask again in this task; carry on without it.' };
+            if (result === 'install_in_progress') return { installed: false, hint: 'It is already being added; check `dex-ext list` in a moment.' };
+            return { installed: true, name, already: result === 'already_installed', hint: 'Reload the page (or open it again) so the extension runs on it, then `dex-ext list` shows its button.' };
+          }
+          default:
+            throw new Error('dex-ext: list | click <ext> | menu [--link URL] [--image URL] [--selection TEXT] | menu-click <ext> <item> | options <ext> | install <store link or id>');
+        }
+      },
+
       'POST /dex/tab': async (raw) => {
         let parsed: { sessionId?: unknown; op?: unknown; tab?: unknown; url?: unknown; show?: unknown; keep?: unknown };
         try {

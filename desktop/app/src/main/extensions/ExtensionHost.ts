@@ -93,6 +93,33 @@ function extensionOf(url: string | undefined | null): string | null {
   return url ? EXTENSION_ORIGIN.exec(url)?.[1] ?? null : null;
 }
 
+/** One extension as the agent sees it (`dex-ext list`). */
+export interface AgentExtension {
+  id: string;
+  name: string;
+  description: string;
+  /** Kept in the user's hands: the agent can't use it. */
+  offLimits: 'password manager' | 'wallet' | null;
+  button: { title: string; badge?: string; enabled: boolean; opens: 'popup' | 'side panel' | 'acts on the page' };
+  /** Where its scripts run: "every site", or the sites it names. */
+  runsOn: string[];
+  options: string | null;
+  /** Its right-click items on the task's page ("Save to Zotero › Save page"). */
+  menu: string[];
+}
+
+/** Menu entries as paths ("Parent › Child"), leaves only. */
+function flatMenu(entries: MenuEntry[], prefix = ''): Array<{ path: string; entry: MenuEntry }> {
+  const out: Array<{ path: string; entry: MenuEntry }> = [];
+  for (const e of entries) {
+    if (e.type === 'separator') continue;
+    const here = prefix ? `${prefix} › ${e.label}` : e.label;
+    if (e.children.length) out.push(...flatMenu(e.children, here));
+    else if (e.id) out.push({ path: here, entry: e });
+  }
+  return out;
+}
+
 export class ExtensionHost {
   readonly menus = new MenuStore();
   readonly tabsApi: TabsApi;
@@ -1061,10 +1088,113 @@ export class ExtensionHost {
     return out;
   }
 
-  /** May the agent drive this extension page? Not a password manager's. */
+  /** May the agent drive this extension page? Not a password manager's, nor a crypto wallet's. */
   static agentMayUse(url: string, name: string): boolean {
     if (!url.startsWith('chrome-extension://')) return true;
-    return !/(bitwarden|1password|lastpass|dashlane|keeper|nordpass|roboform|proton pass|enpass|keepass|zoho vault|norton password)/i.test(name);
+    return ExtensionHost.offLimits(name) === null;
+  }
+
+  /**
+   * Extensions that stay in the user's hands: a password manager holds their
+   * passwords, a wallet signs payments. The agent never reaches their pages
+   * or presses their buttons.
+   */
+  static offLimits(name: string): 'password manager' | 'wallet' | null {
+    if (/(bitwarden|1password|lastpass|dashlane|keeper|nordpass|roboform|proton pass|enpass|keepass|zoho vault|norton password|password manager)/i.test(name)) return 'password manager';
+    if (/(metamask|phantom|coinbase wallet|trust wallet|rabby|okx wallet|keplr|solflare|backpack|ronin|exodus|rainbow|zerion|tronlink|brave wallet|crypto wallet|\bwallet\b)/i.test(name)) return 'wallet';
+    return null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // The agent's side (dex-ext): what's installed, its button, its menu items
+  // ---------------------------------------------------------------------------
+
+  /** The extensions the agent can use in this task, as `dex-ext list` shows them. */
+  agentList(sessionId: string): AgentExtension[] {
+    const tabId = this.activeTabIdOf(sessionId);
+    const page = this.activePageUrl(sessionId);
+    return this.deps.manager.list().filter((s) => s.enabled && s.loaded).map((s) => {
+      const off = ExtensionHost.offLimits(s.name);
+      const st = this.actions.stateFor(s.id, tabId ?? undefined);
+      const panel = this.platform.sidePanelFor(s.id);
+      const opens: AgentExtension['button']['opens'] = panel.openOnAction && panel.path && panel.enabled ? 'side panel' : st.popup ? 'popup' : 'acts on the page';
+      const hosts = s.hostPermissions;
+      const everywhere = hosts.some((h) => h === '<all_urls>' || /^(\*|https?):\/\/\*\/\*$/.test(h));
+      const sites = everywhere ? ['every site'] : [...new Set(hosts.map((h) => h.replace(/^[a-z*]+:\/\//, '').replace(/\/.*$/, '')))].slice(0, 6);
+      const menu = page && !off ? flatMenu(this.menus.entriesFor({ pageUrl: page, frameId: 0, editable: false }, (id) => this.nameOf(id), s.id)).map((m) => m.path) : [];
+      return {
+        id: s.id,
+        name: s.name,
+        description: s.description.length > 180 ? `${s.description.slice(0, 179)}…` : s.description,
+        offLimits: off,
+        button: { title: st.title || s.name, badge: st.badgeText || undefined, enabled: st.enabled !== false, opens },
+        runsOn: sites,
+        options: s.optionsUrl,
+        menu,
+      };
+    });
+  }
+
+  /**
+   * The agent presses an extension's button on the task's page. A popup or
+   * side panel comes back as the page to open (DEX opens it as a background
+   * tab, so the page stays the extension's current tab); a button without
+   * one acts on the page right away.
+   */
+  agentPress(extensionId: string, sessionId: string): { kind: 'popup' | 'side_panel' | 'clicked' | 'disabled'; url?: string } {
+    const tabId = this.activeTabIdOf(sessionId);
+    if (tabId !== null) {
+      const set = this.activeTab.get(extensionId) ?? new Set<number>();
+      set.add(tabId);
+      this.activeTab.set(extensionId, set);
+    }
+    const st = this.actions.stateFor(extensionId, tabId ?? undefined);
+    if (st.enabled === false) return { kind: 'disabled' };
+    const page = (p: string) => new URL(p.replace(/^\/+/, ''), `chrome-extension://${extensionId}/`).href;
+    const panel = this.platform.sidePanelFor(extensionId);
+    if (panel.openOnAction && panel.path && panel.enabled) return { kind: 'side_panel', url: page(panel.path) };
+    if (st.popup) return { kind: 'popup', url: page(st.popup) };
+    const tab = tabId !== null ? this.tabsApi.tabFor(extensionId, tabId) : null;
+    this.emit(extensionId, 'action.onClicked', [tab], { wake: true });
+    return { kind: 'clicked' };
+  }
+
+  /** Extensions' right-click items for the task's page (or a link, picture or selection on it). */
+  agentMenu(sessionId: string, at: { linkUrl?: string; srcUrl?: string; selectionText?: string } = {}): Array<{ extensionId: string; extension: string; path: string; id: string; enabled: boolean }> {
+    const target = this.agentTarget(sessionId, at);
+    if (!target) return [];
+    return flatMenu(this.menus.entriesFor(target, (id) => this.nameOf(id)))
+      .filter((m) => ExtensionHost.offLimits(this.nameOf(m.entry.extensionId)) === null)
+      .map((m) => ({ extensionId: m.entry.extensionId, extension: this.nameOf(m.entry.extensionId), path: m.path, id: m.entry.id as string, enabled: m.entry.enabled }));
+  }
+
+  /** Pick one of them, as the user would from the right-click menu. */
+  agentMenuClick(sessionId: string, extensionId: string, itemId: string, at: { linkUrl?: string; srcUrl?: string; selectionText?: string } = {}): boolean {
+    const target = this.agentTarget(sessionId, at);
+    if (!target) return false;
+    const hit = flatMenu(this.menus.entriesFor(target, (id) => this.nameOf(id), extensionId)).find((m) => m.entry.id === itemId);
+    if (!hit || !hit.entry.enabled) return false;
+    this.menuClicked(hit.entry, target, this.activeTabIdOf(sessionId));
+    return true;
+  }
+
+  private agentTarget(sessionId: string, at: { linkUrl?: string; srcUrl?: string; selectionText?: string }): MenuTarget | null {
+    const pageUrl = this.activePageUrl(sessionId);
+    if (!pageUrl) return null;
+    return {
+      pageUrl,
+      frameId: 0,
+      editable: false,
+      ...(at.linkUrl ? { linkUrl: at.linkUrl } : {}),
+      ...(at.srcUrl ? { srcUrl: at.srcUrl, mediaType: 'image' } : {}),
+      ...(at.selectionText ? { selectionText: at.selectionText } : {}),
+    };
+  }
+
+  private activePageUrl(sessionId: string): string | null {
+    const win = this.deps.tabs.windows().find((w) => w.sessionId === sessionId);
+    const wc = win?.tabs.find((t) => t.active)?.wc;
+    try { return wc && !wc.isDestroyed() ? wc.getURL() || null : null; } catch { return null; }
   }
 
   hasHostAccess(extensionId: string, url: string): boolean {

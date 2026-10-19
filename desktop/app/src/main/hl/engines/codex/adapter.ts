@@ -32,6 +32,7 @@ import { mainLogger } from '../../../logger';
 import { register } from '../registry';
 import { applyBrowserHarnessEnv } from '../browserHarnessEnv';
 import { deliveryBriefing } from '../delivery';
+import { extensionsBriefing } from '../extensions';
 import { codexMcpOverrides, servicesBriefing } from '../services';
 import { enrichedEnv } from '../pathEnrich';
 import { runCliCapture } from '../cliSpawn';
@@ -196,6 +197,7 @@ const codexAdapter: EngineAdapter = {
       `A result whose *shape* is part of the answer — a report, a comparison table, a structured summary, anything with real headings and sections — is \`dex-canvas show "<title>"\` (markdown piped via stdin), rendered as a document in the app itself. That is different from "produce a file": only use \`./outputs/${ctx.sessionId}/\` for something the user will download, attach, or open outside the app (a CSV export, a screenshot, a transcript) — not for a report meant to be read right here.`,
       `Every file you make for the user — a picture, a render, a 3D model, a document, a video — goes in ./outputs/${ctx.sessionId}/ (a render or export: point its output path there), and your final answer names it. A file saved anywhere else: give its full path in your final answer. Each one then shows in the chat as a card the user can open, which is how they see your work; never say "here it is" about a file the user can't see.`,
       ...deliveryBriefing(ctx),
+      ...extensionsBriefing(),
       ...(ctx.memoryBriefing ?? []),
       '',
       `Task: ${ctx.prompt}`,

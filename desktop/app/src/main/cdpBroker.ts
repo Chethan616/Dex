@@ -296,7 +296,7 @@ class BrokerConnection {
     if (page) {
       if (isBlockedOnPage(method)) throw notHere(method);
       if (this.hooks.pageAllowed && !this.hooks.pageAllowed(page.wc.getURL())) {
-        throw new CdpError(-32000, "DEX keeps this page away from the agent: it's a password manager's own page.");
+        throw new CdpError(-32000, "DEX keeps this page away from the agent: it's a password manager's or a wallet's own page.");
       }
       this.notify(page.wc, sessionId);
       return this.forward(page.wc, method, params, undefined);

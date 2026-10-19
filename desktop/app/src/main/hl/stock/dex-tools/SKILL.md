@@ -20,6 +20,7 @@ them with Bash like any other command.
 | `dex-workflow` | The user's saved workflows and daily routines: making, changing, deleting, listing (as cards in the chat) and running them; DEX starts the scheduled ones on time. See `workflows.md`. |
 | `dex-react` | A rare emoji on the user's message, when it says something words wouldn't (🎉 to good news). DEX already reacts to go-aheads and thanks by itself — don't double up; most messages get none. |
 | `dex-tab` | This task's browser tabs, which the user shares: listing them, opening a background tab for a side lookup, showing one to the user. See `tabs.md`. |
+| `dex-ext` | The user's Chrome extensions in DEX's browser: what's installed, pressing one's button (its popup opens as a tab you can drive), its right-click items, its options, adding one from the Web Store (the user confirms). For sites that depend on an extension. See `extensions.md`. |
 | `dex-send` | Sending the user a file, a screenshot (`--page`, `--screen`) or your canvas as a PDF (`--canvas`) on WhatsApp. See `send.md`. |
 | `dex-3d` | An AI-generated, textured 3D model (GLB) of one object from a description or a picture — free on the user's Hugging Face account. See `blender.md`. |
 | `dex-blender` | This task's background Blender (no window — the user keeps their desktop): its status and autosaved scene, headless scripts and renders, and showing the scene to the user when they ask. See `blender.md` for how to build scenes and models that look good. |
