@@ -231,6 +231,7 @@ export async function runEngine(opts: RunEngineOptions): Promise<void> {
   try {
     // Hosted connectors' tokens last about an hour: renew the ones close to it.
     await (await import('../../connectors/remote')).refreshRemoteConnections().catch(() => {});
+    await (await import('../../accounts')).refreshDiscordConnection().catch(() => {});
     const { alwaysOnConnections, connectionsForPrompt, connectorHint } = await import('../../mcp/catalog');
     const { listConnections } = await import('../../mcp/store');
     const enabled = await enabledConnections();

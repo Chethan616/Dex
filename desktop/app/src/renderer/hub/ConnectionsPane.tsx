@@ -16,7 +16,6 @@ import { CookieBrowser, type CookieBrowserApi } from '../shared/CookieBrowser';
 import { pollInstalledStatus } from '../shared/installStatus';
 import { Orb } from '../components/lib';
 import { ChannelTips, TelegramCard } from './TelegramCard';
-import { DiscordCard } from './DiscordCard';
 
 type WaStatus = 'disconnected' | 'connecting' | 'qr_ready' | 'connected' | 'error';
 type AuthType = 'oauth' | 'apiKey' | 'none';
@@ -1212,8 +1211,6 @@ export function ConnectionsPane({
       </div>
 
       <TelegramCard />
-
-      <DiscordCard />
 
       {channelsLast}
 

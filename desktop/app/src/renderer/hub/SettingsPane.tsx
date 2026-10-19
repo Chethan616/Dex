@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import { ConnectionsPane, type SettingsProviderFocusRequest } from './ConnectionsPane';
 import { PhoneCard } from './PhoneCard';
+import { DiscordCard } from './DiscordCard';
 import { ExtensionsSection } from './ExtensionsSection';
 import { PuzzleIcon } from './icons/PuzzleIcon';
 import { DiagnosticsSection } from './DiagnosticsSection';
@@ -1296,6 +1297,7 @@ export function SettingsPane({ intent, keybindings, overrides, onUpdateBinding, 
             channelsLast={(
               <details className="channels-advanced">
                 <summary>Advanced — connect with a token</summary>
+                <DiscordCard />
                 <McpSection />
               </details>
             )}

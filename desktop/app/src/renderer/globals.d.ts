@@ -681,7 +681,7 @@ interface ElectronSettingsAPI {
   app?: ElectronSettingsAppAPI;
 }
 
-type AccountProviderId = 'google' | 'github' | 'slack' | 'reddit' | 'huggingface' | 'microsoft';
+type AccountProviderId = 'google' | 'github' | 'slack' | 'reddit' | 'huggingface' | 'microsoft' | 'discord';
 
 interface AccountProfileInfo {
   identity: string;
@@ -699,6 +699,8 @@ interface AccountInfo {
   devBuild: boolean;
   /** Hugging Face only: the plan (sets the daily GPU time) and today's use. */
   huggingface?: { plan: 'pro' | 'free' | null; modelsToday: number; refillsAt?: number };
+  /** Discord only: the channels DEX may post to. */
+  discord?: { channels: Array<{ id: string; label: string }> };
 }
 
 type AccountProgressEvent =
@@ -727,6 +729,9 @@ interface ElectronSettingsAccountsAPI {
   connect: (provider: AccountProviderId) => Promise<{ ok: boolean; profile?: AccountProfileInfo; error?: string }>;
   cancel: (provider: AccountProviderId) => Promise<void>;
   disconnect: (provider: AccountProviderId) => Promise<void>;
+  discordAddChannel?: () => Promise<{ ok: boolean; error?: string }>;
+  discordRemoveChannel?: (id: string) => Promise<void>;
+  discordRenameChannel?: (id: string, label: string) => Promise<void>;
   openLink: (key: 'huggingface-pro' | 'huggingface-billing' | 'huggingface-zerogpu') => Promise<void>;
   onProgress: (cb: (event: AccountProgressEvent) => void) => () => void;
 }

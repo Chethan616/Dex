@@ -24,7 +24,7 @@ import { HOSTED_CONNECTORS, remoteConnectionId, type HostedConnector } from '../
 export type McpTransport = 'stdio';
 
 /** Which one-click sign-in Settings offers instead of credential fields. */
-export type AccountProvider = 'google' | 'github' | 'slack' | 'reddit' | 'microsoft';
+export type AccountProvider = 'google' | 'github' | 'slack' | 'reddit' | 'microsoft' | 'discord';
 
 export interface McpCredentialField {
   /** Key used in the env passed to the server process. */
@@ -127,6 +127,11 @@ export function launchSpec(definition: McpServerDefinition, values: Record<strin
     for (const key of ['REDDIT_REFRESH_TOKEN', 'DEX_REDDIT_REFRESH_TOKEN', 'REDDIT_CLIENT_SECRET', 'REDDIT_PASSWORD', 'REDDIT_CLIENT_ID', 'REDDIT_USERNAME']) {
       delete env[key];
     }
+  }
+  // The Discord server needs the access token and the channels; DEX keeps the refresh token.
+  if (definition.id === 'discord') {
+    delete env.DISCORD_REFRESH_TOKEN;
+    delete env.DISCORD_TOKEN_EXPIRES;
   }
   // A hosted connector's proxy needs its URL and current access token only;
   // the refresh token and client details stay in the credential store.
@@ -327,6 +332,30 @@ export const MCP_CATALOG: McpServerDefinition[] = [
         MICROSOFT_CLIENT_SECRET: client?.clientSecret ?? '',
       };
     },
+  },
+  {
+    id: 'discord',
+    displayName: 'Discord',
+    summary: 'Your Discord servers, and posting to the channels you picked for DEX — announcements, summaries, files. (Discord sign-in can\'t read messages.)',
+    transport: 'stdio',
+    command: 'node',
+    args: [],
+    builtIn: 'discord',
+    connect: 'discord',
+    credentials: [
+      {
+        key: 'DISCORD_ACCESS_TOKEN',
+        label: 'Discord account',
+        secret: true,
+        help: 'Filled in by "Continue with Discord" — you never paste this.',
+      },
+      {
+        key: 'DISCORD_CHANNELS',
+        label: 'Channels DEX may post to',
+        secret: true,
+        help: 'Added from Connectors › Discord › Add a channel.',
+      },
+    ],
   },
 ];
 

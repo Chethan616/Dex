@@ -1,5 +1,5 @@
 /**
- * Connected accounts: Google, GitHub, Slack, Reddit — signed in with one click,
+ * Connected accounts: Google, GitHub, Slack, Reddit, Discord — signed in with one click,
  * never configured with tokens or file paths.
  *
  * Each account is backed by an MCP connection (mcp/store.ts): signing in
@@ -23,6 +23,7 @@ import { huggingFaceUsage } from '../threed/usage';
 import { cancelSlack, connectSlack, revokeSlack } from './slack';
 import { cancelReddit, connectReddit, revokeReddit } from './reddit';
 import { cancelMicrosoft, connectMicrosoft, revokeMicrosoft } from './microsoft';
+import { addDiscordChannel, cancelDiscord, connectDiscord, deleteDiscordChannel, parseChannels, refreshDiscord, revokeDiscord, type DiscordChannel } from './discord';
 
 export interface AccountProfile {
   identity: string;
@@ -47,6 +48,8 @@ export interface AccountInfo {
   devBuild: boolean;
   /** Hugging Face only: the plan (sets the daily GPU time) and today's use. */
   huggingface?: { plan: 'pro' | 'free' | null; modelsToday: number; refillsAt?: number };
+  /** Discord only: the channels DEX may post to (never their webhook tokens). */
+  discord?: { channels: Array<{ id: string; label: string }> };
 }
 
 export type AccountProgress =
@@ -55,7 +58,7 @@ export type AccountProgress =
   | { provider: OAuthProvider; phase: 'done'; profile: AccountProfile }
   | { provider: OAuthProvider; phase: 'error'; error: string };
 
-const PROVIDERS: OAuthProvider[] = ['google', 'github', 'slack', 'reddit', 'huggingface', 'microsoft'];
+const PROVIDERS: OAuthProvider[] = ['google', 'github', 'slack', 'reddit', 'huggingface', 'microsoft', 'discord'];
 
 /** Fires with the provider whenever an account connects or disconnects. */
 export const accountEvents = new EventEmitter();
@@ -121,6 +124,7 @@ export async function listAccounts(): Promise<AccountInfo[]> {
       connected,
       devBuild: !app.isPackaged,
       profile: connected ? profiles[provider] ?? (connection?.identity ? { identity: connection.identity, connectedAt: 0 } : undefined) : undefined,
+      ...(provider === 'discord' && connected ? { discord: { channels: parseChannels(connection?.values.DISCORD_CHANNELS).map((c) => ({ id: c.id, label: c.label })) } } : {}),
     };
   });
 }
@@ -179,6 +183,19 @@ export async function connectAccount(provider: OAuthProvider): Promise<{ ok: boo
         identity: account.username,
       });
       profile = { identity: account.username, name: account.name, connectedAt: Date.now() };
+    } else if (provider === 'discord') {
+      const account = await connectDiscord();
+      await setConnection('discord', {
+        enabled: true,
+        values: {
+          DISCORD_ACCESS_TOKEN: account.accessToken,
+          DISCORD_REFRESH_TOKEN: account.refreshToken,
+          DISCORD_TOKEN_EXPIRES: String(account.expiresAt),
+          DISCORD_CHANNELS: JSON.stringify(account.channel ? [account.channel] : []),
+        },
+        identity: account.username,
+      });
+      profile = { identity: account.username, name: account.name, picture: account.picture, connectedAt: Date.now() };
     } else if (provider === 'microsoft') {
       const account = await connectMicrosoft();
       await setConnection('microsoft', {
@@ -230,6 +247,7 @@ export function cancelAccount(provider: OAuthProvider): void {
   else if (provider === 'huggingface') cancelHuggingFace();
   else if (provider === 'reddit') cancelReddit();
   else if (provider === 'microsoft') cancelMicrosoft();
+  else if (provider === 'discord') cancelDiscord();
   else cancelSlack();
 }
 
@@ -244,6 +262,11 @@ export async function disconnectAccount(provider: OAuthProvider): Promise<void> 
   if (provider === 'microsoft' && connection?.values.MICROSOFT_REFRESH_TOKEN) {
     await revokeMicrosoft(connection.values.MICROSOFT_REFRESH_TOKEN, connection.values.MICROSOFT_CLIENT_SECRET);
   }
+  if (provider === 'discord' && connection) {
+    // Its webhooks go too, so nothing can post as DEX in those channels any more.
+    await Promise.all(parseChannels(connection.values.DISCORD_CHANNELS).map((c) => deleteDiscordChannel(c)));
+    if (connection.values.DISCORD_REFRESH_TOKEN) await revokeDiscord(connection.values.DISCORD_REFRESH_TOKEN);
+  }
   if (provider === 'huggingface') await forgetHuggingFace();
   else await removeConnection(provider);
   writeProfile(provider, null);
@@ -251,8 +274,67 @@ export async function disconnectAccount(provider: OAuthProvider): Promise<void> 
   mainLogger.info('accounts.disconnected', { provider });
 }
 
+/* ── Discord: the channels DEX may post to ─────────────────────────────── */
+
+async function discordConnection(): Promise<{ values: Record<string, string>; channels: DiscordChannel[] }> {
+  const c = (await listConnections()).find((x) => x.id === 'discord');
+  if (!c?.enabled) throw new Error('Connect Discord first.');
+  return { values: c.values, channels: parseChannels(c.values.DISCORD_CHANNELS) };
+}
+
+/** Discord's channel picker again; the new channel joins the list (and the newer grant replaces the stored one). */
+export async function addDiscordChannelToAccount(): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const { channels } = await discordConnection();
+    const added = await addDiscordChannel(channels);
+    await setConnection('discord', {
+      values: {
+        DISCORD_ACCESS_TOKEN: added.accessToken,
+        ...(added.refreshToken ? { DISCORD_REFRESH_TOKEN: added.refreshToken } : {}),
+        DISCORD_TOKEN_EXPIRES: String(added.expiresAt),
+        DISCORD_CHANNELS: JSON.stringify([...channels.filter((c) => c.channelId !== added.channel.channelId), added.channel]),
+      },
+    });
+    accountEvents.emit('changed', 'discord');
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
+}
+
+export async function removeDiscordChannel(id: string): Promise<void> {
+  const { channels } = await discordConnection();
+  const gone = channels.find((c) => c.id === id);
+  if (gone) await deleteDiscordChannel(gone);
+  await setConnection('discord', { values: { DISCORD_CHANNELS: JSON.stringify(channels.filter((c) => c.id !== id)) } });
+  accountEvents.emit('changed', 'discord');
+}
+
+export async function renameDiscordChannel(id: string, label: string): Promise<void> {
+  const clean = label.replace(/\s+/g, ' ').trim().slice(0, 60);
+  if (!clean) return;
+  const { channels } = await discordConnection();
+  await setConnection('discord', { values: { DISCORD_CHANNELS: JSON.stringify(channels.map((c) => (c.id === id ? { ...c, label: clean } : c))) } });
+  accountEvents.emit('changed', 'discord');
+}
+
+/** Before a run: Discord's week-long access token, renewed when under a day is left. */
+export async function refreshDiscordConnection(): Promise<void> {
+  const c = (await listConnections()).find((x) => x.id === 'discord');
+  const v = c?.values;
+  if (!c?.enabled || !v?.DISCORD_REFRESH_TOKEN) return;
+  if (Number(v.DISCORD_TOKEN_EXPIRES || 0) - Date.now() > 24 * 60 * 60_000) return;
+  try {
+    const t = await refreshDiscord(v.DISCORD_REFRESH_TOKEN);
+    await setConnection('discord', { values: { DISCORD_ACCESS_TOKEN: t.accessToken, DISCORD_REFRESH_TOKEN: t.refreshToken, DISCORD_TOKEN_EXPIRES: String(t.expiresAt) } });
+    mainLogger.info('accounts.discord.refreshed');
+  } catch (err) {
+    mainLogger.warn('accounts.discord.refreshFailed', { error: (err as Error).message });
+  }
+}
+
 function asProvider(value: unknown): OAuthProvider {
-  if (value === 'google' || value === 'github' || value === 'slack' || value === 'reddit' || value === 'huggingface' || value === 'microsoft') return value;
+  if (value === 'google' || value === 'github' || value === 'slack' || value === 'reddit' || value === 'huggingface' || value === 'microsoft' || value === 'discord') return value;
   throw new TypeError('unknown account provider');
 }
 
@@ -261,6 +343,9 @@ export function registerAccountsIpc(): void {
   ipcMain.handle('accounts:connect', (_e, provider: unknown) => connectAccount(asProvider(provider)));
   ipcMain.handle('accounts:cancel', (_e, provider: unknown) => { cancelAccount(asProvider(provider)); });
   ipcMain.handle('accounts:disconnect', (_e, provider: unknown) => disconnectAccount(asProvider(provider)));
+  ipcMain.handle('accounts:discord-add-channel', () => addDiscordChannelToAccount());
+  ipcMain.handle('accounts:discord-remove-channel', (_e, id: unknown) => (typeof id === 'string' && /^\d+$/.test(id) ? removeDiscordChannel(id) : undefined));
+  ipcMain.handle('accounts:discord-rename-channel', (_e, id: unknown, label: unknown) => (typeof id === 'string' && typeof label === 'string' ? renameDiscordChannel(id, label) : undefined));
   // Links the account cards may open — a fixed list, never a URL from the page.
   const LINKS: Record<string, string> = {
     'huggingface-pro': 'https://huggingface.co/subscribe/pro',

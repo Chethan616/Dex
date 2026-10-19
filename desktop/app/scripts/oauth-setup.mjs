@@ -122,6 +122,19 @@ await provider(
   [['clientId', 'Application (client) ID']],
 );
 
+await provider(
+  'discord',
+  'Discord — your servers, and posting to the channels you pick',
+  'https://discord.com/developers/applications',
+  [
+    'New Application · Name: DEX · Create (upload DEX\'s icon: posts show it).',
+    'OAuth2 → Redirects → Add: http://127.0.0.1:53685/discord/callback → Save.',
+    'OAuth2 → Public Client: on → Save. (DEX signs in with PKCE; no secret.)',
+    'Copy the Client ID below.',
+  ],
+  [['clientId', 'Client ID']],
+);
+
 rl.close();
 
 // Hand the config to the release pipeline, so installed builds have it with

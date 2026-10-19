@@ -80,6 +80,30 @@ After Reddit approves the app and provides a client ID:
    DEX stores Reddit's refresh token in the OS credential store. The token is
    used by the upstream Reddit MCP server to make authorized API requests.
 
+## Discord
+
+One Discord application for DEX; users only press **Continue with Discord**.
+Discord gives sign-in apps no way to read messages, so the connector lists the
+user's servers and posts to the channels they pick (each a webhook Discord
+makes on its consent screen).
+
+1. <https://discord.com/developers/applications> → **New Application**, name
+   it DEX (upload DEX's icon: it's what posts show).
+2. **OAuth2** → **Redirects** → add exactly
+   `http://127.0.0.1:53685/discord/callback` → Save.
+3. **OAuth2** → turn on **Public Client** (DEX signs in with PKCE, no secret).
+4. Copy the **Client ID** into the gitignored `config/oauth-clients.json`
+   (or `DEX_DISCORD_CLIENT_ID`), or run `yarn oauth:setup`:
+
+   ```json
+   { "discord": { "clientId": "123456789012345678" } }
+   ```
+
+   If you leave Public Client off, add `"clientSecret"` too.
+
+No bot and no verification are needed for these scopes (`identify guilds
+webhook.incoming`).
+
 ## What happens on connect
 
 - The browser signs in; DEX receives the grant on a one-shot local server.

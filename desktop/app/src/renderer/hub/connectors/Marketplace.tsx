@@ -13,6 +13,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AUDIENCES, HOSTED_CONNECTORS, type Audience, type ConnectorCategory, type ConnectorMark } from '../../../shared/connectorCatalog';
 import { brandLogo, type BrandLogo } from './brandLogos';
 import { HuggingFaceGuide } from './HuggingFaceGuide';
+import { DiscordChannels } from './DiscordChannels';
 import './marketplace.css';
 
 type Source = { kind: 'hosted'; id: string } | { kind: 'account'; provider: AccountProviderId };
@@ -39,6 +40,7 @@ const BUILT_IN: MarketItem[] = [
   { key: 'account:microsoft', name: 'Microsoft 365', blurb: 'Outlook, Calendar, OneDrive, SharePoint, Teams and To Do.', category: 'Productivity', audiences: ['work', 'student', 'business'], mark: { text: 'M', bg: '#0078d4' }, featured: true, source: { kind: 'account', provider: 'microsoft' } },
   { key: 'account:github', name: 'GitHub', blurb: 'Repositories, issues, pull requests and Actions.', category: 'Developer tools', audiences: ['engineer', 'student'], mark: { text: 'GH', bg: '#24292f' }, featured: true, source: { kind: 'account', provider: 'github' } },
   { key: 'account:slack', name: 'Slack', blurb: 'Read channels and post updates in your workspace.', category: 'Communication', audiences: ['work', 'business', 'engineer'], mark: { text: 'S', bg: '#4a154b' }, source: { kind: 'account', provider: 'slack' } },
+  { key: 'account:discord', name: 'Discord', blurb: 'Your servers, and posting to the channels you pick: announcements, summaries, files.', category: 'Communication', audiences: ['student', 'creator', 'engineer', 'business'], mark: { text: 'D', bg: '#5865F2' }, source: { kind: 'account', provider: 'discord' } },
   { key: 'account:reddit', name: 'Reddit', blurb: 'Search communities and read discussions with your account.', category: 'Communication', audiences: ['student', 'creator'], mark: { text: 'R', bg: '#ff4500' }, source: { kind: 'account', provider: 'reddit' } },
   { key: 'account:huggingface', name: 'Hugging Face', blurb: '3D models from a sentence or a photo, on your free GPU time.', category: 'Design & media', audiences: ['creator', 'engineer'], mark: { text: '🤗', bg: '#ffd21e', fg: '#1b1b1b' }, source: { kind: 'account', provider: 'huggingface' } },
 ];
@@ -333,6 +335,9 @@ export function Marketplace({ initialView = 'browse', onClose }: { initialView?:
                 {on && state.tools.get(item.key) ? <p className="mk__detail-how">DEX has {state.tools.get(item.key)} tools from it, in every task.</p> : null}
                 {item.key === 'account:huggingface' && state.accounts.get(item.key) && (
                   <div className="mk__detail-guide"><HuggingFaceGuide info={state.accounts.get(item.key) as AccountInfo} /></div>
+                )}
+                {item.key === 'account:discord' && on && state.accounts.get(item.key) && (
+                  <div className="mk__detail-guide"><DiscordChannels info={state.accounts.get(item.key) as AccountInfo} onChanged={() => { void reload(); }} /></div>
                 )}
                 {errors.get(item.key) && <p className="mk__error" role="alert">{errors.get(item.key)}</p>}
                 <div className="mk__detail-actions">

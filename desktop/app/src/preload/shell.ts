@@ -354,9 +354,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
     accounts: {
       list: (): Promise<unknown> => ipcRenderer.invoke('accounts:list'),
-      connect: (provider: 'google' | 'github' | 'slack' | 'reddit' | 'huggingface'): Promise<unknown> => ipcRenderer.invoke('accounts:connect', provider),
-      cancel: (provider: 'google' | 'github' | 'slack' | 'reddit' | 'huggingface'): Promise<void> => ipcRenderer.invoke('accounts:cancel', provider),
-      disconnect: (provider: 'google' | 'github' | 'slack' | 'reddit' | 'huggingface'): Promise<void> => ipcRenderer.invoke('accounts:disconnect', provider),
+      connect: (provider: 'google' | 'github' | 'slack' | 'reddit' | 'huggingface' | 'microsoft' | 'discord'): Promise<unknown> => ipcRenderer.invoke('accounts:connect', provider),
+      cancel: (provider: 'google' | 'github' | 'slack' | 'reddit' | 'huggingface' | 'microsoft' | 'discord'): Promise<void> => ipcRenderer.invoke('accounts:cancel', provider),
+      disconnect: (provider: 'google' | 'github' | 'slack' | 'reddit' | 'huggingface' | 'microsoft' | 'discord'): Promise<void> => ipcRenderer.invoke('accounts:disconnect', provider),
+      discordAddChannel: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('accounts:discord-add-channel'),
+      discordRemoveChannel: (id: string): Promise<void> => ipcRenderer.invoke('accounts:discord-remove-channel', id),
+      discordRenameChannel: (id: string, label: string): Promise<void> => ipcRenderer.invoke('accounts:discord-rename-channel', id, label),
       openLink: (key: 'huggingface-pro' | 'huggingface-billing' | 'huggingface-zerogpu'): Promise<void> => ipcRenderer.invoke('accounts:open-link', key),
       onProgress: (cb: (event: unknown) => void): (() => void) => {
         const handler = (_evt: unknown, payload: unknown) => cb(payload);

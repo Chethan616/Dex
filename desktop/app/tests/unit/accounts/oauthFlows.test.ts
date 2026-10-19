@@ -29,6 +29,7 @@ vi.mock('../../../src/main/accounts/oauthClients', () => ({
     github: { clientId: 'gh-client' },
     reddit: { clientId: 'r-client' },
     microsoft: { clientId: 'm-client', clientSecret: 'm-secret' },
+    discord: { clientId: 'd-client' },
   } as Record<string, unknown>)[p] ?? null,
 }));
 vi.mock('keytar', () => ({
@@ -200,6 +201,78 @@ describe('Reddit installed-app OAuth', () => {
     browser = async (auth) => { await redirectBack(auth, { error: 'access_denied', state: auth.searchParams.get('state')! }); };
     const { connectReddit } = await import('../../../src/main/accounts/reddit');
     await expect(connectReddit()).rejects.toThrow(/cancelled/);
+  });
+});
+
+describe('Discord sign-in', () => {
+  async function waitForDiscordPort(): Promise<void> {
+    for (let attempts = 0; attempts < 20; attempts += 1) {
+      const free = await new Promise<boolean>((resolve) => {
+        const probe = net.createServer();
+        probe.once('error', () => resolve(false));
+        probe.listen(53685, '127.0.0.1', () => probe.close(() => resolve(true)));
+      });
+      if (free) return;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    throw new Error('Discord loopback port did not become free');
+  }
+  beforeEach(waitForDiscordPort);
+
+  const guilds = () => json([{ id: '42', name: 'Study Group' }, { id: '7', name: 'Other' }]);
+
+  it('uses PKCE as a public client, asks for the channel to post to, and names it after its server', async () => {
+    browser = async (auth) => { await redirectBack(auth, { code: 'd-code', state: auth.searchParams.get('state')! }); };
+    let verifier = '';
+    routes.push([/discord\.com\/api\/v10\/oauth2\/token$/, (_u, init) => {
+      const f = form(init);
+      expect(f.get('grant_type')).toBe('authorization_code');
+      expect(f.get('code')).toBe('d-code');
+      expect(f.get('client_id')).toBe('d-client');
+      expect(f.get('client_secret')).toBeNull();
+      expect(f.get('redirect_uri')).toBe('http://127.0.0.1:53685/discord/callback');
+      verifier = f.get('code_verifier') ?? '';
+      return json({ access_token: 'd-access', refresh_token: 'd-refresh', expires_in: 604800, webhook: { id: '900', token: 'wh-secret', channel_id: '901', guild_id: '42' } });
+    }]);
+    routes.push([/\/users\/@me\/guilds/, guilds]);
+    routes.push([/\/users\/@me$/, (_u, init) => {
+      expect(new Headers(init?.headers).get('authorization')).toBe('Bearer d-access');
+      return json({ id: '5', username: 'chethan', global_name: 'Chethan', avatar: 'abc' });
+    }]);
+
+    const { connectDiscord } = await import('../../../src/main/accounts/discord');
+    const account = await connectDiscord();
+    expect(account).toMatchObject({
+      accessToken: 'd-access', refreshToken: 'd-refresh', username: 'chethan', name: 'Chethan',
+      picture: 'https://cdn.discordapp.com/avatars/5/abc.png?size=128',
+      channel: { id: '900', token: 'wh-secret', channelId: '901', guildId: '42', label: 'Study Group' },
+    });
+    const auth = opened[0];
+    expect(auth.origin + auth.pathname).toBe('https://discord.com/oauth2/authorize');
+    expect(auth.searchParams.get('scope')?.split(' ')).toEqual(['identify', 'guilds', 'webhook.incoming']);
+    expect(auth.searchParams.get('code_challenge_method')).toBe('S256');
+    expect(auth.searchParams.get('code_challenge')).toBe(createHash('sha256').update(verifier).digest('base64url'));
+  });
+
+  it('a second channel in the same server gets its own name, and the newer grant comes back', async () => {
+    browser = async (auth) => { await redirectBack(auth, { code: 'd-code-2', state: auth.searchParams.get('state')! }); };
+    routes.push([/oauth2\/token$/, () => json({ access_token: 'd-access-2', refresh_token: 'd-refresh-2', webhook: { id: '910', token: 'wh-2', channel_id: '911', guild_id: '42' } })]);
+    routes.push([/\/users\/@me\/guilds/, guilds]);
+    const { addDiscordChannel } = await import('../../../src/main/accounts/discord');
+    const added = await addDiscordChannel([{ id: '900', token: 'wh-secret', channelId: '901', guildId: '42', label: 'Study Group' }]);
+    expect(added).toMatchObject({ accessToken: 'd-access-2', refreshToken: 'd-refresh-2', channel: { id: '910', label: 'Study Group (2)' } });
+  });
+
+  it('says so plainly when the user cancels', async () => {
+    browser = async (auth) => { await redirectBack(auth, { error: 'access_denied', state: auth.searchParams.get('state')! }); };
+    const { connectDiscord } = await import('../../../src/main/accounts/discord');
+    await expect(connectDiscord()).rejects.toThrow(/cancelled the Discord sign-in/);
+  });
+
+  it('keeps only well-formed channels from storage', async () => {
+    const { parseChannels } = await import('../../../src/main/accounts/discord');
+    expect(parseChannels('not json')).toEqual([]);
+    expect(parseChannels(JSON.stringify([{ id: '1', token: 't', channelId: '2', guildId: '3', label: 'A' }, { id: 'x', token: 't', channelId: '2', label: 'B' }]))).toEqual([{ id: '1', token: 't', channelId: '2', guildId: '3', label: 'A' }]);
   });
 });
 
