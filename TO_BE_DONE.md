@@ -20,6 +20,22 @@
 
 ## ▶ RESUME HERE — live work log (keep this block current; newest first)
 
+**2026-10-19 (later), owner's PC: extensions for the agent, full-screen guard, Discord connector.**
+- **Chrome extensions for the agent (`ef9f9547`).**
+  - `dex-ext list | click | menu | menu-click | options | install` (route `POST /dex/ext`, host `agentList/agentPress/agentMenu`).
+  - A popup or side panel opens as a **background tab**, so the page stays the extension's active tab; tried live: uBO Lite's popup showed the page's site.
+  - Every prompt names the installed extensions (`hl/engines/extensions.ts`); see `dex-tools/extensions.md`.
+  - In-page extension frames are now reachable (`childAllowed: agentMayReachPage`).
+  - Password managers and **wallets** stay off limits (`ExtensionHost.offLimits`).
+- **Full-screen guard (`ef9f9547`).** `input_act` refuses with `user_fullscreen` while the user watches, plays or presents full-screen (SHQueryUserNotificationState, then a window covering its monitor).
+- **Discord is a connector, owner's choice (`3c91afb5`).**
+  - OAuth with PKCE (`accounts/discord.ts`, loopback port 53685).
+  - Channels are webhooks the user picks on Discord's own consent page.
+  - `mcp-servers/discord` provides me, servers, channels, post, edit and delete; Discord gives sign-in apps no way to read messages.
+  - **Needs the owner's Discord app** (docs/ACCOUNTS_SETUP.md › Discord, or `yarn oauth:setup`); until then it's greyed out in dev and hidden in releases.
+  - The own-bot channel moved under Channels › Advanced.
+- **Dev CDP port:** 9222 and 9223 are now both held by ghost processes. Use `AGB_CDP_PORT=9224` (`drive.mjs` reads `DEX_CDP_PORT`, default 9224).
+
 **2026-10-19, owner's PC: gen-UI in chats, Memory graph, Settings redesigns, Discord.**
 - **Gen-UI (`e4ff471d`).**
   - `dex-ui chart` draws radar/bars/lines/pie/gauge natively (`shared/genui.ts`, `hub/chat/Chart.tsx`, phone `GenUi.kt`).
