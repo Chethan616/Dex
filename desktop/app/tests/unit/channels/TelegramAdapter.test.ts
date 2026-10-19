@@ -42,7 +42,8 @@ function fakeTelegram() {
   let wake: (() => void) | null = null;
   let nextId = 100;
   let updateId = 1;
-  const fetchMock = vi.fn(async (url: string, init: { body?: string; signal?: AbortSignal }) => {
+  const fetchMock = vi.fn(async (url: string, init: { body?: string; signal?: AbortSignal } = {}) => {
+    if (url.includes('/file/bot')) return new Response(Buffer.from('JPEG-BYTES'));
     const method = url.split('/').pop() as string;
     const body = typeof init.body === 'string' ? JSON.parse(init.body) as Record<string, unknown> : {};
     calls.push({ method, body });
@@ -58,13 +59,18 @@ function fakeTelegram() {
       return ok(pending.shift() ?? []);
     }
     if (method === 'sendMessage') return ok({ message_id: nextId++, date: 0, chat: { id: Number(body.chat_id), type: 'private' } });
+    if (method === 'getFile') return ok({ file_path: 'photos/p.jpg' });
     return ok(true);
   });
   const deliver = (from: number, text: string, extra: Record<string, unknown> = {}) => {
     pending.push([{ update_id: updateId++, message: { message_id: nextId++, date: Math.floor(Date.now() / 1000), chat: { id: from, type: 'private' }, from: { id: from, first_name: from === 7 ? 'Chethan' : 'Stranger' }, text, ...extra } }]);
     const w = wake; wake = null; w?.();
   };
-  return { calls, fetchMock, deliver, sent: () => calls.filter((c) => c.method === 'sendMessage') };
+  const press = (from: number, data: string, messageId: number) => {
+    pending.push([{ update_id: updateId++, callback_query: { id: `cb${updateId}`, from: { id: from, first_name: 'Chethan' }, data, message: { message_id: messageId, date: 0, chat: { id: from, type: 'private' } } } }]);
+    const w = wake; wake = null; w?.();
+  };
+  return { calls, fetchMock, deliver, press, sent: () => calls.filter((c) => c.method === 'sendMessage') };
 }
 
 const settle = () => new Promise((r) => setTimeout(r, 20));
@@ -148,6 +154,41 @@ describe('Telegram channel', () => {
     const id = await adapter.send('7', '✅ *Done*\n\nBooked.', { quoteMessageId: 'tg:7:12' });
     expect(id).toMatch(/^tg:7:\d+$/);
     expect(api.sent().at(-1)?.body).toMatchObject({ parse_mode: 'HTML', reply_parameters: { message_id: 12, allow_sending_without_reply: true } });
+  });
+
+  it('sends questions with buttons; a tap keeps the choice and goes on as the answer', async () => {
+    const info = await adapter.connect(TOKEN);
+    api.deliver(7, `/start ${new URL(info.pairUrl as string).searchParams.get('start')}`);
+    await settle();
+    const inbound: InboundMessage[] = [];
+    adapter.onMessage((m) => inbound.push(m));
+
+    const id = await adapter.sendPrompt('7', { text: '*Which cabin?*', rows: [[{ label: 'Economy', reply: 'Economy' }, { label: 'Business', reply: 'Business' }], [{ label: 'Call', url: 'tel:+911234' }, { label: 'Site', url: 'https://example.com' }]], asks: true });
+    const sent = api.sent().at(-1)!.body as { text: string; reply_markup: { inline_keyboard: Array<Array<{ text: string; callback_data?: string; url?: string }>> } };
+    expect(sent.text).toContain('<b>Which cabin?</b>');
+    expect(sent.text).toContain('Call: tel:+911234');
+    expect(sent.reply_markup.inline_keyboard[0].map((b) => b.text)).toEqual(['Economy', 'Business']);
+    expect(sent.reply_markup.inline_keyboard[1]).toEqual([{ text: 'Site', url: 'https://example.com' }]);
+
+    const messageId = Number(id!.split(':')[2]);
+    api.press(7, sent.reply_markup.inline_keyboard[0][1].callback_data as string, messageId);
+    await settle();
+    expect(api.calls.find((c) => c.method === 'answerCallbackQuery')).toBeTruthy();
+    expect(api.calls.find((c) => c.method === 'editMessageReplyMarkup')?.body).toMatchObject({ message_id: messageId, reply_markup: { inline_keyboard: [[{ text: '✓ Business' }]] } });
+    expect(inbound).toEqual([expect.objectContaining({ text: 'Business', pressed: true, replyToMessageId: id })]);
+  });
+
+  it('downloads a photo sent to the bot and hands it on with the caption', async () => {
+    const info = await adapter.connect(TOKEN);
+    api.deliver(7, `/start ${new URL(info.pairUrl as string).searchParams.get('start')}`);
+    await settle();
+    const inbound: InboundMessage[] = [];
+    adapter.onMessage((m) => inbound.push(m));
+    api.deliver(7, '', { text: undefined, caption: 'what plant is this?', photo: [{ file_id: 'small', width: 90, height: 90, file_size: 1000 }, { file_id: 'big', width: 1280, height: 960, file_size: 90_000 }] });
+    await settle();
+    expect(api.calls.find((c) => c.method === 'getFile')?.body).toEqual({ file_id: 'big' });
+    expect(inbound[0]).toMatchObject({ text: 'what plant is this?', attachments: [{ mime: 'image/jpeg' }] });
+    expect(inbound[0].attachments?.[0].bytes.toString()).toBe('JPEG-BYTES');
   });
 
   it('remembers the bot and its owner across restarts', async () => {

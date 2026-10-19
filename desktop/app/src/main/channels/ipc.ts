@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron';
 import { mainLogger } from '../logger';
 import type { ChannelRouter } from './ChannelRouter';
+import type { DiscordAdapter } from './DiscordAdapter';
 import type { TelegramAdapter } from './TelegramAdapter';
 import type { WhatsAppAdapter } from './WhatsAppAdapter';
 
@@ -11,11 +12,15 @@ const CH_WA_CLEAR_AUTH = 'channels:whatsapp:clear-auth';
 const CH_TG_CONNECT = 'channels:telegram:connect';
 const CH_TG_STATUS = 'channels:telegram:status';
 const CH_TG_REMOVE = 'channels:telegram:remove';
+const CH_DC_CONNECT = 'channels:discord:connect';
+const CH_DC_STATUS = 'channels:discord:status';
+const CH_DC_REMOVE = 'channels:discord:remove';
 
 export function registerChannelHandlers(
   _router: ChannelRouter,
   adapter: WhatsAppAdapter,
   telegram: TelegramAdapter,
+  discord: DiscordAdapter,
 ): void {
   mainLogger.info('channels.ipc.register');
 
@@ -62,6 +67,25 @@ export function registerChannelHandlers(
     await telegram.remove();
     return telegram.info();
   });
+
+  // Discord: the same — the token goes in once and never comes back out.
+  ipcMain.handle(CH_DC_CONNECT, async (_e, token: unknown) => {
+    mainLogger.info('channels.discord.connect');
+    if (typeof token !== 'string' || token.length > 200) return { ok: false, error: 'Paste the token from your app’s Bot page.' };
+    try {
+      return { ok: true, info: await discord.connect(token) };
+    } catch (err) {
+      return { ok: false, error: (err as Error).message };
+    }
+  });
+
+  ipcMain.handle(CH_DC_STATUS, () => discord.info());
+
+  ipcMain.handle(CH_DC_REMOVE, async () => {
+    mainLogger.info('channels.discord.remove');
+    await discord.remove();
+    return discord.info();
+  });
 }
 
 export function unregisterChannelHandlers(): void {
@@ -73,4 +97,7 @@ export function unregisterChannelHandlers(): void {
   ipcMain.removeHandler(CH_TG_CONNECT);
   ipcMain.removeHandler(CH_TG_STATUS);
   ipcMain.removeHandler(CH_TG_REMOVE);
+  ipcMain.removeHandler(CH_DC_CONNECT);
+  ipcMain.removeHandler(CH_DC_STATUS);
+  ipcMain.removeHandler(CH_DC_REMOVE);
 }

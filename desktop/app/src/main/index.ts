@@ -167,6 +167,7 @@ import {
 // Channels (WhatsApp, Telegram)
 import { WhatsAppAdapter } from './channels/WhatsAppAdapter';
 import { TelegramAdapter } from './channels/TelegramAdapter';
+import { DiscordAdapter } from './channels/DiscordAdapter';
 import { ChannelRouter } from './channels/ChannelRouter';
 import { WorkflowStore } from './workflows/store';
 import { startWorkflowScheduler } from './workflows/scheduler';
@@ -786,7 +787,8 @@ browserPool.setOnInterruptShortcut((sessionId) => {
 const accountStore = new AccountStore();
 const whatsAppAdapter = new WhatsAppAdapter();
 const telegramAdapter = new TelegramAdapter();
-const channelRouter = new ChannelRouter(sessionManager, { whatsapp: whatsAppAdapter, telegram: telegramAdapter });
+const discordAdapter = new DiscordAdapter();
+const channelRouter = new ChannelRouter(sessionManager, { whatsapp: whatsAppAdapter, telegram: telegramAdapter, discord: discordAdapter });
 
 type SettingsOpenPayload = {
   focusBrowserCodeProvider?: string;
@@ -941,6 +943,9 @@ function openShellAndWire(): BrowserWindow {
     telegramAdapter.resume().catch((err) => {
       mainLogger.warn('main.telegram.resume.failed', { error: (err as Error).message });
     });
+    discordAdapter.resume().catch((err) => {
+      mainLogger.warn('main.discord.resume.failed', { error: (err as Error).message });
+    });
   });
 
   shellWindow.on('close', (e) => {
@@ -1066,7 +1071,7 @@ app.whenReady().then(async () => {
   registerProfileIpc();
   registerMemoryIpc();
   startSystemThemeWatcher();
-  registerChannelHandlers(channelRouter, whatsAppAdapter, telegramAdapter);
+  registerChannelHandlers(channelRouter, whatsAppAdapter, telegramAdapter, discordAdapter);
   whatsAppAdapter.onStatusChange((status, detail) => {
     const target = shellWindow ?? onboardingWindow;
     if (target && !target.isDestroyed()) {
@@ -1076,6 +1081,11 @@ app.whenReady().then(async () => {
   telegramAdapter.onStatusChange((status, detail) => {
     if (shellWindow && !shellWindow.isDestroyed()) {
       shellWindow.webContents.send('channel-status', 'telegram', status, detail);
+    }
+  });
+  discordAdapter.onStatusChange((status, detail) => {
+    if (shellWindow && !shellWindow.isDestroyed()) {
+      shellWindow.webContents.send('channel-status', 'discord', status, detail);
     }
   });
   whatsAppAdapter.onQr((dataUrl) => {
@@ -1845,7 +1855,7 @@ app.whenReady().then(async () => {
   channelRouter.setStartSession(startSessionWithAgent);
   // A WhatsApp reply to a task's message continues that task, exactly like
   // the hub's follow-up box.
-  channelRouter.setFollowUp((id, text) => handleResumeRequest(id, text, []));
+  channelRouter.setFollowUp((id, text, attachments) => handleResumeRequest(id, text, attachments ?? []));
 
   /** Show a file in the task as a file card (desktop chat + phone). Deduped by path. */
   function appendFileCard(sessionId: string, rawPath: string, name?: string): void {
@@ -4269,6 +4279,7 @@ app.whenReady().then(async () => {
     sessionManager.destroy();
     whatsAppAdapter.disconnect().catch(() => {});
     telegramAdapter.disconnect().catch(() => {});
+    discordAdapter.disconnect().catch(() => {});
     channelRouter.destroy();
     unregisterChannelHandlers();
   });

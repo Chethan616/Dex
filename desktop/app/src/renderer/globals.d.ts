@@ -124,6 +124,22 @@ interface ElectronChannelsAPI {
     status: () => Promise<TelegramChannelInfo>;
     remove: () => Promise<TelegramChannelInfo>;
   };
+  discord?: {
+    connect: (token: string) => Promise<{ ok: boolean; info?: DiscordChannelInfo; error?: string }>;
+    status: () => Promise<DiscordChannelInfo>;
+    remove: () => Promise<DiscordChannelInfo>;
+  };
+}
+
+/** main/channels/DiscordAdapter.ts DiscordInfo. Never carries the token. */
+interface DiscordChannelInfo {
+  status: string;
+  bot: string | null;
+  owner: string | null;
+  inviteUrl: string | null;
+  pairCode: string | null;
+  dmUrl: string | null;
+  error?: string;
 }
 
 /** main/channels/TelegramAdapter.ts TelegramInfo. Never carries the token. */

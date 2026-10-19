@@ -9,9 +9,9 @@ import type { SpawnContext } from './types';
  * agent doesn't reach for.
  */
 export function deliveryBriefing(ctx: SpawnContext): string[] {
-  const chat = ctx.originChannel === 'whatsapp' ? 'WhatsApp' : ctx.originChannel === 'telegram' ? 'Telegram' : null;
+  const chat = ctx.originChannel === 'whatsapp' ? 'WhatsApp' : ctx.originChannel === 'telegram' ? 'Telegram' : ctx.originChannel === 'discord' ? 'Discord' : null;
   const lines = [
-    'To give the user a file, a picture or a document — they asked you to send, share or show them something, "on WhatsApp", "on Telegram", "to my phone" — use `dex-send`, which delivers to their own chat (the WhatsApp or Telegram chat this task came from, else their WhatsApp "Message yourself" chat or their DEX bot on Telegram): `dex-send <path>…` for files on this PC, `dex-send --page` for a screenshot of your browser view, `dex-send --screen` for the whole screen, `dex-send --canvas` for the document you showed with dex-canvas (sent as a PDF). Add `--caption "…"` to say what it is.',
+    'To give the user a file, a picture or a document — they asked you to send, share or show them something, "on WhatsApp", "on Telegram", "on Discord", "to my phone" — use `dex-send`, which delivers to their own chat (the WhatsApp, Telegram or Discord chat this task came from, else their WhatsApp "Message yourself" chat or their DEX bot on Telegram or Discord): `dex-send <path>…` for files on this PC, `dex-send --page` for a screenshot of your browser view, `dex-send --screen` for the whole screen, `dex-send --canvas` for the document you showed with dex-canvas (sent as a PDF). Add `--caption "…"` to say what it is.',
   ];
   if (ctx.originChannel === 'android') {
     lines.push(
@@ -20,9 +20,14 @@ export function deliveryBriefing(ctx: SpawnContext): string[] {
   }
   // Widgets (dex-tools/ui.md), named right here: the rule in AGENTS.md alone
   // lost to the habit of asking in prose ("where are you flying from?" as a
-  // numbered list) and ending with "visit google.com/travel/flights". A chat
-  // app can't show widgets, so a task from WhatsApp or Telegram keeps plain
-  // questions.
+  // numbered list) and ending with "visit google.com/travel/flights". In a
+  // chat app the same widgets arrive as a message with buttons
+  // (channels/chatWidgets.ts), so a chat task gets the short version.
+  if (chat) {
+    lines.push(
+      `In ${chat}, a question with a few ready answers goes best as \`dex-ui choose "Which cabin?" "Economy" "Business"\` (a run on your PATH, via Bash) — it arrives as a ${chat} message with ${chat === 'WhatsApp' ? 'numbered answers they reply with' : 'buttons they tap'} — then end your turn: their answer is their next message. Results to pick from (flights, hotels, products) can go as \`dex-ui cards\` the same way (each card a Select reply and its url); a link as \`dex-ui link "Open in Google Flights" "<url>"\`. Keep it to one question at a time in a chat, and don't ask for what you can work out.`,
+    );
+  }
   if (!chat) {
     lines.push(
       'When you need something from the user — where they\'re flying from, which date, what time, how many, which of a few options — never ask in prose. Ask with `dex-ui` (a command on your PATH: run it with Bash; it is not an MCP tool), then end your turn: their answer arrives as their next message. One question with options: `dex-ui choose "Which cabin?" "Economy" "Business"`. Everything you\'re missing at once, as one form — `dex-ui ask <<\'EOF\'`, then `{"title":"Where and when are you flying?","fields":[{"id":"trip","kind":"choice","label":"Trip","options":["One way","Round trip"]},{"id":"from","kind":"place","label":"From","suggestions":["Hyderabad (HYD)","Bengaluru (BLR)"]},{"id":"date","kind":"date","label":"Depart"},{"id":"back","kind":"date","label":"Return","showIf":{"field":"trip","is":"Round trip"}},{"id":"pax","kind":"number","label":"Travellers","min":1,"default":1}]}`, then `EOF`. A field that only matters for some answers gets `showIf` (`{"field":"trip","is":"Round trip"}`): ask one way or round trip, never assume a round trip. Field kinds: choice (options), place (suggestions), date (range:true for two days), time (slots "HH:MM"), number (min, max, unit), text; more in `./dex-tools/ui.md`. If it says the spec doesn\'t fit, fix what it names and run it again — don\'t fall back to prose. Don\'t ask for what you can work out (today\'s date, "on Friday", what they already said).',

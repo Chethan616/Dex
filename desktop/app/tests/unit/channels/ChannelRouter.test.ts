@@ -13,7 +13,7 @@ vi.mock('../../../src/main/logger', () => ({
 import { ChannelRouter } from '../../../src/main/channels/ChannelRouter';
 import type { InboundMessage } from '../../../src/main/channels/types';
 
-type Handler = (session: any) => void;
+type Handler = (...args: any[]) => void;
 
 function setup() {
   const handlers: Record<string, Handler> = {};
@@ -32,6 +32,10 @@ function setup() {
       return id;
     }),
     startSession: vi.fn(),
+    listSessions: () => [...sessions.values()].reverse().map((x) => ({ ...x, createdAt: x.createdAt ?? Date.now() })),
+    cancelSession: vi.fn((id: string) => { const x = sessions.get(id); if (x) x.status = 'stopped'; }),
+    getNextAttachmentTurnIndex: () => 0,
+    saveAttachment: vi.fn(),
   };
   let sent = 0;
   const adapter = {
@@ -44,7 +48,9 @@ function setup() {
   };
   const telegram = {
     onMessage: vi.fn(),
-    send: vi.fn(async () => `tg:42:${++sent}`),
+    send: vi.fn(async (..._args: unknown[]) => `tg:42:${++sent}`),
+    sendPrompt: vi.fn(async (..._args: unknown[]) => `tg:42:${++sent}`),
+    typing: vi.fn(),
     react: vi.fn(async () => {}),
     sendFile: vi.fn(async (..._args: unknown[]) => `tg:42:${++sent}`),
     homeChat: () => '42',
@@ -170,7 +176,7 @@ describe('ChannelRouter file delivery (dex-send)', () => {
     expect((t.telegram.sendFile.mock.calls[0] as unknown[])[0]).toBe('42');
     expect(res.to).toMatch(/Telegram/);
     t.telegram.status = 'disconnected';
-    await expect(t.router.sendFiles('hub-3', [{ path: file }])).rejects.toThrow(/Neither WhatsApp nor Telegram/);
+    await expect(t.router.sendFiles('hub-3', [{ path: file }])).rejects.toThrow(/No chat app \(WhatsApp, Telegram or Discord\) is connected/);
   });
 
   it('on Done, sends the files the task recorded (once), then the answer', async () => {
@@ -209,5 +215,157 @@ describe('ChannelRouter on Telegram', () => {
     await flush();
     expect(t.followUp).toHaveBeenCalledWith('s1', 'make it an SUV');
     expect(t.sessionManager.createSession).toHaveBeenCalledTimes(1);
+  });
+});
+
+const cabin = { type: 'ask', title: 'Which cabin?', fields: [{ id: 'cabin', kind: 'choice', options: ['Economy', 'Business'] }] };
+
+describe('ChannelRouter: a task\'s questions in a chat', () => {
+  const tg = (over: Partial<InboundMessage>): InboundMessage => msg({ channelId: 'telegram', from: '42', conversationId: '42', mentioned: true, ...over });
+
+  it('Telegram: a question arrives with buttons; a press answers it, and the turn ends without "Done"', async () => {
+    const t = setup();
+    t.sessionManager.origin = { originChannel: 'telegram', originConversationId: '42' };
+    t.router.handleInbound(tg({ text: 'book me a flight', messageId: 'tg:42:1' }));
+    t.handlers['session-output']('s1', { type: 'widget', id: 'w1', widget: cabin });
+    await flush();
+    expect(t.telegram.sendPrompt).toHaveBeenCalledTimes(1);
+    const prompt = t.telegram.sendPrompt.mock.calls[0][1] as { text: string; rows: Array<Array<{ label: string; reply?: string }>> };
+    expect(prompt.text).toContain('Which cabin?');
+    expect(prompt.rows.flat().map((b) => b.reply)).toEqual(['Economy', 'Business']);
+
+    t.handlers['session-completed']({ id: 's1', prompt: 'x', output: [{ type: 'done', summary: 'Asked which cabin.' }] });
+    await flush();
+    expect(t.telegram.send).not.toHaveBeenCalled();
+    expect(t.telegram.react).toHaveBeenCalledWith('42', 'tg:42:1', '🤔');
+
+    const promptId = await t.telegram.sendPrompt.mock.results[0].value;
+    t.router.handleInbound(tg({ text: 'Business', messageId: promptId, replyToMessageId: promptId, pressed: true }));
+    await flush();
+    expect(t.followUp).toHaveBeenCalledWith('s1', 'Business');
+    expect(t.sessionManager.createSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('Telegram: after a question, the next message answers it instead of starting a task', async () => {
+    const t = setup();
+    t.sessionManager.origin = { originChannel: 'telegram', originConversationId: '42' };
+    t.router.handleInbound(tg({ text: 'book me a flight', messageId: 'tg:42:1' }));
+    t.handlers['session-output']('s1', { type: 'widget', id: 'w1', widget: cabin });
+    t.router.handleInbound(tg({ text: 'business please', messageId: 'tg:42:9' }));
+    await flush();
+    expect(t.followUp).toHaveBeenCalledWith('s1', 'business please');
+    // Answered: the next message is a new task again.
+    t.router.handleInbound(tg({ text: 'and order pizza', messageId: 'tg:42:10' }));
+    expect(t.sessionManager.createSession).toHaveBeenCalledTimes(2);
+  });
+
+  it('WhatsApp: answers come numbered, and a bare "2" picks the second', async () => {
+    const t = setup();
+    t.router.handleInbound(msg({ text: 'book me a flight', mentioned: true, messageId: 'wa-1' }));
+    t.handlers['session-output']('s1', { type: 'widget', id: 'w1', widget: cabin });
+    await flush();
+    const text = (t.adapter.send.mock.calls as unknown as Array<[string, string]>)[0][1];
+    expect(text).toContain('*1.* Economy');
+    expect(text).toContain('*2.* Business');
+    expect(text).toContain('Reply with a number');
+
+    t.router.handleInbound(msg({ text: 'remember to buy milk' }));
+    expect(t.followUp).not.toHaveBeenCalled();
+    t.router.handleInbound(msg({ text: '2' }));
+    await flush();
+    expect(t.followUp).toHaveBeenCalledWith('s1', 'Business');
+  });
+
+  it('cards go with a Select per card and an Open link', async () => {
+    const t = setup();
+    t.sessionManager.origin = { originChannel: 'telegram', originConversationId: '42' };
+    t.router.handleInbound(tg({ text: 'find hotels', messageId: 'tg:42:1' }));
+    t.handlers['session-output']('s1', { type: 'widget', id: 'w2', widget: { type: 'cards', title: 'Hotels', items: [
+      { title: 'Taj', price: '₹9,000', url: 'https://example.com/taj', actions: [{ label: 'Select', reply: 'Book the Taj' }] },
+      { title: 'Ibis', price: '₹3,000', actions: [{ label: 'Select', reply: 'Book the Ibis' }] },
+    ] } });
+    await flush();
+    const prompt = t.telegram.sendPrompt.mock.calls[0][1] as { text: string; rows: Array<Array<{ label: string; reply?: string; url?: string }>> };
+    expect(prompt.text).toContain('*1. Taj* · ₹9,000');
+    const flat = prompt.rows.flat();
+    expect(flat.filter((b) => b.reply).map((b) => b.reply)).toEqual(['Book the Taj', 'Book the Ibis']);
+    expect(flat.find((b) => b.url)?.url).toBe('https://example.com/taj');
+  });
+});
+
+describe('ChannelRouter commands', () => {
+  const tg = (over: Partial<InboundMessage>): InboundMessage => msg({ channelId: 'telegram', from: '42', conversationId: '42', mentioned: true, ...over });
+
+  it('/status lists the chat\'s tasks; /stop stops the running one', async () => {
+    const t = setup();
+    t.sessionManager.origin = { originChannel: 'telegram', originConversationId: '42' };
+    t.router.handleInbound(tg({ text: 'watch the price of a PS5', messageId: 'tg:42:1' }));
+    t.sessions.get('s1').status = 'running';
+    t.router.handleInbound(tg({ text: '/status', messageId: 'tg:42:2' }));
+    await flush();
+    expect(t.telegram.send).toHaveBeenLastCalledWith('42', expect.stringMatching(/1 running[\s\S]*watch the price of a PS5 — working/), { quoteMessageId: 'tg:42:2' });
+
+    t.router.handleInbound(tg({ text: '/stop', messageId: 'tg:42:3' }));
+    await flush();
+    expect(t.sessionManager.cancelSession).toHaveBeenCalledWith('s1');
+    expect(t.telegram.send).toHaveBeenLastCalledWith('42', expect.stringContaining('Stopped'), { quoteMessageId: 'tg:42:3' });
+    expect(t.sessionManager.createSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('on WhatsApp it\'s "@DEX stop"; plain "stop" is a note', async () => {
+    const t = setup();
+    t.router.handleInbound(msg({ text: 'stop', mentioned: false }));
+    expect(t.adapter.send).not.toHaveBeenCalled();
+    t.router.handleInbound(msg({ text: 'stop', mentioned: true }));
+    await flush();
+    expect(t.adapter.send).toHaveBeenCalledWith('me@s.whatsapp.net', 'Nothing is running here.', expect.anything());
+    expect(t.sessionManager.createSession).not.toHaveBeenCalled();
+  });
+
+  it('/new <task> starts fresh even while a question waits', () => {
+    const t = setup();
+    t.sessionManager.origin = { originChannel: 'telegram', originConversationId: '42' };
+    t.router.handleInbound(tg({ text: 'book me a flight', messageId: 'tg:42:1' }));
+    t.handlers['session-output']('s1', { type: 'widget', id: 'w1', widget: cabin });
+    t.router.handleInbound(tg({ text: '/new order a pizza', messageId: 'tg:42:5' }));
+    expect(t.sessionManager.createSession).toHaveBeenLastCalledWith('order a pizza', { originChannel: 'telegram', originConversationId: '42' });
+    expect(t.followUp).not.toHaveBeenCalled();
+  });
+});
+
+describe('ChannelRouter: photos and files sent from a chat', () => {
+  it('saves them under Downloads › DEX from chats, names them in the prompt, and attaches pictures', () => {
+    const t = setup();
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+    t.router.handleInbound(msg({ text: 'what is this?', mentioned: true, attachments: [
+      { name: 'photo.png', mime: 'image/png', bytes: png },
+      { name: 'notes.docx', mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', bytes: Buffer.from('x') },
+    ] }));
+    const prompt = t.sessionManager.createSession.mock.calls[0][0] as string;
+    expect(prompt).toMatch(/^what is this\?\n\n\(Sent with this message, saved on this PC: .*DEX from chats.*photo\.png, .*notes\.docx\)$/);
+    const saved = prompt.match(/saved on this PC: (.*?photo\.png)/)?.[1] as string;
+    expect(fs.readFileSync(saved)).toEqual(png);
+    // The picture goes to the model; the .docx stays a file on disk.
+    expect(t.sessionManager.saveAttachment).toHaveBeenCalledTimes(1);
+    expect(t.sessionManager.saveAttachment).toHaveBeenCalledWith('s1', expect.objectContaining({ name: 'photo.png' }), 0);
+  });
+});
+
+describe('ChannelRouter typing', () => {
+  it('shows "typing…" while a chat task runs and stops when it ends', () => {
+    vi.useFakeTimers();
+    try {
+      const t = setup();
+      t.sessionManager.origin = { originChannel: 'telegram', originConversationId: '42' };
+      t.handlers['session-updated']({ id: 's1', status: 'running' });
+      expect(t.telegram.typing).toHaveBeenCalledTimes(1);
+      vi.advanceTimersByTime(9_100);
+      expect(t.telegram.typing).toHaveBeenCalledTimes(3);
+      t.handlers['session-updated']({ id: 's1', status: 'idle' });
+      vi.advanceTimersByTime(20_000);
+      expect(t.telegram.typing).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

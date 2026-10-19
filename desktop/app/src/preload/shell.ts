@@ -11,6 +11,7 @@ import { createPopupBridge } from './popupBridge';
 import { memoryBridge } from './memoryBridge';
 import type { PreflightReport } from '../main/startup/preflight';
 import type { TelegramInfo as TelegramChannelInfo } from '../main/channels/TelegramAdapter';
+import type { DiscordInfo as DiscordChannelInfo } from '../main/channels/DiscordAdapter';
 
 
 interface McpConnectionInfo {
@@ -570,6 +571,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
       connect: (token: string): Promise<{ ok: boolean; info?: TelegramChannelInfo; error?: string }> => ipcRenderer.invoke('channels:telegram:connect', token),
       status: (): Promise<TelegramChannelInfo> => ipcRenderer.invoke('channels:telegram:status'),
       remove: (): Promise<TelegramChannelInfo> => ipcRenderer.invoke('channels:telegram:remove'),
+    },
+    discord: {
+      connect: (token: string): Promise<{ ok: boolean; info?: DiscordChannelInfo; error?: string }> => ipcRenderer.invoke('channels:discord:connect', token),
+      status: (): Promise<DiscordChannelInfo> => ipcRenderer.invoke('channels:discord:status'),
+      remove: (): Promise<DiscordChannelInfo> => ipcRenderer.invoke('channels:discord:remove'),
     },
   },
   chromeImport: {

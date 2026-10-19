@@ -7,6 +7,15 @@ import React, { useCallback, useEffect, useState } from 'react';
 
 const open = (url: string) => { void window.electronAPI?.widgets?.openUrl(url); };
 
+/** What a connected chat can do, in a line of chips (Telegram, Discord, WhatsApp cards). */
+export function ChannelTips({ tips }: { tips: string[] }): React.ReactElement {
+  return (
+    <ul className="chan-tips" aria-label="How to use it">
+      {tips.map((t) => <li key={t}>{t}</li>)}
+    </ul>
+  );
+}
+
 function TelegramMark(): React.ReactElement {
   return (
     <svg className="conn-card__icon" viewBox="0 0 24 24" role="img" aria-label="Telegram">
@@ -124,6 +133,10 @@ export function TelegramCard(): React.ReactElement | null {
           </div>
           <p className="tg-setup__note">The token stays in Windows Credential Manager on this PC.</p>
         </form>
+      )}
+
+      {paired && status === 'connected' && (
+        <ChannelTips tips={['Any message starts a task', 'Tap buttons to answer', 'Send photos and files', '/status · /stop · /new']} />
       )}
 
       {hasBot && !paired && status === 'connected' && info?.pairUrl && (

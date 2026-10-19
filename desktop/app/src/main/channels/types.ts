@@ -1,4 +1,11 @@
-export type ChannelId = 'whatsapp' | 'telegram' | 'slack';
+export type ChannelId = 'whatsapp' | 'telegram' | 'discord' | 'slack';
+
+/** A picture or file that came with a message. */
+export interface InboundAttachment {
+  name: string;
+  mime: string;
+  bytes: Buffer;
+}
 
 export type ChannelStatus =
   | 'disconnected'
@@ -22,6 +29,10 @@ export interface InboundMessage {
   quotedText?: string;
   /** Whether it addressed DEX with "@DEX" — the only way to start a new task. */
   mentioned: boolean;
+  /** Pictures and files sent with it (a photo with a caption, a PDF). */
+  attachments?: InboundAttachment[];
+  /** It's a button press on one of DEX's messages, not something typed. */
+  pressed?: boolean;
   /** React to this message (e.g. 👀 received, 🚀 started). Best-effort. */
   ack?: (emoji: string) => void;
 }

@@ -15,7 +15,8 @@ import { useThemedAsset } from '../design/useThemedAsset';
 import { CookieBrowser, type CookieBrowserApi } from '../shared/CookieBrowser';
 import { pollInstalledStatus } from '../shared/installStatus';
 import { Orb } from '../components/lib';
-import { TelegramCard } from './TelegramCard';
+import { ChannelTips, TelegramCard } from './TelegramCard';
+import { DiscordCard } from './DiscordCard';
 
 type WaStatus = 'disconnected' | 'connecting' | 'qr_ready' | 'connected' | 'error';
 type AuthType = 'oauth' | 'apiKey' | 'none';
@@ -1158,9 +1159,9 @@ export function ConnectionsPane({
             </div>
             <span className="conn-card__subtitle">
               {waStatus === 'connected' && waIdentity
-                ? `Connected as +${waIdentity.replace(/(\d{1})(\d{3})(\d{3})(\d{4})/, '$1 ($2) $3-$4')} — text yourself with @DEX to start a session (e.g. "@DEX find me a flight to NYC"). Messages without @DEX are ignored, so the chat still works as a notes app.`
+                ? `Connected as +${waIdentity.replace(/\D/g, '')}. In “Message yourself”, start with @DEX — “@DEX find me a flight to Goa on Friday”. Notes without @DEX stay notes.`
                 : waStatus === 'disconnected'
-                ? 'Connect WhatsApp so you can text yourself @DEX to launch sessions and get agent notifications back in the same chat.'
+                ? 'Text yourself “@DEX …” to start a task from your phone; answers, questions and files come back in the same chat.'
                 : statusText}
             </span>
           </div>
@@ -1200,13 +1201,19 @@ export function ConnectionsPane({
               <div className="conn-card__qr-loading">Generating QR...</div>
             )}
             <p className="conn-card__qr-hint">
-              Open WhatsApp on your phone, go to Linked Devices, and scan this code. After linking, text yourself with @DEX followed by a task (e.g. "@DEX summarize my Linear inbox") to start a session — plain notes without @DEX are ignored.
+              On your phone, open WhatsApp › Linked devices › Link a device, and scan this. Then text yourself “@DEX” and a task — plain notes without @DEX are left alone.
             </p>
           </div>
+        )}
+
+        {waStatus === 'connected' && (
+          <ChannelTips tips={['@DEX starts a task', 'Reply to keep going', 'Answer with a number', 'Photos with @DEX', '@DEX status · stop']} />
         )}
       </div>
 
       <TelegramCard />
+
+      <DiscordCard />
 
       {channelsLast}
 

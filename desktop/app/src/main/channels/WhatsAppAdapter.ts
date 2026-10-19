@@ -7,6 +7,7 @@ import makeWASocket, {
   makeCacheableSignalKeyStore,
   useMultiFileAuthState,
   Browsers,
+  downloadMediaMessage,
   generateMessageIDV2,
 } from '@whiskeysockets/baileys';
 import type { WASocket, ConnectionState, BaileysEventMap, WAMessage, proto } from '@whiskeysockets/baileys';
@@ -15,7 +16,7 @@ import NodeCache from 'node-cache';
 import QRCode from 'qrcode';
 import { app } from 'electron';
 import { mainLogger } from '../logger';
-import type { ChannelAdapter, ChannelStatus, InboundMessage, SendOptions } from './types';
+import type { ChannelAdapter, ChannelStatus, InboundAttachment, InboundMessage, SendOptions } from './types';
 
 const AUTH_DIR = path.join(app.getPath('userData'), 'whatsapp-auth');
 
@@ -25,6 +26,12 @@ const BACKOFF = {
   factor: 1.8,
   jitter: 0.25,
 };
+
+const SILENT_LOGGER: Parameters<typeof makeWASocket>[0]['logger'] = (() => {
+  const l: Record<string, unknown> = { level: 'silent', info: () => {}, warn: () => {}, error: () => {}, debug: () => {}, trace: () => {}, fatal: () => {} };
+  l.child = () => l;
+  return l as unknown as Parameters<typeof makeWASocket>[0]['logger'];
+})();
 
 const MAX_SEEN_MESSAGES = 1000;
 /** Recent self-chat messages kept so DEX can quote them in its replies. */
@@ -245,7 +252,7 @@ export class WhatsAppAdapter implements ChannelAdapter {
         hasExistingCreds: !!state.creds.me,
       });
 
-      const silentLogger = { level: 'silent', info: () => {}, warn: () => {}, error: () => {}, debug: () => {}, trace: () => {}, fatal: () => {}, child: () => silentLogger } as unknown as Parameters<typeof makeWASocket>[0]['logger'];
+      const silentLogger = SILENT_LOGGER;
       this.sock = makeWASocket({
         version,
         logger: silentLogger,
@@ -413,9 +420,10 @@ export class WhatsAppAdapter implements ChannelAdapter {
         continue;
       }
 
-      // Reactions, edits, deletes, stickers… carry no text: nothing to do.
-      const text = messageText(msg.message);
-      if (!text) continue;
+      // Reactions, edits, deletes, stickers… carry no text or file: nothing to do.
+      const text = messageText(msg.message) ?? '';
+      const media = msg.message?.imageMessage ?? msg.message?.documentMessage ?? null;
+      if (!text && !media) continue;
       this.cacheRecent(msg);
 
       const mentioned = TRIGGER_RE.test(text);
@@ -424,29 +432,52 @@ export class WhatsAppAdapter implements ChannelAdapter {
       const replyToMessageId = context?.stanzaId ?? undefined;
       const quotedText = messageText(context?.quotedMessage);
 
-      // A plain note to yourself — not addressed to DEX, not a reply.
-      if (!mentioned && !replyToMessageId) continue;
-      if (!cleanedText) continue;
+      // A plain note to yourself — not addressed to DEX, not a reply. A short
+      // one still goes on: it may answer the question DEX just asked ("2").
+      if (!mentioned && !replyToMessageId && (media || !cleanedText || cleanedText.length > 60)) continue;
+      if (!cleanedText && !media) continue;
 
       mainLogger.info('whatsapp.inbound', {
         textLength: cleanedText.length,
         mentioned,
         replyToMessageId: replyToMessageId ?? null,
+        media: !!media,
       });
 
-      this.messageHandler?.({
-        channelId: 'whatsapp',
-        from: remoteJid,
-        fromName: msg.pushName ?? 'You',
-        text: cleanedText,
-        timestamp: sentAtMs || Date.now(),
-        conversationId: remoteJid,
-        messageId: id,
-        replyToMessageId,
-        quotedText,
-        mentioned,
-        ack: (emoji) => { void this.react(remoteJid, id, emoji); },
+      void this.mediaOf(msg).then((attachments) => {
+        this.messageHandler?.({
+          channelId: 'whatsapp',
+          from: remoteJid,
+          fromName: msg.pushName ?? 'You',
+          text: cleanedText || (msg.message?.imageMessage ? 'Here’s a picture.' : 'Here’s a file.'),
+          timestamp: sentAtMs || Date.now(),
+          conversationId: remoteJid,
+          messageId: id,
+          replyToMessageId,
+          quotedText,
+          mentioned,
+          attachments: attachments.length ? attachments : undefined,
+          ack: (emoji) => { void this.react(remoteJid, id, emoji); },
+        });
       });
+    }
+  }
+
+  /** The photo or document on a message, downloaded (up to 20 MB). */
+  private async mediaOf(msg: WAMessage): Promise<InboundAttachment[]> {
+    const image = msg.message?.imageMessage;
+    const doc = msg.message?.documentMessage;
+    if (!image && !doc) return [];
+    const size = Number((image ?? doc)?.fileLength ?? 0);
+    if (size > 20 * 1024 * 1024) return [];
+    try {
+      const bytes = await downloadMediaMessage(msg, 'buffer', {}, this.sock ? { reuploadRequest: this.sock.updateMediaMessage, logger: SILENT_LOGGER as NonNullable<typeof SILENT_LOGGER> } : undefined);
+      const mime = (image ?? doc)?.mimetype?.split(';')[0] ?? 'application/octet-stream';
+      const name = doc?.fileName ?? `photo-${msg.key.id}.${mime === 'image/png' ? 'png' : 'jpg'}`;
+      return [{ name, mime, bytes }];
+    } catch (err) {
+      mainLogger.warn('whatsapp.download.failed', { error: (err as Error).message });
+      return [];
     }
   }
 
