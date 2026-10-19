@@ -220,7 +220,7 @@ export function DiagnosticsSection(): React.ReactElement {
                   {old && (
                     <div className="diag-gpu__warn">
                       <span>This driver is over {Math.floor((g.ageDays ?? 0) / 365)} years old. Old graphics drivers can freeze or restart the PC under 3D work and long renders.</span>
-                      {page && <button type="button" className="conn-card__btn conn-card__btn--primary diag-btn" onClick={() => { window.open(page[2], '_blank'); }}>Get the {page[1]} driver</button>}
+                      {page && <button type="button" className="conn-card__btn conn-card__btn--primary diag-btn" onClick={() => { void window.electronAPI?.widgets?.openUrl(page[2]); }}>Get the {page[1]} driver</button>}
                     </div>
                   )}
                 </div>
