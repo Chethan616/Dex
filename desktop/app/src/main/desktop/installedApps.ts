@@ -13,19 +13,25 @@ export interface InstalledApp {
   name: string;
   /** Its process, lower case: "whatsapp.exe" — what DEX's lists match. */
   exe: string;
+  /** Where its program is, for its icon (kept in main, never sent to the page). */
+  path?: string;
+  /** A Store app's own logo image, which looks better than its exe's icon. */
+  logo?: string;
 }
 
 const SCRIPT = String.raw`
 $ErrorActionPreference = 'SilentlyContinue'
 $out = @{}
-$add = { param($exe, $name) if ($exe -and $name -and -not $out.ContainsKey($exe)) { $out[$exe] = $name } }
+$paths = @{}
+$logos = @{}
+$add = { param($exe, $name, $path, $logo) if ($exe -and $name -and -not $out.ContainsKey($exe)) { $out[$exe] = $name; if ($path) { $paths[$exe] = $path }; if ($logo) { $logos[$exe] = $logo } } }
 $shell = New-Object -ComObject WScript.Shell
 foreach ($dir in @("$env:ProgramData\Microsoft\Windows\Start Menu\Programs", "$env:APPDATA\Microsoft\Windows\Start Menu\Programs")) {
   Get-ChildItem $dir -Recurse -Filter *.lnk | ForEach-Object {
     $target = $shell.CreateShortcut($_.FullName).TargetPath
     if ($target -and $target.ToLower().EndsWith('.exe')) {
       $exe = [IO.Path]::GetFileName($target).ToLower()
-      if ($exe -notmatch '^(unins|uninstall|setup|update|install|helper|crashpad|elevate)') { & $add $exe $_.BaseName }
+      if ($exe -notmatch '^(unins|uninstall|setup|update|install|helper|crashpad|elevate)') { & $add $exe $_.BaseName $target $null }
     }
   }
 }
@@ -40,10 +46,24 @@ foreach ($p in Get-AppxPackage -PackageTypeFilter Main) {
     if (-not $a.Executable) { continue }
     $name = $names["$($p.PackageFamilyName)!$($a.Id)"]
     if (-not $name) { continue }
-    & $add ([IO.Path]::GetFileName($a.Executable).ToLower()) $name
+    # The tile logo: Assets\Square44x44Logo.png names a family of scaled files; take the biggest that exists.
+    $logo = $null
+    $ve = $a.VisualElements
+    $rel = if ($ve.Square44x44Logo) { $ve.Square44x44Logo } elseif ($ve.Square150x150Logo) { $ve.Square150x150Logo } else { $null }
+    if ($rel) {
+      $base = Join-Path $p.InstallLocation $rel
+      $dir = Split-Path $base
+      $stem = [IO.Path]::GetFileNameWithoutExtension($base)
+      if (Test-Path $base) { $logo = $base }
+      # "altform-unplated" is the full-colour taskbar icon; the plated ones can be white glyphs meant for a coloured tile.
+      $all = @(Get-ChildItem $dir -Filter "$stem*.png" -ErrorAction SilentlyContinue | Where-Object { $_.Name -notmatch 'contrast|lightunplated' })
+      $best = $all | Sort-Object @{ e = { if ($_.Name -match 'altform-unplated') { 0 } else { 1 } } }, @{ e = { $_.Length }; Descending = $true } | Select-Object -First 1
+      if ($best) { $logo = $best.FullName }
+    }
+    & $add ([IO.Path]::GetFileName($a.Executable).ToLower()) $name (Join-Path $p.InstallLocation $a.Executable) $logo
   }
 }
-@($out.GetEnumerator() | ForEach-Object { [pscustomobject]@{ exe = $_.Key; name = $_.Value } }) | ConvertTo-Json -Compress
+@($out.GetEnumerator() | ForEach-Object { [pscustomobject]@{ exe = $_.Key; name = $_.Value; path = $paths[$_.Key]; logo = $logos[$_.Key] } }) | ConvertTo-Json -Compress
 `;
 
 let cache: { at: number; apps: InstalledApp[] } | null = null;
@@ -56,11 +76,17 @@ export function parseInstalledApps(json: string): InstalledApp[] {
   try { raw = JSON.parse(json.trim() || '[]'); } catch { return []; }
   const list = Array.isArray(raw) ? raw : raw ? [raw] : [];
   const byExe = new Map<string, InstalledApp>();
-  for (const item of list as Array<{ exe?: unknown; name?: unknown }>) {
+  const file = (v: unknown): string | undefined => (typeof v === 'string' && /^[A-Za-z]:\\/.test(v) && v.length < 600 ? v : undefined);
+  for (const item of list as Array<{ exe?: unknown; name?: unknown; path?: unknown; logo?: unknown }>) {
     const exe = typeof item.exe === 'string' ? item.exe.toLowerCase().trim() : '';
     const name = typeof item.name === 'string' ? item.name.trim() : '';
     if (!/^[\w .()&+-]{1,80}\.exe$/.test(exe) || !name || byExe.has(exe)) continue;
-    byExe.set(exe, { exe, name: name.slice(0, 80) });
+    const app: InstalledApp = { exe, name: name.slice(0, 80) };
+    const path = file(item.path);
+    const logo = file(item.logo);
+    if (path) app.path = path;
+    if (logo) app.logo = logo;
+    byExe.set(exe, app);
   }
   return [...byExe.values()].sort((a, b) => a.name.localeCompare(b.name));
 }

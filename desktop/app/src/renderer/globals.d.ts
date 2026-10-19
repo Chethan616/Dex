@@ -620,6 +620,8 @@ interface ElectronSettingsDesktopAPI {
   apps: () => Promise<{ installed: Array<{ name: string; exe: string }>; running: string[] }>;
   /** The newest changes DEX made to this PC, from every task's undo journal. */
   journal?: () => Promise<{ entries: DeskJournalEntry[]; total?: number }>;
+  /** An app's real icon as a data URL (null when Windows has none). */
+  icon?: (exe: string) => Promise<string | null>;
 }
 
 interface DeskJournalEntry {
@@ -637,7 +639,16 @@ interface DeskJournalEntry {
   task?: string;
 }
 
+/** Settings › Diagnostics (main/diagnostics.ts). */
+interface ElectronSettingsDiagnosticsAPI {
+  system: () => Promise<import('../main/diagnostics').SystemInfo>;
+  reach: () => Promise<import('../main/diagnostics').ReachResult[]>;
+  problems: (withWarnings?: boolean) => Promise<import('../main/diagnostics').LogProblem[]>;
+  openLogs: () => Promise<boolean>;
+}
+
 interface ElectronSettingsAPI {
+  diagnostics?: ElectronSettingsDiagnosticsAPI;
   mcp?: ElectronSettingsMcpAPI;
   elevation?: ElectronSettingsElevationAPI;
   desktop?: ElectronSettingsDesktopAPI;

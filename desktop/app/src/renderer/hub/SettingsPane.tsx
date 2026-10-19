@@ -3,6 +3,7 @@ import { ConnectionsPane, type SettingsProviderFocusRequest } from './Connection
 import { PhoneCard } from './PhoneCard';
 import { ExtensionsSection } from './ExtensionsSection';
 import { PuzzleIcon } from './icons/PuzzleIcon';
+import { DiagnosticsSection } from './DiagnosticsSection';
 import { DesktopControlSection } from './DesktopControlSection';
 import { MemorySection } from './MemorySection';
 import { AboutYouQuiz, ImportMemory } from '../components/aboutYou/AboutYou';
@@ -594,97 +595,6 @@ function PrivacySection(): React.ReactElement {
   );
 }
 
-/**
- * What DEX needs from the machine, and whether it found it.
- *
- * This exists because of a specific failure: the browser harness could not
- * find Git Bash, silently fell back to a degraded path, and the only visible
- * symptom was an agent that quietly did less than it should. Days went into
- * that. A missing dependency should be one sentence you can act on, so each
- * row states what was looked for, what was found, and what fixes it.
- */
-function DiagnosticsSection(): React.ReactElement {
-  const [report, setReport] = useState<PreflightReportInfo | null>(null);
-  const [checking, setChecking] = useState(false);
-  const [copied, setCopied] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    void window.electronAPI?.settings?.preflight?.get?.().then((next) => {
-      if (!cancelled) setReport(next);
-    }).catch(() => {});
-    return () => { cancelled = true; };
-  }, []);
-
-  const recheck = useCallback(async () => {
-    setChecking(true);
-    try {
-      const next = await window.electronAPI?.settings?.preflight?.refresh?.();
-      if (next) setReport(next);
-    } finally {
-      setChecking(false);
-    }
-  }, []);
-
-  const copy = useCallback((command: string) => {
-    void navigator.clipboard?.writeText(command);
-    setCopied(command);
-    window.setTimeout(() => setCopied((current) => (current === command ? null : current)), 1500);
-  }, []);
-
-  if (!report) {
-    return (
-      <div className="settings-card">
-        <p className="diag__empty">Checking your environment…</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="settings-card">
-      <div className="diag__header">
-        <span className={`diag__summary diag__summary--${report.ok ? 'ok' : 'bad'}`}>
-          {report.ok
-            ? 'Everything DEX needs is installed.'
-            : 'Something DEX needs is missing — the rows below say what.'}
-        </span>
-        <button className="diag__recheck" onClick={recheck} disabled={checking}>
-          {checking ? 'Checking…' : 'Re-check'}
-        </button>
-      </div>
-
-      <div className="diag__list">
-        {report.checks.map((check) => (
-          <div className={`diag__row diag__row--${check.status}`} key={check.id}>
-            <span className="diag__dot" aria-hidden="true" />
-            <div className="diag__body">
-              <div className="diag__line">
-                <span className="diag__label">{check.label}</span>
-                <span className="diag__status">{check.status === 'ok' ? 'ready' : check.status}</span>
-              </div>
-              <div className="diag__detail">{check.detail}</div>
-              {check.fix ? (
-                <div className="diag__fix">
-                  <div className="diag__fix-summary">{check.fix.summary}</div>
-                  {check.fix.command ? (
-                    <button
-                      className="diag__fix-command"
-                      onClick={() => copy(check.fix!.command as string)}
-                      title="Copy this command"
-                    >
-                      <code>{check.fix.command}</code>
-                      <span className="diag__fix-copy">{copied === check.fix.command ? 'copied' : 'copy'}</span>
-                    </button>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 /**
  * Connections to services that expose a real API.

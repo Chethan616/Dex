@@ -288,6 +288,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
       openSystemNotifications: (): Promise<{ ok: boolean; error?: string }> =>
         ipcRenderer.invoke('settings:open-system-notifications'),
     },
+    /** Settings › Diagnostics (main/diagnostics.ts). */
+    diagnostics: {
+      system: () => ipcRenderer.invoke('diagnostics:system'),
+      reach: () => ipcRenderer.invoke('diagnostics:reach'),
+      problems: (withWarnings?: boolean) => ipcRenderer.invoke('diagnostics:problems', withWarnings === true),
+      openLogs: (): Promise<boolean> => ipcRenderer.invoke('diagnostics:open-logs'),
+    },
     /** Admin changes without a Windows prompt each time (main/desktop/elevation.ts). */
     elevation: {
       status: (): Promise<{ supported: boolean; installed: boolean; outdated: boolean }> => ipcRenderer.invoke('desktop:elevation-status'),
@@ -300,6 +307,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       set: (patch: unknown) => ipcRenderer.invoke('desktop:settings-set', patch),
       apps: (): Promise<{ installed: Array<{ name: string; exe: string }>; running: string[] }> => ipcRenderer.invoke('desktop:apps'),
       journal: (): Promise<{ entries: DeskJournalEntry[]; total?: number }> => ipcRenderer.invoke('desktop:journal'),
+      icon: (exe: string): Promise<string | null> => ipcRenderer.invoke('desktop:app-icon', exe),
     },
     approvals: {
       get: (): Promise<{ mode: 'ask' | 'auto' | 'full' }> => ipcRenderer.invoke('settings:approvals:get'),

@@ -4073,7 +4073,38 @@ app.whenReady().then(async () => {
     const self = path.basename(process.execPath).toLowerCase();
     const running = [...new Set(runningOut.split(/\s+/).map((n) => n.trim().toLowerCase()).filter(Boolean).map((n) => `${n}.exe`))]
       .filter((n) => n !== self && !['explorer.exe', 'applicationframehost.exe', 'textinputhost.exe', 'shellexperiencehost.exe'].includes(n));
-    return { installed: await installedApps(), running };
+    return { installed: (await installedApps()).map(({ name, exe }) => ({ name, exe })), running };
+  });
+
+  // An app's real icon, as a data URL: a Store app's logo, else its program's own icon from Windows.
+  const appIcons = new Map<string, string | null>();
+  ipcMain.handle('desktop:app-icon', async (_event, exeArg: unknown) => {
+    const exe = assertString(exeArg, 'exe', 120).toLowerCase();
+    if (appIcons.has(exe)) return appIcons.get(exe);
+    let url: string | null = null;
+    try {
+      const { installedApps } = await import('./desktop/installedApps');
+      const found = (await installedApps()).find((a) => a.exe === exe);
+      let file = found?.path;
+      // An app that's open but not in the Start menu: where its process runs from.
+      if (!found && process.platform === 'win32') {
+        const { execFile } = await import('node:child_process');
+        file = await new Promise<string | undefined>((resolve) => {
+          execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `(Get-Process -Name '${exe.replace(/\.exe$/, '').replace(/'/g, '')}' -ErrorAction SilentlyContinue | Where-Object Path | Select-Object -First 1).Path`],
+            { windowsHide: true, timeout: 6_000 }, (_e, out) => resolve(String(out ?? '').trim() || undefined));
+        });
+      }
+      if (found?.logo && fs.existsSync(found.logo)) {
+        url = `data:image/png;base64,${fs.readFileSync(found.logo).toString('base64')}`;
+      } else if (file && fs.existsSync(file)) {
+        const img = await app.getFileIcon(file, { size: 'large' });
+        if (!img.isEmpty()) url = img.toDataURL();
+      }
+    } catch (err) {
+      mainLogger.warn('desktop.appIcon.failed', { exe, error: (err as Error).message });
+    }
+    appIcons.set(exe, url);
+    return url;
   });
 
   // DEX's elevated helper for admin changes (desktop/elevation.ts).
@@ -4115,6 +4146,11 @@ app.whenReady().then(async () => {
     return { ok: true };
   });
 
+  // Settings › Diagnostics (diagnostics.ts): this PC, the network, DEX's own errors.
+  ipcMain.handle('diagnostics:system', async () => (await import('./diagnostics')).systemInfo());
+  ipcMain.handle('diagnostics:reach', async () => (await import('./diagnostics')).reachability());
+  ipcMain.handle('diagnostics:problems', async (_e, withWarnings: unknown) => (await import('./diagnostics')).recentProblems(30, withWarnings === true));
+  ipcMain.handle('diagnostics:open-logs', async () => (await (await import('./diagnostics')).openLogsFolder()) === '');
   ipcMain.handle('settings:preflight:get', () => preflightReport ?? refreshPreflight());
   ipcMain.handle('settings:preflight:refresh', () => refreshPreflight());
 
