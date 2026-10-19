@@ -17,6 +17,8 @@ import {
 } from '../../../shared/widgets';
 import { WorkflowCards } from '../workflows/WorkflowCards';
 import { TriageView } from './Triage';
+import { ChartView } from './Chart';
+import { CustomFrame } from './CustomFrame';
 import type { TriageWidget } from '../../../shared/triage';
 import './widgets.css';
 
@@ -560,5 +562,9 @@ export function WidgetView({ widget, wid, answered, onReply, onOpenUrl }: Widget
     // Live however many messages follow: each answer is one of them.
     case 'triage':
       return <TriageView widget={widget as TriageWidget} wid={wid} onReply={onReply} />;
+    case 'chart':
+      return <ChartView widget={widget} />;
+    case 'custom':
+      return <CustomFrame widget={widget} onReply={onReply} onOpenUrl={onOpenUrl} />;
   }
 }

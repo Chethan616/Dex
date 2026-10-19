@@ -12,6 +12,7 @@ import { memoryBridge } from './memoryBridge';
 import type { PreflightReport } from '../main/startup/preflight';
 import type { TelegramInfo as TelegramChannelInfo } from '../main/channels/TelegramAdapter';
 
+
 interface McpConnectionInfo {
   id: string;
   displayName: string;
@@ -298,6 +299,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       get: () => ipcRenderer.invoke('desktop:settings-get'),
       set: (patch: unknown) => ipcRenderer.invoke('desktop:settings-set', patch),
       apps: (): Promise<{ installed: Array<{ name: string; exe: string }>; running: string[] }> => ipcRenderer.invoke('desktop:apps'),
+      journal: (): Promise<{ entries: DeskJournalEntry[]; total?: number }> => ipcRenderer.invoke('desktop:journal'),
     },
     approvals: {
       get: (): Promise<{ mode: 'ask' | 'auto' | 'full' }> => ipcRenderer.invoke('settings:approvals:get'),

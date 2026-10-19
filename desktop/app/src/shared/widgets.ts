@@ -13,6 +13,7 @@
  * The phone renders the same specs (android/…/ui/components/Widgets.kt).
  */
 import { z } from 'zod';
+import { ChartWidgetSchema, CustomWidgetSchema, chartLine, normalizeChart, normalizeCustom } from './genui';
 import { WorkflowSchema, workflowLine } from './workflows';
 import { TRIAGE_SHAPE, TriageWidgetSchema, normalizeTriage, triageLine, withItemIds } from './triage';
 
@@ -90,6 +91,9 @@ export const WidgetSchema = z.discriminatedUnion('type', [
   // Messages to answer, plotted by urgency and importance, each with a
   // drafted reply and Yes / No / Specify (shared/triage.ts).
   TriageWidgetSchema,
+  // Charts the apps draw natively, and agent-written UI in a sandbox (shared/genui.ts).
+  ChartWidgetSchema,
+  CustomWidgetSchema,
 ]);
 export type Widget = z.infer<typeof WidgetSchema>;
 export type AskWidget = Omit<Extract<Widget, { type: 'ask' }>, 'fields'> & { fields: AskField[] };
@@ -182,6 +186,8 @@ const TYPE_ALIASES: Record<string, Widget['type']> = {
   buttons: 'buttons', button: 'buttons', links: 'buttons', link: 'buttons',
   facts: 'facts', fact: 'facts', table: 'facts', summary: 'facts', details: 'facts',
   triage: 'triage', matrix: 'triage', inbox: 'triage', priorities: 'triage', eisenhower: 'triage', replies: 'triage', messages: 'triage',
+  chart: 'chart', graph: 'chart', plot: 'chart', radar: 'chart', hexagon: 'chart', pie: 'chart', donut: 'chart', bar: 'chart', gauge: 'chart',
+  custom: 'custom', html: 'custom', ui: 'custom', app: 'custom', page: 'custom', view: 'custom',
 };
 
 /**
@@ -194,7 +200,7 @@ const TYPE_ALIASES: Record<string, Widget['type']> = {
 export function normalizeWidget(raw: unknown, hint: { type?: string; title?: string } = {}): unknown {
   const hintType = hint.type ? TYPE_ALIASES[hint.type.toLowerCase()] : undefined;
   if (Array.isArray(raw)) {
-    const listKey = { ask: 'fields', cards: 'items', buttons: 'buttons', facts: 'rows', workflows: 'items', triage: 'items' }[hintType ?? 'ask'];
+    const listKey = { ask: 'fields', cards: 'items', buttons: 'buttons', facts: 'rows', workflows: 'items', triage: 'items', chart: 'data', custom: 'html' }[hintType ?? 'ask'];
     raw = { [listKey]: raw };
   }
   if (!isObj(raw)) return raw;
@@ -208,6 +214,12 @@ export function normalizeWidget(raw: unknown, hint: { type?: string; title?: str
   const title = firstOf(raw, 'title', 'question', 'prompt', 'heading') ?? hint.title;
   if (title !== undefined) w.title = title;
   if (type === 'triage') return normalizeTriage(w);
+  if (type === 'chart') {
+    // `dex-ui chart` with a kind word as the type: {"type": "radar", …}
+    const kindWord = typeof raw.type === 'string' && raw.type.toLowerCase() !== 'chart' ? raw.type : undefined;
+    return normalizeChart({ ...w, ...(kindWord && w.kind === undefined ? { kind: kindWord } : {}) });
+  }
+  if (type === 'custom') return normalizeCustom(w);
 
   if (type === 'ask') {
     let fields = firstOf(raw, 'fields', 'inputs', 'questions');
@@ -271,6 +283,8 @@ const SHAPES: Record<Widget['type'], string> = {
   facts: '{"title":"Your booking","rows":[{"label":"Flight","value":"6E 2345"}]}',
   workflows: 'nothing: DEX draws the saved workflows itself — run `dex-workflow show`',
   triage: TRIAGE_SHAPE,
+  chart: '{"kind":"radar","title":"Your strengths","labels":["Problem-solving","Learning","Craft","Leadership","Creativity","Communication"],"series":[{"name":"You","values":[9,9,8,7,7,6]}],"max":10} — kinds: radar, bar, line, area, pie, donut, gauge; one value per label',
+  custom: '{"title":"…","html":"<div style=\\"color:var(--dex-fg)\\">…</div>"} — HTML using the --dex-* colours; dex.reply(text) and dex.open(url) talk back',
 };
 
 function issueText(i: z.core.$ZodIssue): string {
@@ -405,6 +419,8 @@ export function widgetLine(w: Widget): string {
     case 'facts': return w.title ?? w.rows.map((r) => `${r.label}: ${r.value}`).join(' · ');
     case 'workflows': return w.title ?? (w.items.length ? w.items.map(workflowLine).join(' — ') : 'No workflows yet');
     case 'triage': return triageLine(w);
+    case 'chart': return chartLine(w);
+    case 'custom': return w.title ?? 'An interactive view';
   }
 }
 

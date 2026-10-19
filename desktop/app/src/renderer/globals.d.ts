@@ -618,6 +618,23 @@ interface ElectronSettingsDesktopAPI {
   set: (patch: Partial<Omit<DesktopControlSettings, 'supported'>>) => Promise<DesktopControlSettings>;
   /** Every installed app (name + process) and the processes with a window open now. */
   apps: () => Promise<{ installed: Array<{ name: string; exe: string }>; running: string[] }>;
+  /** The newest changes DEX made to this PC, from every task's undo journal. */
+  journal?: () => Promise<{ entries: DeskJournalEntry[]; total?: number }>;
+}
+
+interface DeskJournalEntry {
+  sessionId: string;
+  id: string;
+  at: string;
+  title: string;
+  action: string;
+  reason?: string;
+  canUndo: boolean;
+  undone: boolean;
+  admin: boolean;
+  tier?: string;
+  /** The task's prompt, when DEX still has the task. */
+  task?: string;
 }
 
 interface ElectronSettingsAPI {
@@ -725,6 +742,9 @@ interface ElectronMemoryAPI {
   parseImport: (raw: string) => Promise<{ facts: string[]; skipped: number }>;
   importFacts: (facts: string[]) => Promise<{ saved: number; skipped: number }>;
   openAssistant: (which: 'chatgpt' | 'claude') => Promise<{ opened: boolean }>;
+  /** The memory graph (shared/memoryGraph.ts), and whether it's behind the notes. */
+  graph: () => Promise<{ graph: import('../shared/memoryGraph').MemoryGraph | null; indexing: boolean; stale: boolean; noteCount: number }>;
+  index: (opts?: { useModel?: boolean }) => Promise<{ graph: import('../shared/memoryGraph').MemoryGraph } | { error: string }>;
   onChange: (cb: () => void) => () => void;
 }
 

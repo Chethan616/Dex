@@ -16,6 +16,8 @@ export function memoryBridge() {
     parseImport: (raw: string): Promise<{ facts: string[]; skipped: number }> => ipcRenderer.invoke('memory:parse-import', raw),
     importFacts: (facts: string[]): Promise<{ saved: number; skipped: number }> => ipcRenderer.invoke('memory:import', facts),
     openAssistant: (which: 'chatgpt' | 'claude'): Promise<{ opened: boolean }> => ipcRenderer.invoke('memory:open-assistant', which),
+    graph: (): Promise<unknown> => ipcRenderer.invoke('memory:graph'),
+    index: (opts?: { useModel?: boolean }): Promise<unknown> => ipcRenderer.invoke('memory:index', opts ?? {}),
     onChange: (cb: () => void): (() => void) => {
       const handler = () => cb();
       ipcRenderer.on('memory:changed', handler);

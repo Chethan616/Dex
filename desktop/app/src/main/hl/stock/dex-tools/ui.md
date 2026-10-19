@@ -22,6 +22,12 @@ prose. It's a fixed kit, so it costs you a small JSON spec, not a web page.
 5. A card's **reply** action sends its text as the user's next message: use
    it for "Select" / "Book this" / "Use this one", then act on it when it
    arrives (and still ask before paying).
+6. **Numbers with a shape are a chart, drawn by DEX:** scores, a profile, a
+   comparison, shares of a whole, a trend. Use `dex-ui chart`, never an image
+   of a chart (no matplotlib PNGs) and never a table pretending to be one.
+7. **Anything the kit doesn't have, build it:** `dex-ui custom` takes your own
+   HTML (a quiz, a calculator, a timeline, a comparison board, a planner) and
+   shows it in DEX's colours on the PC and the phone. See "Your own UI" below.
 
 ## Quick forms
 
@@ -91,6 +97,58 @@ An **action** is `{label, url}` (https, http, mailto:, tel:, geo:) or
 **Icons:** flight, hotel, food, place, directions, calendar, time, mail,
 call, cart, money, doc, code, music, link, person, star, ticket, car, train,
 weather, pc, check.
+
+## Charts
+
+```bash
+dex-ui chart <<'EOF'
+{"kind": "radar", "title": "Your strengths", "note": "From what DEX knows about your work",
+ "labels": ["Problem-solving", "Learning", "Craft", "Leadership", "Creativity", "Communication"],
+ "series": [{"name": "You", "values": [9, 9, 8, 7, 7, 6]}], "max": 10}
+EOF
+```
+
+- `kind`: `radar` (six labels make a hexagon; any 3–24 work), `bar`, `line`,
+  `area`, `pie`, `donut`, `gauge`.
+- `labels` (1–24) and `series` (1–4). Each series has a `name` and exactly
+  one value per label. Pie, donut and gauge take one series; a gauge shows
+  its first value against `max`.
+- Optional: `title`, `note` (one line under it), `max` (the scale's top; it
+  defaults to the data's, rounded up) and `unit` ("%", "h", "₹").
+- Several series on one radar or bar chart compare them (you vs. the role,
+  this month vs. last); each gets its own colour.
+
+## Your own UI
+
+When the kit has nothing that fits, write the UI yourself. DEX shows it in the
+chat, on the PC and the phone, inside a sandbox: your scripts run, but there is
+no network (except `https://cdn.jsdelivr.net` for libraries) and no access to
+the app or the user's files.
+
+```bash
+dex-ui custom <<'EOF'
+{"title": "Pick a slot", "html": "<div class='g'>…</div><style>.g{display:grid;gap:8px}.g button{background:var(--dex-surface-2);color:var(--dex-fg);border:1px solid var(--dex-line);border-radius:var(--dex-radius);padding:10px}</style><script>document.querySelectorAll('button').forEach(b=>b.onclick=()=>dex.reply('Book '+b.textContent))</script>"}
+EOF
+```
+
+- **Use DEX's colours, never your own palette**, so the view matches light
+  and dark on both apps:
+  - backgrounds: `--dex-bg`, `--dex-surface`, `--dex-surface-2`;
+  - borders: `--dex-line`;
+  - text: `--dex-fg`, `--dex-muted`;
+  - accent: `--dex-accent` (text on it: `--dex-accent-fg`);
+  - states: `--dex-good`, `--dex-warn`, `--dex-bad`;
+  - data colours: `--dex-series-1` … `--dex-series-4`;
+  - `--dex-radius` and `--dex-font`.
+- **Talk back with `dex.reply("…")`**: it sends that text as the user's next
+  message, like a card's reply button. Act on it when it arrives. Use
+  `dex.open("https://…")` for links (plain `<a href>` works too).
+- **It must work at phone width** (from 320px): use flexible layouts, not
+  fixed widths. The frame grows to fit the content, so don't set a height.
+- Keep it under 60 KB. Prefer inline SVG; load a library from jsdelivr only
+  when it earns its place.
+- A chart is still `dex-ui chart`; a choice or a form is still `dex-ui ask`.
+  `custom` is for what those can't do.
 
 ## Triage — answering a batch of messages
 

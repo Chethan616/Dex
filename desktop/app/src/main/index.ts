@@ -2013,8 +2013,23 @@ app.whenReady().then(async () => {
         const { recallSite, listSites } = await import('./memory/siteStore');
         const { listNotes } = await import('./memory/notes');
         const { nodesOf, recall } = await import('./memory/recall');
-        const found = recall(nodesOf(listNotes(), await listSites(), workflowStore.list()), q, 8);
-        return { site: await recallSite(q), remembered: found.map((n) => ({ kind: n.kind, id: n.id, text: n.text })) };
+        const all = listNotes();
+        const found = recall(nodesOf(all, await listSites(), workflowStore.list()), q, 8);
+        // The memory graph, when Settings has built one: what the words reach and what's linked to it.
+        const { readGraph } = await import('./memory/graph');
+        const { queryGraph } = await import('../shared/memoryGraph');
+        const g = readGraph();
+        const linked = g ? queryGraph(g, q, (id) => all.find((n) => n.id === id)?.text, 6) : null;
+        return {
+          site: await recallSite(q),
+          remembered: found.map((n) => ({ kind: n.kind, id: n.id, text: n.text })),
+          ...(linked && linked.matches.length ? {
+            graph: {
+              things: linked.matches.map((n) => ({ name: n.label, kind: n.dimension, about: n.summary })),
+              linked: linked.related.map((r) => `${r.via} — ${r.label} — ${r.node.label}${r.node.summary ? ` (${r.node.summary})` : ''}`),
+            },
+          } : {}),
+        };
       },
 
       // A fact the user wants kept, for every later task on any engine:
@@ -3997,6 +4012,31 @@ app.whenReady().then(async () => {
     const dir = journalDir(typeof sessionId === 'string' ? sessionId : null);
     fs.mkdirSync(dir, { recursive: true });
     return (await shell.openPath(dir)) === '';
+  });
+
+  // Settings › Desktop control: the newest changes DEX made to this PC, from every task's journal.
+  ipcMain.handle('desktop:journal', async () => {
+    const base = journalDir(null);
+    const out: Array<{ sessionId: string; id: string; at: string; title: string; action: string; reason?: string; canUndo: boolean; undone: boolean; admin: boolean; tier?: string; task?: string }> = [];
+    let dirs: string[] = [];
+    try { dirs = fs.readdirSync(base); } catch { return { entries: [] }; }
+    for (const sid of dirs) {
+      let files: string[] = [];
+      try { files = fs.readdirSync(path.join(base, sid)).filter((f) => f.endsWith('.json')); } catch { continue; }
+      for (const f of files) {
+        try {
+          const e = JSON.parse(fs.readFileSync(path.join(base, sid, f), 'utf-8')) as Record<string, unknown>;
+          out.push({
+            sessionId: sid, id: String(e.id ?? f.replace(/\.json$/, '')), at: String(e.at ?? ''), title: String(e.title ?? e.action ?? 'A change'),
+            action: String(e.action ?? ''), reason: typeof e.reason === 'string' ? e.reason : undefined,
+            canUndo: Boolean(e.undo) && e.undone !== true, undone: e.undone === true, admin: e.admin === true, tier: typeof e.tier === 'string' ? e.tier : undefined,
+            task: sessionManager.getSession(sid)?.prompt?.slice(0, 80),
+          });
+        } catch { /* a half-written file */ }
+      }
+    }
+    out.sort((a, b) => b.at.localeCompare(a.at));
+    return { entries: out.slice(0, 40), total: out.length };
   });
 
   // Settings › Desktop control (desktop/deskSettings.ts).

@@ -1,0 +1,81 @@
+/* Charts (Chart.tsx) and agent-written views (CustomFrame.tsx) in the chat. */
+
+.cx-chart, .cx-custom {
+  /* Series colours from the hub's own tokens: the phone maps the same roles (Chart.kt). */
+  --cx-series-1: var(--color-accent-primary);
+  --cx-series-2: var(--color-status-success);
+  --cx-series-3: var(--color-status-warning);
+  --cx-series-4: var(--color-status-danger);
+}
+
+.cx-chart {
+  margin: var(--space-6) 0 var(--space-2);
+  max-width: 640px;
+  padding: 16px 18px 14px;
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--cx-card-line);
+  background: var(--cx-card);
+  animation: cx-w-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.cx-chart__head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px; }
+.cx-chart__title { font-size: var(--font-size-md); font-weight: 650; color: var(--color-fg-primary); }
+.cx-chart__note { font-size: var(--font-size-sm); color: var(--color-fg-tertiary); }
+.cx-chart__body { display: flex; justify-content: center; }
+.cx-chart__svg { display: block; width: 100%; height: auto; overflow: visible; }
+.cx-chart__svg--radar { max-width: 420px; }
+.cx-chart__svg--gauge { max-width: 340px; }
+
+.cx-chart__grid { fill: none; stroke: rgba(var(--highlight-rgb), 0.12); stroke-width: 1; }
+.cx-chart__axis { stroke: rgba(var(--highlight-rgb), 0.12); stroke-width: 1; }
+.cx-chart__label { font-size: 12.5px; font-weight: 600; fill: var(--color-fg-secondary); }
+.cx-chart__value { font-size: 12px; font-weight: 700; fill: var(--color-fg-primary); font-variant-numeric: tabular-nums; }
+.cx-chart__tick { font-size: 11px; fill: var(--color-fg-tertiary); font-variant-numeric: tabular-nums; }
+
+/* Radar: the shape grows out of the centre. */
+.cx-chart__radar { transform-origin: 200px 200px; animation: cx-chart-grow 0.6s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+.cx-chart__radar polygon { fill: color-mix(in srgb, var(--c) 22%, transparent); stroke: var(--c); stroke-width: 2.4; stroke-linejoin: round; }
+.cx-chart__radar circle { fill: var(--c); stroke: var(--cx-card); stroke-width: 2; }
+@keyframes cx-chart-grow { from { transform: scale(0.2); opacity: 0; } }
+
+/* Bars rise. */
+.cx-chart__bar { transform-box: fill-box; transform-origin: bottom; animation: cx-chart-rise 0.55s cubic-bezier(0.2, 1.2, 0.4, 1) both; }
+@keyframes cx-chart-rise { from { transform: scaleY(0); } }
+
+/* Lines draw on. */
+.cx-chart__line { fill: none; stroke: var(--c); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; animation: cx-chart-draw 0.9s ease-out both; }
+.cx-chart__dot { fill: var(--c); stroke: var(--cx-card); stroke-width: 2; }
+@keyframes cx-chart-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+
+/* Pie and donut. */
+.cx-chart__pie { display: flex; align-items: center; gap: 22px; width: 100%; }
+.cx-chart__svg--pie { width: 220px; flex: none; }
+.cx-chart__slice { transform-box: view-box; transform-origin: 120px 120px; transition: transform 0.15s ease, opacity 0.15s ease; animation: cx-chart-grow 0.5s cubic-bezier(0.2, 1.2, 0.4, 1) both; cursor: default; }
+.cx-chart__slice--on { transform: scale(1.04); }
+.cx-chart__center { font-size: 30px; font-weight: 750; fill: var(--color-fg-primary); font-variant-numeric: tabular-nums; }
+.cx-chart__keys { flex: 1; min-width: 0; margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.cx-chart__keys li { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto 44px; align-items: center; gap: 10px; padding: 4px 8px; border-radius: 8px; font-size: var(--font-size-sm); color: var(--color-fg-secondary); }
+.cx-chart__keys li.is-on { background: rgba(var(--highlight-rgb), 0.06); }
+.cx-chart__keys i { width: 10px; height: 10px; border-radius: 3px; }
+.cx-chart__keys span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cx-chart__keys b { color: var(--color-fg-primary); font-variant-numeric: tabular-nums; }
+.cx-chart__keys em { font-style: normal; color: var(--color-fg-tertiary); text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Gauge. */
+.cx-chart__track { fill: none; stroke: rgba(var(--highlight-rgb), 0.1); stroke-width: 18; stroke-linecap: round; }
+.cx-chart__meter { fill: none; stroke: var(--cx-series-1); stroke-width: 18; stroke-linecap: round; stroke-dasharray: 1; animation: cx-chart-draw 1s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+.cx-chart__big { font-size: 44px; font-weight: 800; fill: var(--color-fg-primary); font-variant-numeric: tabular-nums; }
+.cx-chart__unit { font-size: 18px; font-weight: 600; fill: var(--color-fg-tertiary); }
+
+.cx-chart__legend { display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: center; margin-top: 6px; font-size: var(--font-size-sm); color: var(--color-fg-secondary); }
+.cx-chart__legend span { display: inline-flex; align-items: center; gap: 6px; }
+.cx-chart__legend i { width: 10px; height: 10px; border-radius: 3px; }
+
+/* An agent-written view: a sandboxed frame that grows to its content. */
+.cx-custom { margin: var(--space-6) 0 var(--space-2); max-width: 720px; border-radius: var(--radius-2xl); border: 1px solid var(--cx-card-line); background: var(--cx-card); overflow: hidden; animation: cx-w-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.cx-custom__head { display: flex; align-items: center; gap: 8px; padding: 12px 16px 0; font-size: var(--font-size-md); font-weight: 650; color: var(--color-fg-primary); }
+.cx-custom__badge { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--color-fg-tertiary); }
+.cx-custom__frame { display: block; width: 100%; border: 0; background: transparent; transition: height 0.2s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cx-chart, .cx-custom, .cx-chart__radar, .cx-chart__bar, .cx-chart__line, .cx-chart__slice, .cx-chart__meter { animation: none; }
+}

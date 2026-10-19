@@ -1,110 +1,153 @@
-/* Settings › Memory (MemorySection.tsx): the notes DEX keeps about the user, and their sites. */
+/* Settings › Memory (MemorySection.tsx, MemoryGraphView.tsx): notes, sites, and the memory graph. */
 
-.dexmem__add {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-}
-.dexmem__input {
-  flex: 1;
-  min-width: 0;
-  height: 34px;
-  padding: 0 12px;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 10px;
-  background: var(--color-bg-base);
-  color: var(--color-fg-primary);
-  font: inherit;
-  font-size: 13px;
-  outline: none;
-}
-.dexmem__input::placeholder { color: var(--color-fg-tertiary); }
-.dexmem__input:focus { border-color: var(--color-accent-default); }
-.dexmem__go { height: 34px; border-radius: 999px; padding: 0 16px; }
-
-.dexmem__error { margin-top: -6px; font-size: 12px; color: var(--color-status-error); }
-.dexmem__empty { font-size: 12.5px; color: var(--color-fg-tertiary); }
-
-.dexmem__notes, .dexmem__sites {
+.dexmem {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  gap: 14px;
+  /* Dimension colours for the graph, from the hub's tokens. */
+  --mg-identity: var(--color-accent-primary);
+  --mg-people: var(--color-status-danger);
+  --mg-places: var(--color-status-success);
+  --mg-work: var(--color-status-warning);
+  --mg-study: var(--color-status-info);
+  --mg-skills: color-mix(in srgb, var(--color-accent-primary) 55%, var(--color-status-success));
+  --mg-tools: color-mix(in srgb, var(--color-status-info) 50%, var(--color-fg-tertiary));
+  --mg-interests: color-mix(in srgb, var(--color-status-danger) 50%, var(--color-accent-primary));
+  --mg-goals: color-mix(in srgb, var(--color-status-warning) 60%, var(--color-status-danger));
+  --mg-habits: color-mix(in srgb, var(--color-status-success) 50%, var(--color-status-info));
+  --mg-preferences: color-mix(in srgb, var(--color-status-warning) 45%, var(--color-accent-primary));
+  --mg-other: var(--color-fg-tertiary);
 }
 
-.dexmem__note {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 36px;
-  padding: 6px 6px 6px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--color-border-subtle);
-  background: var(--color-bg-elevated);
+/* ── The header ── */
+.dexmem__hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px 22px;
+  padding: 18px 20px;
+  border-radius: 14px;
+  background-color: var(--surface-card-solid);
+  box-shadow: var(--surface-card-glow), inset 0 0 0 1px rgba(var(--highlight-rgb), 0.05), var(--surface-card-ring);
 }
-.dexmem__text { flex: 1; min-width: 0; font-size: 13px; line-height: 1.4; color: var(--color-fg-primary); overflow-wrap: anywhere; }
-.dexmem__meta { flex: none; font-size: 11.5px; color: var(--color-fg-tertiary); white-space: nowrap; }
-.dexmem__x {
-  flex: none;
-  display: inline-grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: none;
-  color: var(--color-fg-tertiary);
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out);
+.dexmem__hero-title { font-size: 15px; font-weight: 650; color: var(--color-fg-primary); }
+.dexmem__hero-sub { margin-top: 4px; font-size: 12.5px; line-height: 1.5; color: var(--color-fg-secondary); max-width: 560px; }
+.dexmem__stats { display: flex; gap: 8px; align-self: start; }
+.dexmem__stat { min-width: 72px; padding: 8px 12px; border-radius: 10px; background: rgba(var(--highlight-rgb), 0.04); box-shadow: inset 0 0 0 1px var(--color-border-subtle); display: flex; flex-direction: column; gap: 1px; }
+.dexmem__stat b { font-size: 18px; font-weight: 650; color: var(--color-fg-primary); font-variant-numeric: tabular-nums; }
+.dexmem__stat span { font-size: 11px; color: var(--color-fg-tertiary); }
+.dexmem__index { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px solid var(--color-border-subtle); }
+.dexmem__index-btn { flex: none; display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 14px; border-radius: 999px; }
+.dexmem__index-btn.is-busy svg { animation: dexmem-spin 1.2s linear infinite; }
+@keyframes dexmem-spin { to { transform: rotate(360deg); } }
+.dexmem__index-sub { font-size: 12px; color: var(--color-fg-tertiary); }
+
+/* ── Search and views ── */
+.dexmem__bar { display: flex; gap: 10px; align-items: center; }
+.dexmem__search {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border-radius: 12px;
+  border: 1px solid var(--color-border-subtle); background: var(--surface-card-solid); color: var(--color-fg-tertiary);
 }
+.dexmem__search:focus-within { border-color: var(--color-border-default); }
+.dexmem__search input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--color-fg-primary); font: inherit; font-size: 13px; outline: none; }
+.dexmem__search button { border: 0; background: transparent; color: var(--color-fg-tertiary); font-size: 16px; cursor: pointer; }
+.dexmem__views { display: inline-flex; padding: 3px; border-radius: 12px; background: rgba(var(--highlight-rgb), 0.05); box-shadow: inset 0 0 0 1px var(--color-border-subtle); }
+.dexmem__views button { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: var(--color-fg-secondary); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.dexmem__views button[aria-selected='true'] { background: var(--color-bg-elevated); color: var(--color-fg-primary); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12); }
+
+.dexmem__topics { display: flex; flex-wrap: wrap; gap: 6px; }
+.dexmem__topics button { height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: rgba(var(--highlight-rgb), 0.05); color: var(--color-fg-secondary); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.dexmem__topics button b { margin-left: 4px; color: var(--color-fg-tertiary); font-weight: 600; }
+.dexmem__topics button[aria-pressed='true'] { background: color-mix(in srgb, var(--color-accent-primary) 16%, transparent); color: var(--color-fg-primary); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent-primary) 45%, transparent); }
+
+/* ── Add a note ── */
+.dexmem__add { display: flex; gap: 8px; align-items: center; }
+.dexmem__input { flex: 1; min-width: 0; height: 34px; padding: 0 14px; border: 1px solid var(--color-border-subtle); border-radius: 999px; background: var(--color-bg-base); color: var(--color-fg-primary); font: inherit; font-size: 13px; outline: none; }
+.dexmem__input::placeholder { color: var(--color-fg-tertiary); }
+.dexmem__input:focus { border-color: var(--color-accent-primary); }
+.dexmem__go { height: 34px; padding: 0 16px; border-radius: 999px; }
+.dexmem__error { font-size: 12px; color: var(--color-status-error); }
+.dexmem__empty { padding: 14px 4px; font-size: 12.5px; color: var(--color-fg-tertiary); }
+
+/* ── Notes, grouped by topic ── */
+.dexmem__groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.dexmem__group { padding: 12px 12px 8px; border-radius: 14px; background-color: var(--surface-card-solid); box-shadow: var(--surface-card-glow), inset 0 0 0 1px rgba(var(--highlight-rgb), 0.05), var(--surface-card-ring); }
+.dexmem__group--sites { padding-bottom: 12px; }
+.dexmem__group-head { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 8px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-fg-tertiary); }
+.dexmem__group-head b { font-weight: 600; letter-spacing: 0; }
+.dexmem__notes, .dexmem__sites { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.dexmem__note { position: relative; display: flex; flex-direction: column; gap: 3px; padding: 8px 30px 8px 8px; border-radius: 10px; transition: background 0.12s ease; }
+.dexmem__note:hover { background: rgba(var(--highlight-rgb), 0.045); }
+.dexmem__text { font-size: 13px; line-height: 1.45; color: var(--color-fg-primary); overflow-wrap: anywhere; }
+.dexmem__text mark, .dexmem__host mark { background: color-mix(in srgb, var(--color-status-warning) 35%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
+.dexmem__meta { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--color-fg-tertiary); }
+.dexmem__core { padding: 0 6px; border-radius: 999px; background: color-mix(in srgb, var(--color-accent-primary) 16%, transparent); color: var(--color-accent-primary); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
+.dexmem__x { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border: 0; border-radius: 50%; background: transparent; color: var(--color-fg-tertiary); font-size: 15px; line-height: 1; cursor: pointer; opacity: 0; transition: opacity 0.12s ease, background 0.12s ease; }
 .dexmem__note:hover .dexmem__x, .dexmem__x:focus-visible { opacity: 1; }
-.dexmem__x:hover { color: var(--color-fg-primary); background: rgba(var(--highlight-rgb), 0.08); }
+.dexmem__x:hover { background: color-mix(in srgb, var(--color-status-danger) 14%, transparent); color: var(--color-status-danger); }
 
-.dexmem__more {
-  align-self: flex-start;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--color-fg-secondary);
-  font: inherit;
-  font-size: 12.5px;
-  cursor: pointer;
-}
-.dexmem__more:hover { color: var(--color-fg-primary); text-decoration: underline; }
-
-.dexmem__site {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 8px 8px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--color-border-subtle);
-  background: var(--color-bg-elevated);
-}
+/* ── Sites ── */
+.dexmem__sites-sub { padding: 0 4px 10px; font-size: 12px; line-height: 1.45; color: var(--color-fg-tertiary); }
+.dexmem__site { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; }
+.dexmem__site:hover { background: rgba(var(--highlight-rgb), 0.045); }
+.dexmem__favicon { flex: none; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 9px; background: color-mix(in srgb, var(--color-accent-primary) 14%, transparent); color: var(--color-accent-primary); font-weight: 750; font-size: 13px; }
 .dexmem__site-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .dexmem__host { font-size: 13px; font-weight: 600; color: var(--color-fg-primary); }
-.dexmem__aliases { font-size: 12px; color: var(--color-fg-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dexmem__badge {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 22px;
-  padding: 0 9px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--color-status-success) 14%, transparent);
-  color: var(--color-status-success);
-  font-size: 11.5px;
-  font-weight: 550;
-}
+.dexmem__aliases { font-size: 11.5px; color: var(--color-fg-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dexmem__badge { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px; border-radius: 999px; background: color-mix(in srgb, var(--color-status-success) 14%, transparent); color: var(--color-status-success); font-size: 11px; font-weight: 650; white-space: nowrap; }
 .dexmem__confirm { display: inline-flex; gap: 6px; }
-.dexmem__danger { background: var(--color-status-error); color: #fff; }
-.dexmem__danger:hover { opacity: 0.88; }
+.dexmem__ghost, .dexmem__danger { height: 28px; padding: 0 12px; border: 0; border-radius: 999px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.dexmem__ghost { background: rgba(var(--highlight-rgb), 0.06); color: var(--color-fg-secondary); }
+.dexmem__ghost:hover { color: var(--color-fg-primary); }
+.dexmem__danger { background: var(--color-status-danger); color: #fff; }
 
-/* Settings › About you: the line under the heading, and the "or import" divider. */
-.settings-section-lede { margin: 0 0 4px; font-size: 13px; line-height: 1.5; color: var(--color-fg-tertiary); max-width: 640px; }
-.settings-section-subhead { margin: 10px 0 0; font-size: 13px; font-weight: 600; color: var(--color-fg-secondary); }
+/* ── The graph ── */
+.dexmem__empty-graph { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 46px 20px; border-radius: 18px; border: 1px dashed var(--color-border-subtle); color: var(--color-fg-tertiary); font-size: 13px; text-align: center; }
+.mg { display: flex; flex-direction: column; gap: 10px; }
+.mg__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.mg__chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border: 0; border-radius: 999px; background: rgba(var(--highlight-rgb), 0.05); color: var(--color-fg-secondary); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.mg__chip i { width: 9px; height: 9px; border-radius: 50%; background: var(--mgc); }
+.mg__chip b { color: var(--color-fg-tertiary); font-weight: 600; }
+.mg__chip[aria-pressed='true'] { background: color-mix(in srgb, var(--mgc) 18%, transparent); color: var(--color-fg-primary); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mgc) 55%, transparent); }
+.mg__stage { position: relative; border-radius: 14px; box-shadow: var(--surface-card-glow), inset 0 0 0 1px rgba(var(--highlight-rgb), 0.05), var(--surface-card-ring); overflow: hidden;
+  background: var(--surface-card-solid); }
+.mg__svg { display: block; width: 100%; height: auto; cursor: grab; touch-action: none; user-select: none; }
+.mg__svg:active { cursor: grabbing; }
+.mg__edge { stroke: rgba(var(--highlight-rgb), 0.16); stroke-width: 1.1; transition: opacity 0.15s ease, stroke 0.15s ease; }
+.mg__edge--dim { opacity: 0.18; }
+.mg__edge--hot { stroke: var(--color-fg-secondary); stroke-width: 1.8; opacity: 1; }
+.mg__node { cursor: pointer; outline: none; transition: opacity 0.15s ease; }
+.mg__node--dim { opacity: 0.18; }
+.mg__dot { fill: var(--mgc); stroke: var(--color-bg-elevated); stroke-width: 2; transition: transform 0.15s ease; }
+.mg__halo { fill: color-mix(in srgb, var(--mgc) 22%, transparent); opacity: 0; transition: opacity 0.15s ease; }
+.mg__node:hover .mg__halo, .mg__node:focus-visible .mg__halo, .mg__node--on .mg__halo { opacity: 1; }
+.mg__node--on .mg__dot { stroke: var(--color-fg-primary); }
+.mg__label { font-size: 11px; font-weight: 600; fill: var(--color-fg-secondary); paint-order: stroke; stroke: var(--color-bg-elevated); stroke-width: 3px; pointer-events: none; }
+.mg__hint { position: absolute; left: 14px; bottom: 10px; font-size: 11px; color: var(--color-fg-tertiary); pointer-events: none; }
+.mg-d--identity { --mgc: var(--mg-identity); } .mg-d--people { --mgc: var(--mg-people); } .mg-d--places { --mgc: var(--mg-places); }
+.mg-d--work { --mgc: var(--mg-work); } .mg-d--study { --mgc: var(--mg-study); } .mg-d--skills { --mgc: var(--mg-skills); }
+.mg-d--tools { --mgc: var(--mg-tools); } .mg-d--interests { --mgc: var(--mg-interests); } .mg-d--goals { --mgc: var(--mg-goals); }
+.mg-d--habits { --mgc: var(--mg-habits); } .mg-d--preferences { --mgc: var(--mg-preferences); } .mg-d--other { --mgc: var(--mg-other); }
+
+.mg__panel { position: absolute; top: 12px; right: 12px; bottom: 12px; width: 300px; max-width: calc(100% - 24px); overflow-y: auto; padding: 14px; border-radius: 14px;
+  background: color-mix(in srgb, var(--color-bg-elevated) 92%, transparent); backdrop-filter: blur(10px); box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28), inset 0 0 0 1px var(--color-border-subtle);
+  animation: mg-in 0.22s cubic-bezier(0.2, 1.2, 0.4, 1) both; }
+@keyframes mg-in { from { opacity: 0; transform: translateX(14px) scale(0.98); } }
+.mg__panel-head { display: flex; align-items: flex-start; gap: 10px; }
+.mg__panel-dot { flex: none; width: 14px; height: 14px; margin-top: 3px; border-radius: 50%; background: var(--mgc); }
+.mg__panel-title { font-size: 15px; font-weight: 700; color: var(--color-fg-primary); }
+.mg__panel-sub { font-size: 11.5px; color: var(--color-fg-tertiary); }
+.mg__panel-x { margin-left: auto; border: 0; background: transparent; color: var(--color-fg-tertiary); font-size: 18px; cursor: pointer; }
+.mg__panel-sum { margin: 10px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--color-fg-secondary); }
+.mg__panel-block { margin-top: 14px; }
+.mg__panel-label { margin-bottom: 6px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-fg-tertiary); }
+.mg__panel-links { display: flex; flex-wrap: wrap; gap: 5px; }
+.mg__link { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 4px 9px; border: 0; border-radius: 999px; background: rgba(var(--highlight-rgb), 0.06); color: var(--color-fg-primary); font: inherit; font-size: 11.5px; cursor: pointer; }
+.mg__link i { width: 7px; height: 7px; border-radius: 50%; background: var(--mgc); }
+.mg__link em { font-style: normal; color: var(--color-fg-tertiary); }
+.mg__panel-notes { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 5px; font-size: 12px; line-height: 1.45; color: var(--color-fg-secondary); }
+
+@media (max-width: 760px) {
+  .dexmem__hero { grid-template-columns: 1fr; }
+  .mg__panel { position: static; width: auto; max-width: none; margin: 0 12px 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .mg__panel, .dexmem__index-btn.is-busy svg { animation: none; } }

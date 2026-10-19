@@ -16,7 +16,7 @@ them with Bash like any other command.
 | `dex-websearch` | A plain factual lookup that doesn't need a browser tab. See `websearch.md`. |
 | `dex-open` | Showing the user a file you made or found — a report, PDF, sheet, image or 3D model — rendered in a document tab that reloads as you edit it. See `open.md`. |
 | `mcp__windows__*` | Windows apps, media and PC diagnostics, in the background. See `desktop.md`. |
-| `dex-ui` | Asking the user with real controls (choices, a place, a date, a time, a number) instead of prose, and showing results as cards, link buttons or facts — on the PC and the phone. See `ui.md`. |
+| `dex-ui` | Asking the user with real controls (choices, a place, a date, a time, a number) instead of prose, and showing results as cards, link buttons or facts; charts it draws itself (radar, bar, line, pie, gauge); and your own UI in DEX's colours — on the PC and the phone. See `ui.md`. |
 | `dex-workflow` | The user's saved workflows and daily routines: making, changing, deleting, listing (as cards in the chat) and running them; DEX starts the scheduled ones on time. See `workflows.md`. |
 | `dex-react` | A rare emoji on the user's message, when it says something words wouldn't (🎉 to good news). DEX already reacts to go-aheads and thanks by itself — don't double up; most messages get none. |
 | `dex-tab` | This task's browser tabs, which the user shares: listing them, opening a background tab for a side lookup, showing one to the user. See `tabs.md`. |

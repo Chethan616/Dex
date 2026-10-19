@@ -61,6 +61,24 @@ export function registerMemoryIpc(): void {
     return { opened: true };
   });
 
+  // The memory graph (memory/graph.ts): read it, or build it now.
+  ipcMain.handle('memory:graph', async () => {
+    const { readGraph, isIndexing } = await import('./graph');
+    const { hashNotes } = await import('../../shared/memoryGraph');
+    const g = readGraph();
+    const all = notes.listNotes();
+    return { graph: g, indexing: isIndexing(), stale: g ? g.noteHash !== hashNotes(all) : all.length > 0, noteCount: all.length };
+  });
+  ipcMain.handle('memory:index', async (_e, opts: unknown) => {
+    const { indexMemory } = await import('./graph');
+    const useModel = !(opts && typeof opts === 'object' && (opts as { useModel?: unknown }).useModel === false);
+    try {
+      return { graph: await indexMemory(notes.listNotes(), { useModel }) };
+    } catch (err) {
+      return { error: (err as Error).message };
+    }
+  });
+
   memoryEvents.on('changed', () => {
     for (const win of BrowserWindow.getAllWindows()) {
       if (!win.isDestroyed()) win.webContents.send('memory:changed');

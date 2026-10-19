@@ -19,6 +19,9 @@ usage:
   dex-ui buttons <<'EOF'  {"buttons": [{"label": "...", "url": "https://..."}]}
   dex-ui facts   <<'EOF'  {"title": "...", "rows": [{"label": "...", "value": "..."}]}
   dex-ui triage  <<'EOF'  {"title": "...", "source": "gmail", "items": [{"from": "...", "urgency": 8, "importance": 6, "draft": "..."}]}
+  dex-ui chart   <<'EOF'  {"kind": "radar", "title": "...", "labels": ["A","B","C"], "series": [{"values": [7, 9, 5]}], "max": 10}
+                          kinds: radar (hexagon, spider), bar, line, area, pie, donut, gauge
+  dex-ui custom  <<'EOF'  {"title": "...", "html": "<div>...</div>"}   your own UI, in DEX's colours (--dex-*)
 
 after the user answers a triage card:
   dex-ui mark <card-id> <item-id> sent|failed|skipped ["note"]
@@ -51,7 +54,7 @@ read_spec() {
 }
 
 case "$op" in
-  ask|cards|buttons|facts|triage)
+  ask|cards|buttons|facts|triage|chart|custom)
     # An optional title on the command line: dex-ui ask "Flight details" <<'EOF'
     title=""
     if [ $# -ge 1 ] && [ "$1" != "--file" ]; then title="$(dex_esc "$1")"; shift; fi

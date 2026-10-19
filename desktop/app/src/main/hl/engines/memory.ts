@@ -33,6 +33,9 @@ type Note = Pick<MemoryNote, 'id' | 'text' | 'topic'> & Partial<Pick<MemoryNote,
 /** "Reply to my unread mail", "go through my WhatsApp", "answer today's Slack DMs". */
 const REPLY_WORDS = /\b(repl(y|ies)|respond|answer|go through|triage|clear|handle|deal with)\b[\s\S]{0,60}\b(mails?|e-?mails?|inbox|messages?|whatsapp|telegram|slack|teams|dms?|chats?|texts?|notifications?)\b/i;
 
+/** "A hexagon graph of me", "plot my spending", "chart this", "a radar of the team". */
+const CHART_WORDS = /\b(graph|chart|plot|radar|hexagon\w*|spider|pie|donut|doughnut|histogram|visuali[sz]\w*|dashboard)\b/i;
+
 const ROUTINE_WORDS = /\b(routines?|workflows?|automat\w*|schedul\w*|every (day|morning|evening|night|week|weekday|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|daily|weekly|remind\w*|trigger\w*)\b/i;
 
 /** The prompt lines for one task (pure: memoryBriefing reads the stores). */
@@ -74,6 +77,12 @@ export function briefingLines(
   if (REPLY_WORDS.test(prompt)) {
     lines.push(
       'Answering messages: unless the request names one message or person (then draft it and send it), show every message you fetched as ONE `dex-ui triage` card — read the Triage section of `./dex-tools/ui.md` first. Score each for urgency and importance, give each a category (academics, work, personal or other) and draft the replies. ALWAYS show the card, even when every message is automated and nothing needs a reply: the card is how the user sees what came in, and deciding what deserves a reply is theirs, not yours. Those go on it without a draft and sit in Later; one line of prose may say so. Then end your turn: the user answers each message with Yes / No / Specify. Never a list of drafts in prose, and never send without their Yes.',
+    );
+  }
+
+  if (CHART_WORDS.test(prompt)) {
+    lines.push(
+      'A graph, chart or plot is `dex-ui chart` — DEX draws it in the chat itself, in its own colours, on the PC and the phone: `{"kind": "radar", "title": "…", "labels": [...], "series": [{"values": [...]}], "max": 10}` (kinds: radar — six labels make a hexagon — bar, line, area, pie, donut, gauge; see the Charts section of `./dex-tools/ui.md`). Never render a chart to an image or an HTML file, and never stand a table in for one. For something richer than a chart, build it with `dex-ui custom` (your own HTML in the --dex-* colours).',
     );
   }
 

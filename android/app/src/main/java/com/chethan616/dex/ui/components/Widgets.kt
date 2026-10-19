@@ -175,6 +175,9 @@ sealed interface Widget {
   data class Workflows(val title: String?, val items: List<WWorkflow>) : Widget
   /** Messages to answer, by urgency and importance, each with a drafted reply (Triage.kt). */
   data class Triage(val title: String?, val source: String?, val items: List<TItem>) : Widget
+  /** A chart drawn in the phone's colours, and an agent-written view (GenUi.kt). */
+  data class Chart(val chart: WChart) : Widget
+  data class Custom(val view: WCustom) : Widget
 }
 
 private fun JSONObject.str(k: String): String? = if (has(k) && !isNull(k)) optString(k).takeIf { it.isNotBlank() } else null
@@ -234,6 +237,8 @@ fun parseWidget(json: String?): Widget? = runCatching {
       o.optJSONArray("actions").objects().map { it.action() },
     )
     "workflows" -> Widget.Workflows(o.str("title"), o.optJSONArray("items").objects().mapNotNull { parseWorkflow(it) })
+    "chart" -> parseChart(o)?.let { Widget.Chart(it) }
+    "custom" -> parseCustom(o)?.let { Widget.Custom(it) }
     "triage" -> Widget.Triage(o.str("title"), o.str("source"), o.optJSONArray("items").objects().mapIndexedNotNull { i, it -> parseTriageItem(it, i) })
     else -> null
   }
@@ -363,6 +368,8 @@ fun WidgetBlock(block: Block) {
     is Widget.Workflows -> WorkflowsCard(widget.title, widget.items, reply)
     // Live however many messages follow: each answer is one of them.
     is Widget.Triage -> TriageCard(widget.title, widget.source, widget.items, block.wid, reply)
+    is Widget.Chart -> ChartCard(widget.chart)
+    is Widget.Custom -> CustomCard(widget.view, open, reply)
   }
 }
 

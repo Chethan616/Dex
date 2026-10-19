@@ -66,3 +66,11 @@ describe('what DEX tells every engine about the user', () => {
     expect(text).toMatch(/not your own memory files/);
   });
 });
+
+describe('charts', () => {
+  it('points a graph request at dex-ui chart, and only then', () => {
+    expect(briefingLines([], [], [], 'a hexagon graph about me in all aspects').join('\n')).toMatch(/`dex-ui chart`/);
+    expect(briefingLines([], [], [], 'plot my spending this month').join('\n')).toMatch(/kinds: radar/);
+    expect(briefingLines([], [], [], 'book a table for two').join('\n')).not.toMatch(/dex-ui chart/);
+  });
+});
