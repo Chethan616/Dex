@@ -20,6 +20,31 @@
 
 ## ▶ RESUME HERE — live work log (keep this block current; newest first)
 
+**2026-10-19, owner's PC: gen-UI in chats, Memory graph, Settings redesigns, Discord.**
+- **Gen-UI (`e4ff471d`).**
+  - `dex-ui chart` draws radar/bars/lines/pie/gauge natively (`shared/genui.ts`, `hub/chat/Chart.tsx`, phone `GenUi.kt`).
+  - `dex-ui custom` runs the agent's own HTML in a sandboxed iframe themed with `--dex-*` tokens, reaching back only through `dex.reply` / `dex.open`.
+  - The briefing names `dex-ui chart` when the prompt asks for a graph, chart, radar…
+- **Memory (`e4ff471d`).**
+  - Settings › Memory has search, a List/Graph view and an Index button.
+  - Indexing runs `llmOnce` (`main/llm/once.ts`: Claude Code first, Codex fallback, 8-min timeout).
+  - It builds a multi-dimension graph with Louvain groups (`shared/memoryGraph.ts`, `main/memory/graph.ts`).
+  - `/dex/recall-site` returns `graph.things/linked`, so any engine can use it.
+- **Desktop control + Diagnostics (`94649cb6`), rebuilt from scratch.**
+  - Desktop control: summary stats, searchable pickers, Ask first / Never use, the admin helper, and recent changes with Undo (`desktop:journal`).
+  - Apps show their real icons (`desktop:app-icon`): a Store app's logo, else `app.getFileIcon`.
+  - Diagnostics: a health ring with a copyable report, tools/engines with fixes, This PC (GPU driver age), network reachability, recent log errors (`main/diagnostics.ts`).
+- **Channels (`e8818721`).**
+  - **Discord** (`channels/DiscordAdapter.ts`): your own bot, Gateway over `ws`, no privileged intents, paired by a `DEX-XXXXXXXX` code sent in a DM or @mention.
+  - A task's widgets reach chats (`channels/chatWidgets.ts`): buttons on Telegram and Discord, numbered on WhatsApp. A question ends the turn without "Done", and the next message in that chat answers it.
+  - Inbound photos and files are saved under `Downloads\DEX from chats\<date>`; pictures, PDFs and text are attached for the model.
+  - `/status` `/stop` `/help` `/new` (WhatsApp: `@DEX stop`); typing on Telegram and Discord.
+  - **Not live-tested with real bots yet** (no Discord or Telegram bot token on this PC): the unit tests use fake APIs.
+- **Next:**
+  - live-test Telegram and Discord with real bots;
+  - the benchmark (OSWorld-style; DEX vs Agent S2/S3, Copilot, an OpenAI agent, on Opus);
+  - the Diagnostics "Get the AMD driver" button uses `window.open`; check that it opens the browser.
+
 **2026-10-19, owner's PC: release 2.1.1, the README shrine gallery, the demo video.**
 - **Release:**
   - desktop 2.1.1 and phone 2.1.1 (41);
