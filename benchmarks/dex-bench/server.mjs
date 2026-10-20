@@ -209,7 +209,7 @@ document.getElementById('save').onclick = async () => {
   }
 });
 
-if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/')}` || process.argv[1]?.endsWith('server.mjs')) {
+if (process.argv[1]?.replace(/\\/g, '/').endsWith('/server.mjs')) {
   server.listen(PORT, '127.0.0.1', () => console.log(`DEX-Bench site on http://127.0.0.1:${PORT}`));
 }
 export { server };

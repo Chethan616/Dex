@@ -88,7 +88,10 @@ function claudeCodeAgent() {
         const t0 = Date.now();
         const env = { ...process.env };
         for (const k of ['CLAUDECODE', 'CLAUDE_CODE_ENTRYPOINT', 'CLAUDE_CODE_SSE_PORT']) delete env[k];
-        const child = spawn('claude', ['-p', prompt, '--model', MODEL, '--output-format', 'json', '--dangerously-skip-permissions'], { cwd: dir, env, shell: true, windowsHide: true });
+        // The prompt goes in on stdin: through Windows' shell an argument with
+        // spaces arrives split, and Claude Code saw only its first word.
+        const child = spawn('claude', ['-p', '--model', MODEL, '--output-format', 'json', '--dangerously-skip-permissions'], { cwd: dir, env, shell: true, windowsHide: true });
+        child.stdin.end(prompt);
         let out = '';
         child.stdout.on('data', (d) => { out += d; });
         child.stderr.on('data', () => {});

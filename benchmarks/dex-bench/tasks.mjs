@@ -74,9 +74,9 @@ export const TASKS = [
     setup() {},
     check({ answer }) {
       const want = BOOKS.filter((b) => b.author === 'Ursula K. Le Guin').length;
-      // The count is the number given for the books ("**7** books"), else the first number said.
-      const plain = answer.replace(/[*_`]/g, '');
-      const given = /\b(\d+)\s+(?:\w+\s+){0,3}books?\b/i.exec(plain)?.[1] ?? /\b\d+\b/.exec(plain)?.[0];
+      // Asked to answer with the number: the first number said is the answer
+      // (what follows may explain it: "the catalogue has 38 books over 4 pages").
+      const given = /\b\d+\b/.exec(answer.replace(/[*_`]/g, ''))?.[0];
       return ok(Number(given) === want, `want ${want}; read ${given}; answer: ${answer.slice(0, 160)}`);
     },
   },
