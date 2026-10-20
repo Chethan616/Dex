@@ -175,6 +175,37 @@ describe('BrowserPool — concurrency', () => {
     expect(pool.queuedCount).toBe(0);
     expect(pool.activeCount).toBe(0);
   });
+
+  it('when full, frees the idle task used longest ago instead of refusing a new one', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(1_000);
+      pool.create('old');
+      vi.setSystemTime(2_000);
+      pool.create('recent');
+      pool.markSessionIdle('old');
+      vi.setSystemTime(3_000);
+      await pool.markSessionActive('recent');
+      pool.markSessionIdle('recent');
+      vi.setSystemTime(4_000);
+      expect(pool.create('new')).not.toBeNull();
+      expect(pool.getView('old')).toBeNull();
+      expect(pool.getView('recent')).not.toBeNull();
+      expect(pool.queuedCount).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('never frees a running task or the one on screen; with nothing idle it still refuses', () => {
+    pool.create('running');
+    pool.create('shown');
+    pool.markSessionIdle('shown');
+    pool.attachToWindow('shown', mockWindow() as never, { x: 0, y: 0, width: 800, height: 600 });
+    expect(pool.create('new')).toBeNull();
+    expect(pool.getView('running')).not.toBeNull();
+    expect(pool.getView('shown')).not.toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------

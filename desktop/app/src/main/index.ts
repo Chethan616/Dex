@@ -1351,6 +1351,8 @@ app.whenReady().then(async () => {
       });
     }
     if (session.status !== 'stuck') notifiedStuck.delete(session.id);
+    // Stopped is as idle as done: its browser may be freed when the pool is full.
+    if (session.status === 'stopped') browserPool.markSessionIdle(session.id);
   });
   sessionManager.onEvent('session-completed', (session) => {
     shellWindow?.webContents.send('session-updated', session);
@@ -1376,6 +1378,7 @@ app.whenReady().then(async () => {
     });
   });
   sessionManager.onEvent('session-error', (session) => {
+    browserPool.markSessionIdle(session.id);
     shellWindow?.webContents.send('session-updated', session);
     sendToPill('session-updated', session);
     forwardSessionUpdatedToLogs(session);

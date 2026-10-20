@@ -124,6 +124,8 @@ interface PoolEntry {
   idleFreezeEligible: boolean;
   frozen: boolean;
   freezeTimer: ReturnType<typeof setTimeout> | null;
+  /** When you or the agent last used this browser: the pool, when full, frees the stalest idle one. */
+  lastUsedAt: number;
   /** Pages you closed, newest last, for Ctrl+Shift+T. DEX's scratch tabs aren't kept. */
   closed?: string[];
 }
@@ -261,6 +263,9 @@ export class BrowserPool {
       return this.entries.get(sessionId)!.view;
     }
 
+    // Full: free the browser of the idle task you used longest ago (its tabs
+    // are remembered and come back when the task continues) before refusing.
+    if (!this.canCreate()) this.evictIdle();
     if (!this.canCreate()) {
       this.queue.push(sessionId);
       browserLogger.warn('BrowserPool.create.queued', {
@@ -297,6 +302,7 @@ export class BrowserPool {
       idleFreezeEligible: false,
       frozen: false,
       freezeTimer: null,
+      lastUsedAt: startupStartedAt,
     };
     this.entries.set(sessionId, entry);
 
@@ -1124,6 +1130,8 @@ export class BrowserPool {
   noteAgentUse(wc: WebContents): boolean {
     const tab = this.findTab(wc);
     if (!tab) return false;
+    const used = this.entries.get(this.sessionIdOf(wc) ?? '');
+    if (used) used.lastUsedAt = Date.now();
     if (tab.pending) this.wake(this.sessionIdOf(wc) ?? '', tab);
     if (tab.agentBusyTimer) clearTimeout(tab.agentBusyTimer);
     tab.agentBusyTimer = setTimeout(() => {
@@ -1198,9 +1206,27 @@ export class BrowserPool {
     return entry?.view ?? null;
   }
 
+  /**
+   * The pool is full: close the browser of the task that's idle (finished,
+   * stopped or failed), isn't on screen, and was used longest ago. False when
+   * every browser is busy or in front of you.
+   */
+  private evictIdle(): boolean {
+    let victim: PoolEntry | null = null;
+    for (const e of this.entries.values()) {
+      if (e.attached || !e.idleFreezeEligible) continue;
+      if (!victim || e.lastUsedAt < victim.lastUsedAt) victim = e;
+    }
+    if (!victim) return false;
+    browserLogger.info('BrowserPool.evictIdle', { sessionId: victim.sessionId, idleMs: Date.now() - victim.lastUsedAt, activeCount: this.entries.size, maxConcurrent: this.maxConcurrent });
+    this.destroy(victim.sessionId);
+    return true;
+  }
+
   async markSessionActive(sessionId: string): Promise<void> {
     const entry = this.entries.get(sessionId);
     if (!entry) return;
+    entry.lastUsedAt = Date.now();
     entry.idleFreezeEligible = false;
     this.clearIdleFreezeTimer(entry);
     this.applyFrameRate(entry);
@@ -1355,6 +1381,7 @@ export class BrowserPool {
     if (validShape) entry.bounds = { ...bounds };
     entry.attached = true;
     entry.window = window;
+    entry.lastUsedAt = Date.now();
     const front = entry.tabs.find((t) => t.id === entry.activeTabId);
     if (front) {
       if (this.screenAllowed()) this.putOnScreen(front, window, entry.bounds);
