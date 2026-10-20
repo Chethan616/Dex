@@ -6,7 +6,7 @@
 
 | Agent | Passed | Rate | Median time | Median steps |
 |---|---|---|---|---|
-| DEX (Claude Code engine, opus) | 24/24 | **100%** | 40 s | 4 |
+| DEX (Claude Code engine, opus) | 24/24 | **100%** | 39 s | 4 |
 
 ## By category
 

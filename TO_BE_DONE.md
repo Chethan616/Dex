@@ -20,6 +20,17 @@
 
 ## ▶ RESUME HERE — live work log (keep this block current; newest first)
 
+**2026-10-20, owner's PC: DEX-Bench — DEX 24/24 on Opus 5.5.**
+- **The benchmark:** `benchmarks/dex-bench/`, OSWorld-style, 24 tasks on Windows. It has a local deterministic site, an end-state checker per task (`selftest.mjs` proves them all), `run.mjs` (drives DEX through the hub, or the plain CLI) and `report.mjs`.
+- **Result:** DEX with the Claude Code engine, `claude-opus-5-5`, passed **24/24**: median 39 s and 4 steps a task, 21.5 min total. Results are in `results/`; the shareable page is a claude.ai artifact.
+- **The owner's call:** no own baseline runs. Other agents are compared through their published OSWorld/WAA numbers: Agent S3 62.6%, or 72.6% best-of-N; GPT-5.4 75.0% OSWorld-Verified; OpenAI CUA 38.1%; UFO2 30.5% WAA; Opus 5.5 81.8% on OSWorld 2.1; humans 72.4%.
+- **Fixed on the way:** "Browser pool full" after 10 tasks (`6201b4ef`, the LRU idle browser is freed).
+- **Open, found by `app-calc`:** a relaunched UWP app (Calculator, in ApplicationFrameHost) jumps to the foreground, and DexDesk `Watch()` marks it `takenOver` because the user touched any input in the same 2 s. DEX then refuses its own clicks.
+  - Fix: a grace period after DEX's own `app_launch` (re-park it and give the foreground back, not a takeover).
+  - The first launch also timed out (`provider_timeout`), and `ui_wait` for `num1Button` never appeared while the app was parked.
+- **Dev CDP:** 9222, 9223 and 9224 are ghost-held now; DEX runs on 9225. Use `run.mjs --cdp 9225` and `DEX_CDP_PORT=9225 node drive.mjs`. Close DEX gracefully (`CloseMainWindow`) before force-killing, or the port ghosts again.
+- **Usage limit:** the plan's Opus session limit stopped the first attempt. `run.mjs` now waits for the reset and retries.
+
 **2026-10-19 (later), owner's PC: extensions for the agent, full-screen guard, Discord connector.**
 - **Chrome extensions for the agent (`ef9f9547`).**
   - `dex-ext list | click | menu | menu-click | options | install` (route `POST /dex/ext`, host `agentList/agentPress/agentMenu`).

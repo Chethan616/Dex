@@ -13,7 +13,12 @@ const latest = (prefix) => {
 };
 const runs = [latest('dex-'), latest('claude-code-')].filter(Boolean);
 const pct = (a, b) => (b ? `${Math.round((100 * a) / b)}%` : '—');
-const median = (xs) => { const s = xs.filter((x) => Number.isFinite(x)).sort((a, b) => a - b); return s.length ? s[Math.floor(s.length / 2)] : null; };
+const median = (xs) => {
+  const s = xs.filter((x) => Number.isFinite(x)).sort((a, b) => a - b);
+  if (!s.length) return null;
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+};
 
 const cats = [...new Set(TASKS.map((t) => t.category))];
 let md = '# DEX-Bench results\n\n';
