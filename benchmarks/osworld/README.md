@@ -32,7 +32,8 @@ the benchmark. Read this first.
   screenshots.** DEX's own strengths don't apply inside OSWorld's virtual
   machine: its built-in browser, background Windows control and connectors.
   Expect a number near Opus 5.5's own computer-use results. The point is a
-  score you can put next to the OSWorld leaderboard.
+  score you can put next to the OSWorld leaderboard. For a Windows benchmark
+  where DEX runs inside the VM with all its tools, see `../waa/`.
 - **It's long.** The verified set has a few hundred tasks, each taking minutes.
   Plan on a day or more on a subscription. The prompt runs a small set first,
   then asks before the full run, with a time and cost estimate.

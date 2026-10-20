@@ -1,0 +1,8 @@
+# Never commit the VM, the Windows ISO or the token
+*.iso
+*.qcow2
+*.img
+*.vhdx
+storage/
+claude-token.txt
+*.env

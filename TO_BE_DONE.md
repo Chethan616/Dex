@@ -20,6 +20,11 @@
 
 ## ▶ RESUME HERE — live work log (keep this block current; newest first)
 
+**2026-10-20 (later): prompts for public benchmarks, for a friend to run.**
+- **`benchmarks/waa/`:** Windows Agent Arena, all local and free. Claude Code (run with `--dangerously-skip-permissions --model opus`) installs WSL2, Ubuntu and Docker Engine (not Docker Desktop), then WAA and its Windows 11 evaluation VM. DEX runs **inside** the VM from source at the same commit, with `AGB_CDP_PORT=9225`, `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`, Full access, and Desktop control on. A `dex` agent in WAA hands each instruction to `waa-task.mjs` in the VM (modelled on dex-bench's `dexAgent()`), so WAA's own runner does the resets and the scoring. Nothing is built yet; the friend's Claude builds it.
+- **`benchmarks/osworld/`:** the same idea for OSWorld (Ubuntu). DEX can't run there, so it gets an `osworld_*` MCP bridge (screenshots and pyautogui), and the score mostly measures Opus.
+- **Why WAA:** it shows DEX's own tools. OSWorld gets the most-cited number.
+
 **2026-10-20, owner's PC: DEX-Bench — DEX 24/24 on Opus 5.5.**
 - **The benchmark:** `benchmarks/dex-bench/`, OSWorld-style, 24 tasks on Windows. It has a local deterministic site, an end-state checker per task (`selftest.mjs` proves them all), `run.mjs` (drives DEX through the hub, or the plain CLI) and `report.mjs`.
 - **Result:** DEX with the Claude Code engine, `claude-opus-5-5`, passed **24/24**: median 39 s and 4 steps a task, 21.5 min total. Results are in `results/`; the shareable page is a claude.ai artifact.
