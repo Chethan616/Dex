@@ -3897,9 +3897,12 @@ app.whenReady().then(async () => {
   ipcMain.handle('sessions:view-detach', (_event, id: string) => {
     const validatedId = assertString(id, 'id', 100);
     if (!shellWindow) return false;
-    mainLogger.info('main.sessions:view-detach', { id: validatedId });
     takeoverOverlay.hide(validatedId, shellWindow);
-    return browserPool.detachFromWindow(validatedId, shellWindow);
+    // The pane re-sends a detach on every re-layout while its chat is in
+    // front (AgentPane forceSync); only one that took a view away is news.
+    const detached = browserPool.detachFromWindow(validatedId, shellWindow);
+    if (detached) mainLogger.info('main.sessions:view-detach', { id: validatedId });
+    return detached;
   });
 
   // ---- Takeover overlay (pulsing glow + stop-and-take-over button) ----

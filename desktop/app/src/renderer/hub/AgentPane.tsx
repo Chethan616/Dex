@@ -862,8 +862,19 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
     // whatever the previous instance left attached.
     let lastKey = '';
     let rafScheduled = 0;
+    // This instance's decisions are only good while it's the current one: a
+    // click that focuses the window often also switches the tab (Chat), and
+    // the focus re-layout's timers below must not run this instance's old
+    // "the page is in front" choice after the switch (it re-attached the page
+    // over the chat, at its old size, and a maximize then left it there).
+    let disposed = false;
+    const timers = new Set<ReturnType<typeof setTimeout>>();
+    // A layout change asks for a full re-sync: attach if the page is in
+    // front, detach if not — even if this instance thinks it's already gone.
+    let forceSync = false;
     const applyBounds = () => {
       rafScheduled = 0;
+      if (disposed) return;
       const outEl = paneEl.querySelector('.pane__output') as HTMLElement | null;
       if (!outEl) return;
       const computed = computeBounds();
@@ -879,12 +890,14 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
         // The chat or the New-tab page owns the rect: the page steps aside
         // (to the stage, where the agent can still use it). Bounds measurement below still runs, so it's
         // positioned exactly where the browser would have been.
-        if (hasAttachedRef.current) {
+        if (hasAttachedRef.current || (forceSync && session.hasBrowser !== false)) {
           hasAttachedRef.current = false;
           attachSucceededRef.current = false;
           api.sessions.viewDetach(session.id).catch(() => {});
         }
-      } else if (!hasAttachedRef.current) {
+        forceSync = false;
+      } else if (!hasAttachedRef.current || forceSync) {
+        forceSync = false;
         hasAttachedRef.current = true;
         api.sessions.viewAttach(session.id, bounds).then((ok) => {
           attachSucceededRef.current = ok;
@@ -939,25 +952,30 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
     // pane:layout-change when the session list or grid layout changes — we
     // re-read bounds across a few frames to catch any CSS transition.
     const onLayoutChange = () => {
-      // Layout just changed (grid columns, page, session list). Force the next
-      // bounds call through the viewAttach path so if the WebContentsView was
-      // silently detached (e.g. by temporarilyDetachAll for pill/settings), it
-      // gets re-added. Bounds are always set BEFORE addChildView so there's no
-      // stale-position flash.
-      hasAttachedRef.current = false;
+      // Layout just changed (grid columns, page, session list, a maximize).
+      // Force the next bounds call through a full attach — or, with the chat
+      // in front, a detach — so a view that was silently detached (e.g. by
+      // temporarilyDetachAll for pill/settings) gets re-added, and one that's
+      // still on screen behind the chat goes. Bounds are always set BEFORE
+      // addChildView so there's no stale-position flash.
+      forceSync = true;
       lastKey = '';
       updateBounds();
       requestAnimationFrame(updateBounds);
-      setTimeout(updateBounds, 120);
+      const t = setTimeout(() => { timers.delete(t); updateBounds(); }, 120);
+      timers.add(t);
     };
     window.addEventListener('pane:layout-change', onLayoutChange);
 
     return () => {
+      disposed = true;
       observer.disconnect();
       window.removeEventListener('pane:layout-change', onLayoutChange);
       if (rafScheduled) cancelAnimationFrame(rafScheduled);
+      for (const t of timers) clearTimeout(t);
+      timers.clear();
     };
-  }, [session.id, computeBounds, browserDead, session.status, session.primarySite, surfaceActive]);
+  }, [session.id, computeBounds, browserDead, session.status, session.primarySite, session.hasBrowser, surfaceActive]);
 
   useEffect(() => {
     return () => {
