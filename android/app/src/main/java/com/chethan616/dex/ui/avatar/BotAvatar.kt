@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -26,14 +27,12 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
@@ -52,12 +51,14 @@ import kotlin.random.Random
  * components/lib/botMood.ts):
  *
  *  - Idle       awake, blinking, glancing round, the odd happy hop
- *  - Thinking   eyes up and to the side, a small "hmm", thought dots
- *  - Working    hopping with a grin
- *  - NeedsYou   wide eyes on you, raised brows, a pulsing "!", eager hops
+ *  - Thinking   one eye squinting, a swirl in the eyes, a sideways "hmm", thought dots
+ *  - Working    focused lids, tongue out, hopping
+ *  - NeedsYou   hopeful puppy eyes, a double eyebrow-raise, eager hops
  *  - Happy      ^ ^ eyes, a big open smile, a jump, sparkles
- *  - Sad        droopy brows, a frown, a sweat drop, a little grey
- *  - Sleeping   eyes shut, slow breaths, z's
+ *  - Sad        worried lids and brows, a frown, a tear, a little grey
+ *  - Sleeping   eyes shut, slow breaths, a sleep bubble
+ *
+ * The face is BotFace.kt, the same rig as the desktop's.
  */
 enum class BotMood { Idle, Thinking, Working, NeedsYou, Happy, Sad, Sleeping }
 
@@ -93,18 +94,15 @@ fun moodFor(status: String?): BotMood = when (status) {
   else -> BotMood.Idle
 }
 
-private val AMBER = Color(0xFFF5A623)
 private val SPARKLE = Color(0xFFFFD24A)
 private val SPARKLE_COOL = Color(0xFF7FD8FF)
 private val SWEAT = Color(0xFF7CC4F5)
-/** A soft periwinkle that reads on light and dark screens alike. */
-private val SLEEPY = Color(0xFF8EA2F2)
 
 /**
  * A living bot: breathes, blinks, glances around, tilts its head toward where
- * it's looking, and wears its mood — each with its own face, its own way of
- * moving, and a little accent (thought dots, a "!", sparkles, a sweat drop,
- * z's). It jumps when tapped. Drawn from the bot-avatars outlines with a soft
+ * it's looking, and wears its mood — each with its own face (lids, brows,
+ * mouth, blush; BotFace.kt), its own way of moving, and for some a little
+ * accent (thought dots, sparkles, a sweat drop). It jumps when tapped. Drawn from the bot-avatars outlines with a soft
  * lit-plastic shading — no bitmaps, crisp at any size.
  */
 @Composable
@@ -130,7 +128,7 @@ fun BotAvatar(
   val grey by animateFloatAsState(if (mood == BotMood.Sad) 0.32f else 0f, tween(900), label = "grey")
   val base = color ?: Color(shape.color)
   val bodyColor = lerp(base, Color(0xFF8C9199), grey)
-  val ink = if (base.luminance() > 0.45f) Color(0xFF15161A) else Color(0xFFF8F8FA)
+  val ink = inkFor(base)
   val haptics = LocalHaptics.current
   val scope = rememberCoroutineScope()
   val seed = remember(type) { Random(type.hashCode()) }
@@ -158,6 +156,28 @@ fun BotAvatar(
     animationSpec = infiniteRepeatable(tween(1300, easing = LinearEasing), RepeatMode.Restart),
     label = "beatPhase",
   )
+  // The face's own clock: the eyebrow-raise, the thinking swirl, the twinkle.
+  val nudgePhase = if (still) null else rememberInfiniteTransition(label = "nudge").animateFloat(
+    initialValue = 0f,
+    targetValue = 1f,
+    animationSpec = infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Restart),
+    label = "nudgePhase",
+  )
+
+  // The face eases from mood to mood: the lids, brows and mouth move, they don't swap.
+  val faceFrom = remember { mutableStateOf(faceFor(mood)) }
+  val faceTo = remember { mutableStateOf(faceFor(mood)) }
+  val faceMix = remember { Animatable(1f) }
+  LaunchedEffect(mood) {
+    val target = faceFor(mood)
+    if (target == faceTo.value) return@LaunchedEffect
+    faceFrom.value = lerpFace(faceFrom.value, faceTo.value, faceMix.value)
+    faceTo.value = target
+    if (still) faceMix.snapTo(1f) else {
+      faceMix.snapTo(0f)
+      faceMix.animateTo(1f, tween(380, easing = FastOutSlowInEasing))
+    }
+  }
 
   suspend fun jump(height: Float) {
     squash.animateTo(0.86f, tween(90, easing = FastOutSlowInEasing))
@@ -173,7 +193,7 @@ fun BotAvatar(
     // The mood's resting pose, set once.
     LaunchedEffect(mood) {
       accent.snapTo(1f)
-      eyeOpen.snapTo(when (mood) { BotMood.Sleeping -> 0f; BotMood.Thinking -> 0.72f; else -> 1f })
+      eyeOpen.snapTo(if (mood == BotMood.Sleeping) 0f else 1f)
       val (x, y) = when (mood) {
         BotMood.Sleeping -> 0f to 2.5f
         BotMood.Sad -> -1f to 2.2f
@@ -191,11 +211,11 @@ fun BotAvatar(
     accent.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow))
   }
 
-  // Blinking — never while asleep (lids are already shut) or beaming (^ ^).
+  // Blinking — never while asleep (lids are already shut). Thinking's squint
+  // is the face's own lid, not a half-open eye.
   LaunchedEffect(mood) {
     when (mood) {
       BotMood.Sleeping -> { eyeOpen.animateTo(0f, tween(400)); return@LaunchedEffect }
-      BotMood.Thinking -> eyeOpen.animateTo(0.72f, tween(300))
       else -> eyeOpen.animateTo(1f, tween(250))
     }
     val open = eyeOpen.value
@@ -312,7 +332,12 @@ fun BotAvatar(
               ),
             )
             drawPath(body, Color.White.copy(alpha = 0.18f), style = Stroke(width = 0.9f))
-            drawFace(mood, shape, ink, lookX.value, lookY.value, eyeOpen.value, large)
+            drawFace(
+              face = lerpFace(faceFrom.value, faceTo.value, faceMix.value),
+              shape = shape, ink = ink, lookX = lookX.value, lookY = lookY.value,
+              eyeOpen = eyeOpen.value, large = large,
+              breath = sin(phase), nudge = nudgePhase?.value ?: 0.5f,
+            )
           }
         }
       }
@@ -335,73 +360,6 @@ private fun moodLabel(mood: BotMood): String = when (mood) {
   BotMood.Sleeping -> "asleep"
 }
 
-/** The face, in the 100-unit body box. */
-internal fun DrawScope.drawFace(
-  mood: BotMood,
-  shape: BotShape,
-  ink: Color,
-  lookX: Float,
-  lookY: Float,
-  eyeOpen: Float,
-  large: Boolean,
-) {
-  val fs = shape.faceScale
-  val cx = shape.faceX + lookX
-  val cy = shape.faceY - 3f + lookY
-  val gap = 7.6f * fs
-  val w = 6.4f * fs
-  val fullH = 9.6f * fs
-  val line = Stroke(width = 1.6f * fs, cap = StrokeCap.Round)
-
-  when {
-    // Beaming: eyes squeezed into happy arcs, ^ ^.
-    mood == BotMood.Happy -> for (dx in floatArrayOf(-gap, gap)) {
-      drawArc(ink, startAngle = 200f, sweepAngle = 140f, useCenter = false, topLeft = Offset(cx + dx - w * 0.75f, cy - 2.2f * fs), size = Size(w * 1.5f, 5.5f * fs), style = Stroke(width = 1.9f * fs, cap = StrokeCap.Round))
-    }
-    mood == BotMood.Sleeping || eyeOpen < 0.12f -> for (dx in floatArrayOf(-gap, gap)) {
-      drawArc(ink, startAngle = 20f, sweepAngle = 140f, useCenter = false, topLeft = Offset(cx + dx - w * 0.7f, cy - 2f), size = Size(w * 1.4f, 4.5f * fs), style = line)
-    }
-    else -> {
-      val wide = if (mood == BotMood.NeedsYou) 1.14f else 1f
-      val h = fullH * eyeOpen * wide
-      val ew = w * wide
-      for (dx in floatArrayOf(-gap, gap)) {
-        drawRoundRect(ink, topLeft = Offset(cx + dx - ew / 2, cy - h / 2), size = Size(ew, h), cornerRadius = CornerRadius(ew / 2, ew / 2))
-        if (eyeOpen > 0.6f && ink.luminance() < 0.5f) {
-          drawCircle(Color.White.copy(alpha = 0.85f), radius = 1.1f * fs, center = Offset(cx + dx - ew * 0.12f, cy - h * 0.22f))
-        }
-      }
-    }
-  }
-
-  if (!large) return
-  val browY = cy - fullH * 0.5f - 3.4f * fs
-  when (mood) {
-    BotMood.Working -> // A wide grin.
-      drawArc(ink, startAngle = 15f, sweepAngle = 150f, useCenter = false, topLeft = Offset(cx - 5f * fs, cy + 5f * fs), size = Size(10f * fs, 6f * fs), style = Stroke(width = 1.7f * fs, cap = StrokeCap.Round))
-    BotMood.Happy -> { // A big open smile.
-      drawArc(ink, startAngle = 0f, sweepAngle = 180f, useCenter = true, topLeft = Offset(cx - 5.5f * fs, cy + 2.5f * fs), size = Size(11f * fs, 8f * fs))
-      drawArc(Color(0xFFFF7A8A), startAngle = 20f, sweepAngle = 140f, useCenter = true, topLeft = Offset(cx - 3f * fs, cy + 5.5f * fs), size = Size(6f * fs, 4.5f * fs))
-    }
-    BotMood.Thinking -> // A small "hmm", off to one side.
-      drawLine(ink, Offset(cx + 0.5f * fs, cy + 7.2f * fs), Offset(cx + 4.5f * fs, cy + 6.4f * fs), strokeWidth = 1.6f * fs, cap = StrokeCap.Round)
-    BotMood.NeedsYou -> { // Raised brows and a little "o".
-      for (dx in floatArrayOf(-gap, gap)) {
-        drawLine(ink, Offset(cx + dx - w * 0.55f, browY - 0.6f * fs), Offset(cx + dx + w * 0.55f, browY - 1.4f * fs), strokeWidth = 1.5f * fs, cap = StrokeCap.Round)
-      }
-      drawOval(ink, topLeft = Offset(cx - 1.8f * fs, cy + 5.2f * fs), size = Size(3.6f * fs, 4.2f * fs))
-    }
-    BotMood.Sad -> { // Brows that slope down to the sides, and a frown.
-      for (sign in floatArrayOf(-1f, 1f)) {
-        val x = cx + sign * gap
-        drawLine(ink, Offset(x - sign * w * 0.6f, browY - 1.2f * fs), Offset(x + sign * w * 0.6f, browY + 0.6f * fs), strokeWidth = 1.5f * fs, cap = StrokeCap.Round)
-      }
-      drawArc(ink, startAngle = 200f, sweepAngle = 140f, useCenter = false, topLeft = Offset(cx - 4.5f * fs, cy + 6.5f * fs), size = Size(9f * fs, 5.5f * fs), style = Stroke(width = 1.6f * fs, cap = StrokeCap.Round))
-    }
-    else -> Unit
-  }
-}
-
 /** The accent beside the head, in the 100-unit box: pops in with the mood. */
 internal fun DrawScope.drawAccent(mood: BotMood, ink: Color, phase: Float, beat: Float, pop: Float) {
   if (pop <= 0.01f) return
@@ -414,16 +372,6 @@ internal fun DrawScope.drawAccent(mood: BotMood, ink: Color, phase: Float, beat:
         val t = ((beat * 3f - i) % 3f + 3f) % 3f
         val up = if (t < 1f) sin(t * PI.toFloat()) * 2.2f else 0f
         drawCircle(Color(0xFF55595F).copy(alpha = 0.55f + up / 5f), radius = 2f, center = Offset(75f + i * 6f, 12.5f - up))
-      }
-    }
-    BotMood.NeedsYou -> {
-      val pulse = 1f + 0.12f * sin(beat * 2f * PI.toFloat())
-      val ring = beat
-      drawCircle(AMBER.copy(alpha = 0.35f * (1f - ring)), radius = 10f + 8f * ring, center = Offset(84f, 14f))
-      scale(pop * pulse, pivot = Offset(84f, 14f)) {
-        drawCircle(AMBER, radius = 9.5f, center = Offset(84f, 14f))
-        drawLine(Color(0xFF1A1206), Offset(84f, 8.5f), Offset(84f, 15.5f), strokeWidth = 3f, cap = StrokeCap.Round)
-        drawCircle(Color(0xFF1A1206), radius = 1.7f, center = Offset(84f, 19.5f))
       }
     }
     BotMood.Happy -> {
@@ -448,17 +396,6 @@ internal fun DrawScope.drawAccent(mood: BotMood, ink: Color, phase: Float, beat:
       drawPath(drop, SWEAT.copy(alpha = a))
       drawCircle(Color.White.copy(alpha = 0.7f * a), radius = 1f, center = Offset(84.6f, y))
     }
-    BotMood.Sleeping -> {
-      // Two z's drifting up and away.
-      for (i in 0 until 2) {
-        val t = ((phase / (2f * PI.toFloat())) + i * 0.5f) % 1f
-        val s = (7f - i * 2f) * (0.7f + 0.4f * t)
-        val x = 78f + 8f * t + i * 5f
-        val y = 26f - 22f * t - i * 4f
-        val a = (if (t < 0.2f) t / 0.2f else 1f - (t - 0.2f) / 0.8f) * pop
-        drawZ(Offset(x, y), s, SLEEPY.copy(alpha = 0.9f * a))
-      }
-    }
     else -> Unit
   }
 }
@@ -473,14 +410,4 @@ private fun DrawScope.drawSparkle(c: Offset, r: Float, color: Color) {
     close()
   }
   drawPath(path, color)
-}
-
-private fun DrawScope.drawZ(at: Offset, s: Float, color: Color) {
-  val path = Path().apply {
-    moveTo(at.x, at.y)
-    lineTo(at.x + s, at.y)
-    lineTo(at.x, at.y + s)
-    lineTo(at.x + s, at.y + s)
-  }
-  drawPath(path, color, style = Stroke(width = s * 0.22f, cap = StrokeCap.Round))
 }

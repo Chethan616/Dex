@@ -14,7 +14,6 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
@@ -36,7 +35,7 @@ fun botStill(type: String, mood: BotMood, px: Int, lookX: Float = 0f, hop: Float
   val base = tint?.let { Color(it) } ?: Color(shape.color)
   // A sad bot loses a little colour, as in BotAvatar.
   val bodyColor = if (mood == BotMood.Sad) lerp(base, Color(0xFF8C9199), 0.32f) else base
-  val ink = if (base.luminance() > 0.45f) Color(0xFF15161A) else Color(0xFFF8F8FA)
+  val ink = inkFor(base)
   val image = ImageBitmap(px, px)
   CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(image), Size(px.toFloat(), px.toFloat())) {
     scale(px / 100f, px / 100f, pivot = Offset.Zero) {
@@ -52,7 +51,7 @@ fun botStill(type: String, mood: BotMood, px: Int, lookX: Float = 0f, hop: Float
           )
           drawPath(body, Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.2f)), startY = 48f, endY = 96f))
           drawPath(body, Color.White.copy(alpha = 0.18f), style = Stroke(width = 0.9f))
-          drawFace(mood, shape, ink, lookX, 0f, 1f, large = true)
+          drawFace(faceFor(mood), shape, ink, lookX, 0f, if (mood == BotMood.Sleeping) 0f else 1f, large = true)
         }
         drawAccent(mood, ink, phase = 0f, beat = 0.25f, pop = 1f)
       }

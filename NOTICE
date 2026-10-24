@@ -34,7 +34,9 @@ their licenses ask to be carried:
 
 * Thinking orbs (android/orbs) — Copyright (c) 2026 Jakub Antalik. MIT License,
   android/orbs/LICENSE. Bot avatar outlines — bot-avatars by Libraries.dev,
-  (c) Jakub Antalik, MIT License.
+  (c) Jakub Antalik, MIT License; the desktop copy is vendored and modified
+  (DEX's expressive faces) in desktop/app/src/renderer/components/lib/bot-avatars,
+  LICENSE beside it.
 
 * <model-viewer> (android/app/src/main/assets/viewer) — Copyright Google LLC.
   Apache License 2.0, LICENSE-model-viewer.txt in that folder.

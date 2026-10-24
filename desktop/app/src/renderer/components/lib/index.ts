@@ -1,5 +1,6 @@
 export { Orb, OrbLabel, type OrbProps, type OrbState } from './Orb';
 export { AgentAvatar, avatarTypeFor, avatarStateFor, type AgentAvatarProps } from './AgentAvatar';
+export { botExpressions, type BotExpression } from './bot-avatars/expressions';
 export { TaskAvatar, type TaskAvatarProps } from './TaskAvatar';
 export { moodFor, liveMood, useBotMood, HAPPY_MS, type BotMood, type MoodSource } from './botMood';
 export { NewBadge, MetalButton, MetalWordmark, type MetalButtonProps } from './Metal';

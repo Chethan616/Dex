@@ -326,8 +326,9 @@
 
 /* ------------------------------------------------------------ Bot moods
  * Accents beside a task bot's head (AgentAvatar `mood`, botMood.ts): thought
- * dots, a "!", sparkles, a sweat drop, floating z's. Everything scales with
- * the avatar (--avatar-size) and sits outside its box, so layouts don't move.
+ * dots, sparkles, a sweat drop. Needing you and sleeping have none: the face
+ * itself says those (bot-avatars/expressions.ts). Everything scales with the
+ * avatar (--avatar-size) and sits outside its box, so layouts don't move.
  */
 .lib-mood-host {
   position: relative;
@@ -368,25 +369,6 @@
 .lib-mood--thinking i:nth-child(3) { animation-delay: 0.3s; }
 @keyframes lib-mood-dot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.45; } 30% { transform: translateY(-30%); opacity: 1; } }
 
-/* Needs you: an amber "!" that pulses. */
-.lib-mood--needs-you {
-  top: calc(-6 * var(--u));
-  right: calc(-6 * var(--u));
-  display: grid;
-  place-items: center;
-  width: calc(10 * var(--u));
-  height: calc(10 * var(--u));
-  min-width: 9px;
-  min-height: 9px;
-  border-radius: 50%;
-  background: #f5a623;
-  color: #1a1206;
-  font: 800 calc(7.5 * var(--u))/1 var(--font-ui, system-ui, sans-serif);
-  box-shadow: 0 0 0 0 rgba(245, 166, 35, 0.55);
-  animation: lib-mood-pulse 1.4s ease-out infinite;
-}
-@keyframes lib-mood-pulse { 70% { box-shadow: 0 0 0 calc(5 * var(--u)) rgba(245, 166, 35, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 166, 35, 0); } }
-
 /* Happy: sparkles that twinkle round the head. */
 .lib-mood--happy { inset: calc(-6 * var(--u)); }
 .lib-mood--happy i {
@@ -417,27 +399,8 @@
 }
 @keyframes lib-mood-sweat { 0% { transform: translateY(0) scale(0.6); opacity: 0; } 20% { opacity: 1; transform: translateY(0) scale(1); } 80% { opacity: 1; } 100% { transform: translateY(calc(7 * var(--u))) scale(0.9); opacity: 0; } }
 
-/* Sleeping: z's floating up. */
-.lib-mood--sleeping {
-  top: calc(-8 * var(--u));
-  right: calc(-6 * var(--u));
-  width: calc(10 * var(--u));
-  height: calc(12 * var(--u));
-}
-.lib-mood--sleeping i {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  font: italic 800 calc(6 * var(--u))/1 var(--font-ui, system-ui, sans-serif);
-  color: var(--color-fg-tertiary, #6e737d);
-  animation: lib-mood-z 2.8s ease-out infinite;
-}
-.lib-mood--sleeping i:nth-child(2) { left: 40%; font-size: calc(4.5 * var(--u)); animation-delay: 1.4s; }
-@keyframes lib-mood-z { 0% { transform: translate(0, 0) scale(0.6); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(calc(4 * var(--u)), calc(-8 * var(--u))) scale(1.1); opacity: 0; } }
-
 /* Tiny avatars (sidebar rows) keep only the clearest accents. */
-.lib-mood-host[style*="--avatar-size: 14px"] .lib-mood--happy,
-.lib-mood-host[style*="--avatar-size: 14px"] .lib-mood--sleeping { display: none; }
+.lib-mood-host[style*="--avatar-size: 14px"] .lib-mood--happy { display: none; }
 
 .lib-mood-host--still .lib-mood,
 .lib-mood-host--still .lib-mood i { animation: none; }
