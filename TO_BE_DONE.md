@@ -20,6 +20,12 @@
 
 ## ▶ RESUME HERE — live work log (keep this block current; newest first)
 
+**2026-10-24: v2.3.0 released (desktop 2.3.0, Android 2.3.0 / versionCode 44), tagged at `b013286a` on main.**
+- **Desktop control:** every app now stays off-screen like Notepad. Store apps (Calculator) activated themselves on launch, and the watcher took that, plus any input, for the user taking the window (centred it on screen, DEX `held`). DexDesk.cs now has `Settle`, `Contain`, a WinEvent foreground hook with `TakenByUser`, and `AdoptNewWindows` (dialogs). Exe names resolve through the PATH and App Paths, and launches use `SEE_MASK_FLAG_NO_UI`. Measured live; see `docs/desktop-control/PLAN.md` §4.1.3. This fixes the "Known DEX issue" in `benchmarks/waa/PROMPT.md`.
+- **Release:** CI built `dex-setup.exe`, the nupkg and RELEASES. `DEX-android-2.3.0.apk` was built and signed locally (cert `2f727fa5…`) and uploaded. Notes were written by hand in the 2.2 style. The nupkg's app.asar was checked: the new DexDesk.cs, version 2.3.0, and the new desktop.md text in the main chunk.
+- **Main:** waa-benchmark's 3 commits went to main without AI trailers (same trees). The waa-benchmark branch on GitHub still has the old ones.
+- **Not done:** no Play bundle was built for 44 (next Play upload ≥ 44). The `TOBEDONE.MD` deletion is left unstaged (an old RUST-APP prompt; ask before removing it). `unify` wasn't moved to the new main.
+
 **2026-10-21 (night): one copy of the report per student.**
 - **Build:** `review/report/revised/build_copies.py` writes `review/report/individual/Multi Agent Framework Report - <name> (<reg>) - Word.docx` and `- LaTeX.pdf` for each student, from `content.COPIES`.
 - **Per-copy differences:**
