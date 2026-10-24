@@ -33,7 +33,7 @@ Checked on 2026-10-07. Re-run the dependency scan with `yarn licenses:scan` in
 | Browser Use desktop app | `desktop/` (where DEX started) | MIT | Notice kept in `desktop/LICENSE-browser-use` |
 | Browser Use browser-harness | `desktop/app/src/main/hl/stock/` (browser harness, domain skills) | MIT | Synced by `scripts/sync-domain-skills.mjs` |
 | Thinking orbs | `android/orbs` | MIT | `android/orbs/LICENSE` |
-| Bot avatars (Libraries.dev) | `android/…/ui/avatar/BotShapes.kt`, desktop avatars | MIT | Credited in the phone's Settings › About |
+| Bot avatars (Libraries.dev) | `android/…/ui/avatar/BotShapes.kt`; desktop avatars, vendored and modified in `desktop/app/src/renderer/components/lib/bot-avatars/` (DEX's expressive faces) | MIT | Credited in the phone's Settings › About; `LICENSE` kept beside the vendored copy |
 | `<model-viewer>` | `android/app/src/main/assets/viewer` | Apache-2.0 | `LICENSE-model-viewer.txt` beside it |
 | Material Symbols (Rounded) | `android/app/src/main/res/drawable/ic_task_*.xml` | Apache-2.0 | |
 | Material Symbols (Outlined) "extension" | `desktop/app/src/renderer/hub/icons/PuzzleIcon.tsx` (the puzzle piece Chrome's toolbar uses) | Apache-2.0 | Path data only |

@@ -10,8 +10,14 @@
  * happy, sad, asleep. bot-avatars draws three states itself — awake, working
  * (hops, spins, a laugh) and sleeping — so each mood picks one of those, tunes
  * the motion (eager hops when it needs you, slow and grey when it failed), and
- * adds a small accent beside the head: thought dots, a "!", sparkles, a sweat
- * drop, floating z's. Without a mood, `status` drives it as before.
+ * adds a small accent beside the head for some: thought dots, sparkles, a
+ * sweat drop. Without a mood, `status` drives it as before.
+ *
+ * The face is DEX's own (bot-avatars/expressions.ts, in the vendored copy):
+ * each mood also sets an expression (lids, brows, mouth, blush) that eases
+ * in, and `expression` can override it for a moment (a wink, a laugh).
+ * Needing you and sleeping are said by the face, not by text: hopeful
+ * puppy eyes with a double eyebrow-raise, and a sleep bubble that breathes.
  *
  * Alive by default: every avatar animates (`animate={false}` freezes one).
  * The cost is kept down where there are many — small avatars use the
@@ -20,7 +26,8 @@
  */
 
 import React, { useEffect, useImperativeHandle, useRef } from 'react';
-import { BotAvatar, botAvatarTypes, type BotAvatarType, type BotAvatarState } from 'bot-avatars';
+// Vendored (MIT) so the face can be ours: lids, brows, expressive mouths.
+import { BotAvatar, botAvatarTypes, type BotAvatarType, type BotAvatarState, type BotExpression } from './bot-avatars';
 import { useLibTheme } from '../../design/useLibTheme';
 import type { BotMood } from './botMood';
 
@@ -67,12 +74,34 @@ const MOOD_MOTION: Record<BotMood, { state: BotAvatarState; speed?: number; turn
   sleeping: { state: 'sleeping' },
 };
 
+/**
+ * The face each mood wears (bot-avatars/expressions.ts). Lids and brows do
+ * most of the work: smiling eyes at rest, a squint and a swirl while
+ * thinking, focused lids and a tongue out while working, hopeful puppy eyes
+ * while it waits on you, worried lids and a frown when it failed, a sleep
+ * bubble while it dozes.
+ */
+const MOOD_EXPRESSION: Record<BotMood, BotExpression> = {
+  awake: 'content',
+  thinking: 'thinking',
+  working: 'focused',
+  'needs-you': 'hopeful',
+  happy: 'happy',
+  sad: 'sad',
+  sleeping: 'sleepy',
+};
+
 export interface AgentAvatarProps {
   engineId?: string | null;
   sessionId?: string | null;
   status?: string | null;
   /** What the task is doing (botMood.ts). Wins over `status`. */
   mood?: BotMood;
+  /**
+   * The face, overriding the mood's own: e.g. `wink` for DEX's 👍, `love`
+   * for ❤️, `laugh` for 😂, `listening` while the mic is open.
+   */
+  expression?: BotExpression;
   /** Explicit shape, overriding the engine/session mapping. */
   type?: BotAvatarType;
   size?: number;
@@ -94,14 +123,10 @@ function Accent({ mood }: { mood: BotMood }): React.ReactElement | null {
   switch (mood) {
     case 'thinking':
       return <span className="lib-mood lib-mood--thinking" aria-hidden="true"><i /><i /><i /></span>;
-    case 'needs-you':
-      return <span className="lib-mood lib-mood--needs-you" aria-hidden="true">!</span>;
     case 'happy':
       return <span className="lib-mood lib-mood--happy" aria-hidden="true"><i /><i /><i /></span>;
     case 'sad':
       return <span className="lib-mood lib-mood--sad" aria-hidden="true" />;
-    case 'sleeping':
-      return <span className="lib-mood lib-mood--sleeping" aria-hidden="true"><i>z</i><i>z</i></span>;
     default:
       return null;
   }
@@ -122,7 +147,7 @@ const MOOD_LABEL: Record<BotMood, string> = {
  * round, as a click does — the chat's "done!" when a reply lands.
  */
 export const AgentAvatar = React.forwardRef<HTMLCanvasElement, AgentAvatarProps>(function AgentAvatar({
-  engineId, sessionId, status, mood, type, size = 24, interactive, animate = true, face, color,
+  engineId, sessionId, status, mood, expression, type, size = 24, interactive, animate = true, face, color,
   className, label, whirl,
 }, ref): React.ReactElement {
   const theme = useLibTheme();
@@ -146,10 +171,10 @@ export const AgentAvatar = React.forwardRef<HTMLCanvasElement, AgentAvatarProps>
       type={type ?? avatarTypeFor(engineId, sessionId)}
       state={state}
       size={size}
-      // The mouth carries the expression (smile while working, a yawn
-      // asleep); below ~20px it's a smudge, so eyes only there.
-      // Thinking and sad don't smile.
-      face={face ?? (size >= 20 && mood !== 'sad' && mood !== 'thinking' ? 'mouth' : 'eyes')}
+      // The mouth carries half the expression (a grin, a frown, a "hmm",
+      // a tongue out while working); below ~20px it's a smudge, so eyes only.
+      face={face ?? (size >= 20 ? 'mouth' : 'eyes')}
+      expression={expression ?? (mood ? MOOD_EXPRESSION[mood] : 'content')}
       theme={theme}
       color={color ?? undefined}
       seed={seed}

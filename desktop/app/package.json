@@ -121,7 +121,6 @@
     "ajv": "^8.18.0",
     "better-sqlite3": "^12.9.0",
     "border-beam": "1.4.1",
-    "bot-avatars": "0.1.1",
     "docx-preview": "^0.4.1",
     "dotenv": "^17.4.2",
     "electron-squirrel-startup": "^1.0.1",

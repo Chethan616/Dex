@@ -3178,11 +3178,6 @@ border-beam@1.4.1:
   resolved "https://registry.yarnpkg.com/border-beam/-/border-beam-1.4.1.tgz#74cced9e679571c4c85db75de2b387eb243f206d"
   integrity sha512-YyugmKjrhkg1PBC1ZKX7JvFo/zYzha6NXOq24VWrnvBYmDRvGCgFS9oxZoKJ+oS9Kn436l1etYGlAdGiWK+3ag==
 
-bot-avatars@0.1.1:
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/bot-avatars/-/bot-avatars-0.1.1.tgz#9df2db0f8ac089d65cf980367948d66eb7a497c8"
-  integrity sha512-J1gamb44dLXWViX6N+qz8wQyMmVUEtv9GrrHXo+xP3GlzbVzPTO4g+bWme0F9OXpX31nyDXSnUG9/mctUi7t3w==
-
 bplist-creator@~0.0.3:
   version "0.0.8"
   resolved "https://registry.npmjs.org/bplist-creator/-/bplist-creator-0.0.8.tgz"
