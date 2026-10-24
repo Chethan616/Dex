@@ -20,7 +20,7 @@ const read = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
 const ok = (pass, why) => ({ pass: Boolean(pass), why });
 const num = (s) => Number(String(s).replace(/[₹$,\s]/g, ''));
 /** The agent's reply says it can't / it isn't there, without making something up. */
-const SAYS_NO = /(not (found|exist|available|possible|supported|an option|offered|listed|there)|does ?n[o']t (exist|have|offer|support)|doesn't|isn't (there|available|an option|possible)|no such|couldn't find|could not find|can't find|cannot find|can't|cannot|unable|unavailable|only (offers|has|supports|lists)|missing)/i;
+const SAYS_NO = /(not (found|exist|available|possible|supported|an option|offered|listed|there)|does ?n[o'’]t (exist|have|offer|support)|doesn['’]t|isn['’]t (there|available|an option|possible)|couldn['’]t|could not|isn['’]t in|is not in|no such|couldn['’]t find|could not find|can['’]t find|cannot find|can['’]t|cannot|unable|unavailable|only (offers|has|supports|lists)|missing)/i;
 
 export const TASKS = [
   /* ── Web (DEX's browser on the local site) ───────────────────────── */

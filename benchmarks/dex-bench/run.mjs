@@ -2,6 +2,8 @@
 //
 //   node run.mjs --agent dex            DEX (Claude Code engine, Opus), driven through the hub
 //   node run.mjs --agent claude-code    plain Claude Code CLI, same model, same prompts (baseline)
+//   node run.mjs --agent dex-codex      DEX (Codex engine), driven through the hub
+//   node run.mjs --agent codex          plain Codex CLI, same model and flags, no DEX (baseline)
 //   options: --only id,id  --timeout 900  --root C:\Users\you\DEX-Bench  --cdp 9224  --model opus
 //
 // DEX must be running with a CDP port for the hub (AGB_CDP_PORT=9224). For the
@@ -18,6 +20,7 @@ import { TASKS } from './tasks.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const arg = (name, def) => { const i = process.argv.indexOf(`--${name}`); return i > 0 ? process.argv[i + 1] : def; };
 const AGENT = arg('agent', 'dex');
+const ENGINE = AGENT === 'dex-codex' ? 'codex' : 'claude-code';
 const MODEL = arg('model', 'opus');
 const ONLY = arg('only', '')?.split(',').filter(Boolean);
 const TIMEOUT_S = Number(arg('timeout', 900));
@@ -47,10 +50,10 @@ async function dexAgent() {
   await hub.evaluate(() => window.electronAPI.settings.approvals.set('full'));
   log('DEX approval mode', before.mode, '→ full for the run');
   return {
-    name: `DEX (Claude Code engine, ${MODEL})`,
+    name: `DEX (${ENGINE} engine${ENGINE === 'claude-code' ? `, ${MODEL}` : ''})`,
     async run(prompt) {
       const t0 = Date.now();
-      const id = await hub.evaluate(({ prompt, model }) => window.electronAPI.sessions.create({ prompt, engine: 'claude-code', model }), { prompt, model: MODEL });
+      const id = await hub.evaluate(({ prompt, model, engine }) => window.electronAPI.sessions.create({ prompt, engine, ...(engine === 'claude-code' ? { model } : {}) }), { prompt, model: MODEL, engine: ENGINE });
       await hub.evaluate((id) => window.electronAPI.sessions.start(id), id);
       let s = null;
       while (Date.now() - t0 < TIMEOUT_S * 1000) {
@@ -114,6 +117,47 @@ function claudeCodeAgent() {
   };
 }
 
+// The Codex CLI with the flags DEX's Codex engine uses (`exec --json`, approvals
+// and sandbox bypassed, the configured model), but none of DEX's tools, MCP
+// servers or prompt: what a user gets from Codex alone.
+function codexAgent() {
+  return {
+    name: 'Codex CLI alone (configured model)',
+    run(prompt, dir) {
+      return new Promise((resolve) => {
+        const t0 = Date.now();
+        const child = spawn('codex', ['exec', '--json', '--skip-git-repo-check', '--dangerously-bypass-approvals-and-sandbox', '-C', dir, '-'],
+          { cwd: dir, env: process.env, shell: true, windowsHide: true });
+        child.stdin.end(prompt);
+        let buf = '';
+        child.stdout.on('data', (d) => { buf += d; });
+        child.stderr.on('data', () => {});
+        const timer = setTimeout(() => { child.kill(); }, TIMEOUT_S * 1000);
+        child.on('close', () => {
+          clearTimeout(timer);
+          let answer = '', steps = 0, inputTokens = 0, cachedInputTokens = 0, outputTokens = 0, error;
+          for (const line of buf.split(/\r?\n/)) {
+            let e; try { e = JSON.parse(line); } catch { continue; }
+            const item = e.item ?? {};
+            if (e.type === 'item.completed' && (item.type === 'agent_message' || item.type === 'assistant_message')) answer = String(item.text ?? answer);
+            else if (e.type === 'item.completed' && item.type && item.type !== 'reasoning') steps += 1;
+            else if (e.type === 'turn.completed' && e.usage) {
+              inputTokens += e.usage.input_tokens ?? 0; cachedInputTokens += e.usage.cached_input_tokens ?? 0; outputTokens += e.usage.output_tokens ?? 0;
+            } else if (e.type === 'error' || e.type === 'turn.failed') error = String(e.message ?? e.error?.message ?? 'error');
+          }
+          resolve({
+            answer: answer || error || buf.slice(-2000),
+            timedOut: Date.now() - t0 >= TIMEOUT_S * 1000,
+            seconds: Math.round((Date.now() - t0) / 1000),
+            steps, error, inputTokens, cachedInputTokens, outputTokens,
+          });
+        });
+      });
+    },
+    async close() {},
+  };
+}
+
 /* ── The plan's usage limit ──────────────────────────────────────── */
 // "You've hit your session limit · resets 6:40pm (Asia/Kolkata)": not a
 // result. Wait for the reset and run the task again.
@@ -135,7 +179,7 @@ await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
 log('site on', SITE);
 const sys = sysFacts();
 log('this PC:', JSON.stringify(sys));
-const agent = AGENT === 'dex' ? await dexAgent() : claudeCodeAgent();
+const agent = AGENT === 'dex' || AGENT === 'dex-codex' ? await dexAgent() : AGENT === 'codex' ? codexAgent() : claudeCodeAgent();
 const results = [];
 const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 const outFile = path.join(HERE, 'results', `${AGENT}-${stamp}.json`);
@@ -172,7 +216,7 @@ try {
     const row = { id: task.id, category: task.category, prompt, ...r, pass: verdict.pass, why: verdict.why };
     results.push(row);
     log(`${verdict.pass ? '✔ PASS' : '✘ FAIL'} ${task.id} · ${r.seconds}s · ${r.steps ?? '?'} steps · ${verdict.why}`);
-    fs.writeFileSync(outFile, JSON.stringify({ agent: agent.name, model: MODEL, startedAt: stamp, sys, results }, null, 2));
+    fs.writeFileSync(outFile, JSON.stringify({ agent: agent.name, model: ENGINE === 'codex' || AGENT === 'codex' ? 'Codex configured model' : MODEL, startedAt: stamp, sys, results }, null, 2));
   }
 } finally {
   await agent.close();

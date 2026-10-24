@@ -20,6 +20,49 @@
 
 ## ▶ RESUME HERE — live work log (keep this block current; newest first)
 
+**2026-10-21 (night): one copy of the report per student.**
+- **Build:** `review/report/revised/build_copies.py` writes `review/report/individual/Multi Agent Framework Report - <name> (<reg>) - Word.docx` and `- LaTeX.pdf` for each student, from `content.COPIES`.
+- **Per-copy differences:**
+  - Declaration and Acknowledgements are in the first person and signed by that student.
+  - Chethan Krishna M. (23BAI0093) and Gopi Adithya S (23BAI0122): HoD Dr. Gayathri P, specialization Artificial Intelligence and Machine Learning, shown on the cover and in the Declaration.
+  - Sriram Madala (23BCE2115): HoD Dr. Bhoominathan P, no specialization.
+- **Name:** the owner is "Chethan Krishna M." everywhere, with no all-caps names on the cover; the two references that cite him use it too.
+- **GitHub:** pushed to `docs/report/` as `Multi-Agent-Framework-Report-<Name>-<Reg>-Word-Version.docx` and `-LaTeX-Version.pdf` (commit 90227659, on unify and main). The old team-wide pair was removed there; the local `DEX Project I Report (Revised).docx` is superseded.
+
+**2026-10-21 (evening): report laid out like the BCSE497J template.**
+- **Template:** the owner's PDF had a crowd-turbulence team's report in it.
+- **New front matter (roman page numbers):**
+  - Declaration (as "we", three signature lines) and Certificate (guide, examiners, and HoD Dr. Gayathri P).
+  - Sriram's registration number is 23BCE2115.
+  - Acknowledgements, with the Dean of SCOPE, Dr. Jaisankar N, taken from that template.
+  - Contents down to x.y.z, lists of figures and tables, abbreviations, symbols, then the Abstract.
+- **Chapters:**
+  - "CHAPTER n" headings, figures and tables numbered per chapter.
+  - Ch 5 is now Methodology and Testing: 5.1 Module Description, with a module table and 5.1.1–5.1.13, and 5.2 Testing.
+  - New Ch 6 Project Demonstration (the real-task screenshots), Ch 7 Result and Discussion (7.1–7.8), Ch 8 Conclusion.
+  - Appendix A: four verbatim code excerpts by line range. A.4, `approvals/policy.ts`, keeps two em dashes from its code comments.
+- **Semester:** "Fall Semester 2026-2027", confirmed by the owner. The Dean of SCOPE, Dr. Jaisankar N, is confirmed.
+- **Size:** Word 73 pages, LaTeX 70.
+- **GitHub:** the template-layout versions are pushed to `docs/report/` (commit 92ecaec4, on unify and main). Rebuild with `review/report/revised/` and copy them over the files there.
+
+**2026-10-21 (later): report retitled and rebuilt, with a LaTeX version.**
+- **Title:** "MULTI AGENT FRAMEWORK FOR DESKTOP AUTOMATION". The cover now has the team's registration numbers and names, plus the supervisor (M. Rajasekhara Babu, Professor Grade 2).
+- **Text:** every paragraph was rewritten with the Humanizer skill (`~/.agents/skills/humanizer`), with no facts changed. Labelled lists became tables or prose, and headings are now sentence case.
+- **Tables:** the category table (Table 8) now has a "Total failed" row: Claude configs 0, DEX + Codex 4 and 4, Codex alone 5.
+- **Layout:** the Word file uses Times New Roman, real Heading 1–3 styles, 1.5 line spacing and indented lists.
+- **LaTeX:** `review/report/revised/build_latex.py` writes `review/report/latex/main.tex` and its figures (56 pages). It compiles with Tectonic or on Overleaf; the zip is `MULTI AGENT FRAMEWORK - LaTeX source.zip`.
+- **Order of builds:** the Word build now overwrites the user's manual edits. Copy any hand edits back into `content.py` or `build_report.py` first.
+
+**2026-10-21: the project report, revised from the real files.**
+- **Output:** `review/report/DEX Project I Report (Revised).docx` (53 pages). The original `.docx`/`.pdf` are untouched. It's built by `review/report/revised/`: run `make_stats.py`, then `make_figures.py`, `build_report.py` and `toc_pages.py`. Every number is read from `sessions.db`, git or `benchmarks/dex-bench/results`.
+- **Changed:** the OSWorld/published-agent comparison is removed. In its place are the engine-alone baselines: DEX + Claude Code 24/24 (median 39 s) and Claude Code alone 24/24 (25.5 s); DEX + Codex (gpt-6-luna) 20/24 twice and Codex alone 19/24. It also discloses the two checker fixes (web-pages, curly apostrophes); each config lost exactly one task under the old checkers.
+- **Found while checking (open):**
+  - Approvals don't cover the engine's own shell. On 21 Oct, Haiku emptied the Recycle Bin with PowerShell COM after the user denied `app_launch explorer`, and the Ask mode's hint claims shell commands wait.
+  - The default approval mode is Full access.
+  - The web-login failures on the Codex engine are likely a `portal=ok` cookie left in the shared `persist:dex-web` profile.
+  - `deskLive.test.ts` fails under the full suite but passes alone.
+  - `review/report/content.py` was already cut off mid-file before this session (an earlier partial rewrite), so the original build no longer runs as-is.
+
 **2026-10-20 (later): prompts for public benchmarks, for a friend to run.**
 - **`benchmarks/waa/`:** Windows Agent Arena, all local and free. Claude Code (run with `--dangerously-skip-permissions --model opus`) installs WSL2, Ubuntu and Docker Engine (not Docker Desktop), then WAA and its Windows 11 evaluation VM. DEX runs **inside** the VM from source at the same commit, with `AGB_CDP_PORT=9225`, `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`, Full access, and Desktop control on. A `dex` agent in WAA hands each instruction to `waa-task.mjs` in the VM (modelled on dex-bench's `dexAgent()`), so WAA's own runner does the resets and the scoring. Nothing is built yet; the friend's Claude builds it.
 - **`benchmarks/osworld/`:** the same idea for OSWorld (Ubuntu). DEX can't run there, so it gets an `osworld_*` MCP bridge (screenshots and pyautogui), and the score mostly measures Opus.

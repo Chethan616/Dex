@@ -4,7 +4,9 @@
 import fs from 'node:fs';
 import { TASKS } from './tasks.mjs';
 
-const ANSWER_ONLY = new Set(['web-pages', 'os-sysinfo', 'app-calc', 'app-display', 'app-explorer']);
+// infeasible-file also checks that budget-2019.xlsx wasn't made; with no saved dir that
+// part reads as "not made", so only the answer is re-read.
+const ANSWER_ONLY = new Set(['web-pages', 'os-sysinfo', 'app-calc', 'app-display', 'app-explorer', 'infeasible-file']);
 const file = process.argv[2];
 const run = JSON.parse(fs.readFileSync(file, 'utf8'));
 for (const r of run.results) {
