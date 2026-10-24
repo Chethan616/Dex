@@ -25,8 +25,15 @@ shell — interrupts them. Don't.
 
 `app_launch` opens an app **parked just off-screen** — running normally (not
 minimized, so it keeps working) and not in the user's way. Use the
-`launchId` it returns as `{opened:"L1"}`. App ids come from
-`system_info {topic:"apps"}` (its `startMenu` list).
+`launchId` it returns as `{opened:"L1"}`. Give it an exe path, a program
+name (`notepad.exe`), or an app id from `system_info {topic:"apps"}` (its
+`startMenu` list); a display name like "Calculator" answers `not_found`.
+
+Every app works this way, Store apps included. If one jumps to the front by
+itself — Store apps do as they start, some apps do when a button is pressed —
+DEX puts it back off-screen and hands the user their window back; you don't
+need to do anything. Dialogs the app opens (Save as, "Are you sure?") are
+parked with it: `windows_list` shows them, `openedByDex: true`.
 
 `show:true`, `window_manage unpark` and `open_settings` put a window on the
 user's screen. Only when they asked to see it, or as your very last step.

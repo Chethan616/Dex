@@ -154,7 +154,7 @@ export const TOOLS = [
   {
     name: 'app_launch',
     op: 'launch',
-    description: "Open an app in the background: its window is parked just off-screen (not minimized, so it keeps working) and the user's focus stays where it is. app: an exe path or an app id from system_info apps (startMenu). show:true only when the user wants to see it. Returns a launchId to use as {opened}.",
+    description: "Open an app in the background: its window is parked just off-screen (not minimized, so it keeps working) and the user's focus stays where it is. Store apps (Calculator, Settings…) jump to the front as Windows starts them; DEX puts them straight back. Windows the app opens later (Save as, a confirmation) are parked with it: find them with windows_list. app: an exe path, a program name like \"notepad.exe\", or an app id from system_info apps (startMenu). show:true only when the user wants to see it. Returns a launchId to use as {opened}.",
     inputSchema: {
       type: 'object',
       properties: {

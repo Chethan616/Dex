@@ -434,6 +434,18 @@ The host resolves the target in this order:
    `mayHaveTakenFocus:true`. Then park, if the window belongs to a process
    DEX started.
 
+*As built (2026-10-24):* a program name (`notepad.exe`, `mspaint`) is
+resolved through the PATH and App Paths and started as an exe (step 1); an
+app id goes through `ShellExecuteExW` with `SEE_MASK_FLAG_NO_UI`, so a name
+Windows can't open fails at once (`not_found`) instead of leaving an error
+box on the user's screen and the helper stuck for 30 s. Store apps can only
+start through the shell, which activates them at their last on-screen place
+a moment *after* their window appears (Calculator: ~0.4 s, later on a busy
+PC). So after the first park, `Settle` watches the new window for up to 8 s,
+re-parking it and handing the front back each time, until it has been
+drawn and quiet for 1.2 s. `mayHaveTakenFocus` now says whether it really
+took the front (it was handed back either way).
+
 **The park rect**
 - To the right of the virtual screen: `left = SM_XVIRTUALSCREEN +
   SM_CXVIRTUALSCREEN + 200`, `top = SM_YVIRTUALSCREEN`.
@@ -441,12 +453,27 @@ The host resolves the target in this order:
 - It is not -32000: that is the minimized position, and minimized packaged or
   CEF apps freeze.
 
-**Every 2 s, for parked windows, the host:**
+**Every 2 s, and at once on a foreground change or a new window (an
+out-of-context WinEvent hook), for parked windows, the host:**
 - re-parks a window that a display change moved on-screen (and the user
   didn't);
-- if a parked window became foreground *and* real user input happened (the
-  `GetLastInputInfo` time moved), the user took it, for example from the
-  taskbar or Alt+Tab. The host then:
+- parks the new windows of a parked app with it: a window it owns (Save as,
+  a confirmation), or a new titled window of a process whose windows are all
+  DEX's, within 5 s of DEX acting in it (never in ApplicationFrameHost or
+  Explorer, which host other apps' windows, nor right after the user's own
+  input);
+- if a parked window became foreground, decides who brought it forward
+  (`TakenByUser`, measured 2026-10-24):
+  - from a shell surface (taskbar, Alt+Tab, Task view, Start): the user;
+  - within 1.5 s of DEX acting in its app: DEX, so it is parked again and the
+    front goes back to the user's last window. Store apps (Calculator)
+    activate themselves as they start and some apps on a button press; the
+    old rule ("any input since the last tick") took that for the user and
+    moved Calculator onto the screen, in front of a film;
+  - otherwise the user only if they clicked or typed within 1 s before it
+    came forward.
+
+  When the user took it, the host:
   - moves it on-screen, centred on the monitor under the cursor
     (`SWP_NOACTIVATE`; it is already active);
   - posts `taken-over`;

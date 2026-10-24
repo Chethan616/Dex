@@ -164,6 +164,8 @@ public static class DexDesk {
     selfElevated = IsElevated((uint)Process.GetCurrentProcess().Id);
     session = Regex.Replace(Environment.GetEnvironmentVariable("DEX_SESSION_ID") ?? "", "[^A-Za-z0-9_-]", "_");
     if (session.Length == 0) session = "shared";
+    AdoptNewWindows();                        // what's open now is the user's: only windows from here on are new
+    StartForegroundWatch();
     watcher = new Timer(Watch, null, 2000, 2000);
     frameTimer = new Timer(FrameTick, null, 500, 500);
   }
@@ -213,6 +215,8 @@ public static class DexDesk {
     var res = new Dictionary<string, object>();
     Snapshot before = Mutating.Contains(op) ? Snap() : null;
     opElement = null;
+    opWin = null;
+    opActs = before != null;
     try {
       res["ok"] = true;
       var result = Dispatch(op, args);
@@ -234,9 +238,24 @@ public static class DexDesk {
     }
     if (before != null) {
       Thread.Sleep(150);                       // Invoke returns before the app acts
+      object handedBack = null;
+      try {
+        // The app DEX just acted in came forward (or opened a window in front
+        // of the user): back off-screen, and the front back to the user.
+        if (op != "launch") handedBack = Contain(before);
+        if (opWin != null) actedAt[opWin.Pid] = Environment.TickCount;
+        AdoptNewWindows();
+      } catch { /* never fail an op over this */ }
       var incident = Incident(before, Snap());
-      if (incident != null) res["focus"] = new Dictionary<string, object> { { "incident", incident } };
+      if (incident != null || handedBack != null) {
+        var focus = new Dictionary<string, object>();
+        if (incident != null) focus["incident"] = incident;
+        if (handedBack != null) focus["handedBack"] = handedBack;
+        res["focus"] = focus;
+      }
     }
+    opActs = false;
+    parkedCount = parked.Count;
     return res;
   }
 
@@ -416,6 +435,7 @@ public static class DexDesk {
     if (IsDex(info)) throw new DexDeskError("refused", "DEX doesn't use its own windows.");
     if (!selfElevated && IsElevated(info.Pid)) throw new DexDeskError("elevated_window", "That window runs as administrator, which DEX's helper can't reach from here.", "Ask the user, or use the admin route when it's set up.", null);
     NoteWorking(info.H);
+    if (opActs) { opWin = info; actedAt[info.Pid] = Environment.TickCount; }
     return info;
   }
 
@@ -836,7 +856,10 @@ public static class DexDesk {
    * wholly off-screen back onto the screen's edge (documented, and measured:
    * a "parked" window sat at the right edge, in full view).
    */
-  static void Park(IntPtr h) {
+  static void Park(IntPtr h) { Park(h, IntPtr.Zero); }
+
+  /** `back`: the window the user was in, to hand the front back to if this one took it. */
+  static void Park(IntPtr h, IntPtr back) {
     int noAnim = 1;
     DwmSetWindowAttribute(h, DWMWA_TRANSITIONS_FORCEDISABLED, ref noAnim, 4);   // no flying to and from the taskbar
     // Minimized (an app launched that way): restored where it was, then straight off-screen.
@@ -845,10 +868,19 @@ public static class DexDesk {
     var park = ParkRect(r.Right - r.Left, r.Bottom - r.Top);
     SetWindowPos(h, IntPtr.Zero, park.Left, park.Top, 0, 0, 0x0001 | 0x0004 | 0x0010 /* NOSIZE | NOZORDER | NOACTIVATE */);
     if (GetForegroundWindow() == h) {
-      // It took the front. Minimizing hands it back to the window the user was
-      // in; restoring puts it where it is now — off-screen — without activating.
+      // It took the front: straight back to the window the user was in.
+      if (!UsersWindow(back, h)) back = LastUserWindow(h);
+      if (back != IntPtr.Zero) {
+        Activate(back);
+        for (int i = 0; i < 10 && GetForegroundWindow() == h; i++) Thread.Sleep(20);   // activation lands a moment later
+      }
+    }
+    if (GetForegroundWindow() == h) {
+      // Still in front (nothing of the user's to hand it to). Minimizing hands
+      // it to the next window; restoring puts it where it is now — off-screen —
+      // without activating.
       ShowWindow(h, SW_MINIMIZE);
-      for (int i = 0; i < 15 && GetForegroundWindow() == h; i++) Thread.Sleep(20);   // activation lands a moment later
+      for (int i = 0; i < 15 && GetForegroundWindow() == h; i++) Thread.Sleep(20);
       Thread.Sleep(120);   // restored any sooner, some apps (WinForms) take the front straight back
       ShowWindow(h, SW_SHOWNOACTIVATE);
     }
@@ -856,27 +888,66 @@ public static class DexDesk {
     DwmSetWindowAttribute(h, DWMWA_TRANSITIONS_FORCEDISABLED, ref noAnim, 4);
   }
 
+  static bool OnScreen(RECT r) {
+    int vx = GetSystemMetrics(76), vy = GetSystemMetrics(77), vw = GetSystemMetrics(78), vh = GetSystemMetrics(79);
+    return r.Right > vx && r.Left < vx + vw && r.Bottom > vy && r.Top < vy + vh;
+  }
+
+  static bool IsCloaked(IntPtr h) { int c; return DwmGetWindowAttribute(h, DWMWA_CLOAKED, out c, 4) == 0 && c != 0; }
+
   static List<long> Hwnds() { var l = new List<long>(); foreach (var w in TopWindows(true)) l.Add(w.H.ToInt64()); return l; }
+
+  [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] static extern uint SearchPath(string path, string file, string ext, int size, StringBuilder buffer, out IntPtr filePart);
+
+  /**
+   * An app given as a program, not an app id: a full path, a name on the PATH
+   * ("notepad.exe", "mspaint"), or one registered in Windows' App Paths
+   * ("chrome.exe"). Started as a program, it can start without activating.
+   */
+  static string ExePath(string app) {
+    if (app.IndexOf('\\') >= 0 || app.IndexOf('/') >= 0) return File.Exists(app) ? app : null;
+    if (app.IndexOf('!') >= 0 || app.IndexOf(' ') >= 0) return null;   // an app id, or a display name
+    string name = app.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? app : app + ".exe";
+    var sb = new StringBuilder(1024); IntPtr part;
+    if (SearchPath(null, name, null, sb.Capacity, sb, out part) > 0 && File.Exists(sb.ToString())) return sb.ToString();
+    foreach (var root in new[] { Microsoft.Win32.Registry.CurrentUser, Microsoft.Win32.Registry.LocalMachine }) {
+      using (var k = root.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\App Paths\" + name)) {
+        var v = k != null ? k.GetValue(null) as string : null;
+        if (v == null) continue;
+        v = Environment.ExpandEnvironmentVariables(v.Trim().Trim('"'));
+        if (File.Exists(v)) return v;
+      }
+    }
+    return null;
+  }
 
   static object Launch(Dictionary<string, object> a) {
     string app = Str(a, "app"), uri = Str(a, "uri");
     bool show = Bool(a, "show", false);
     var before = new HashSet<long>(Hwnds());
     var fgBefore = GetForegroundWindow();
+    uint inputBefore = LastInput();
     int pid = 0;
     bool viaShell = false;
-    if (app != null && File.Exists(app)) {
+    string exe = app != null && uri == null ? ExePath(app) : null;
+    if (exe != null) {
       var si = new STARTUPINFO { cb = Marshal.SizeOf(typeof(STARTUPINFO)), dwFlags = 1 /* STARTF_USESHOWWINDOW */, wShowWindow = (short)(show ? 1 : SW_SHOWMINNOACTIVE) };
       PROCESS_INFORMATION pi;
-      var cmd = new StringBuilder("\"" + app + "\"" + (Str(a, "args") != null ? " " + Str(a, "args") : ""));
-      if (!CreateProcess(app, cmd, IntPtr.Zero, IntPtr.Zero, false, 0, IntPtr.Zero, System.IO.Path.GetDirectoryName(app), ref si, out pi))
-        throw new DexDeskError("launch_failed", "Windows wouldn't start " + app + " (error " + Marshal.GetLastWin32Error() + ").");
+      var cmd = new StringBuilder("\"" + exe + "\"" + (Str(a, "args") != null ? " " + Str(a, "args") : ""));
+      if (!CreateProcess(exe, cmd, IntPtr.Zero, IntPtr.Zero, false, 0, IntPtr.Zero, System.IO.Path.GetDirectoryName(exe), ref si, out pi))
+        throw new DexDeskError("launch_failed", "Windows wouldn't start " + exe + " (error " + Marshal.GetLastWin32Error() + ").");
       pid = pi.dwProcessId; CloseHandle(pi.hThread); CloseHandle(pi.hProcess);
     } else {
       string file = uri ?? (app != null ? "shell:AppsFolder\\" + app : null);
       if (file == null) throw new DexDeskError("bad_args", "app_launch needs an app (exe path or app id) or a uri.");
-      var info = new SHELLEXECUTEINFO { cbSize = Marshal.SizeOf(typeof(SHELLEXECUTEINFO)), fMask = 0x00000040 /* NOCLOSEPROCESS */, lpVerb = "open", lpFile = file, nShow = show ? 1 : SW_SHOWNOACTIVATE };
-      if (!ShellExecuteEx(ref info)) throw new DexDeskError("launch_failed", "Windows couldn't open " + file + " (error " + Marshal.GetLastWin32Error() + ").");
+      // NO_UI: a name Windows can't open fails here, rather than as an error
+      // box on the user's screen that holds this helper until someone closes it.
+      var info = new SHELLEXECUTEINFO { cbSize = Marshal.SizeOf(typeof(SHELLEXECUTEINFO)), fMask = 0x00000040 | 0x00000400 /* NOCLOSEPROCESS | FLAG_NO_UI */, lpVerb = "open", lpFile = file, nShow = show ? 1 : SW_SHOWNOACTIVATE };
+      if (!ShellExecuteEx(ref info)) {
+        int err = Marshal.GetLastWin32Error();
+        if (uri == null) throw new DexDeskError("not_found", "There's no app called \"" + app + "\" to open (error " + err + ").", "Give an exe path, or the app id from system_info {topic:\"apps\"} (its startMenu list), e.g. Microsoft.WindowsCalculator_8wekyb3d8bbwe!App.", null);
+        throw new DexDeskError("launch_failed", "Windows couldn't open " + file + " (error " + err + ").");
+      }
       if (info.hProcess != IntPtr.Zero) CloseHandle(info.hProcess);
       viaShell = true;
     }
@@ -886,9 +957,14 @@ public static class DexDesk {
     var sw = Stopwatch.StartNew();
     while (sw.ElapsedMilliseconds < 15000 && found == IntPtr.Zero) {
       Thread.Sleep(200);
+      var fgNow = GetForegroundWindow();
       foreach (var w in TopWindows(true)) {
         if (before.Contains(w.H.ToInt64()) || IsDex(w)) continue;
-        if (pid != 0 && w.Pid != pid && sw.ElapsedMilliseconds < 4000) continue;   // prefer our own process's first
+        // Prefer our own process's first — unless a new window just came to the
+        // front with no input from the user: an app started for us by another
+        // process (calc.exe starts the Store Calculator), on the user's screen.
+        bool pushedIn = w.H == fgNow && LastInput() == inputBefore;
+        if (pid != 0 && w.Pid != pid && sw.ElapsedMilliseconds < 4000 && !pushedIn) continue;
         found = w.H; break;
       }
     }
@@ -900,10 +976,44 @@ public static class DexDesk {
     }
     string id = "L" + (nextLaunch++);
     launches[id] = found.ToInt64();
-    if (!show) { Park(found); parked[found.ToInt64()] = id; }
+    bool tookFront = false;
+    if (!show) { parked[found.ToInt64()] = id; tookFront = Settle(found, fgBefore); }
+    uint foundPid; GetWindowThreadProcessId(found, out foundPid);
+    actedAt[foundPid] = Environment.TickCount;
     res["launchId"] = id; res["hwnd"] = found.ToInt64(); res["parked"] = !show;
-    res["mayHaveTakenFocus"] = viaShell || GetForegroundWindow() != fgBefore;
+    res["mayHaveTakenFocus"] = show ? (viaShell || GetForegroundWindow() != fgBefore) : tookFront;
+    if (tookFront) res["note"] = "It came to the front for a moment as Windows started it; DEX put it back behind the user's window.";
     return res;
+  }
+
+  /**
+   * Keep a new window parked until it settles. Store (packaged) apps are
+   * started by the shell, which brings them to the front at their last place
+   * — on the user's screen — a moment after their window appears, often after
+   * it was first parked. So: park it, then watch it until it stays off-screen
+   * and behind for a while once drawn, parking it again (and handing the front
+   * back) each time it pops up. Returns whether it ever took the front.
+   */
+  static bool Settle(IntPtr h, IntPtr back) {
+    bool tookFront = false;
+    var sw = Stopwatch.StartNew();
+    long calm = 0;
+    for (bool first = true; sw.ElapsedMilliseconds < 8000; first = false) {
+      if (!IsWindow(h)) break;
+      bool front = GetForegroundWindow() == h;
+      RECT r; GetWindowRect(h, out r);
+      bool shown = OnScreen(r) && !IsIconic(h);
+      if (first || front || shown) {
+        tookFront |= front;
+        Park(h, back);
+        calm = sw.ElapsedMilliseconds;
+      }
+      long quiet = sw.ElapsedMilliseconds - calm;
+      // Drawn and quiet: done. Still cloaked (a splash that never ends): give up waiting a little later.
+      if (quiet >= 1200 && (!IsCloaked(h) || sw.ElapsedMilliseconds > 4000)) break;
+      Thread.Sleep(40);
+    }
+    return tookFront;
   }
 
   static object WindowAction(Dictionary<string, object> a) {
@@ -940,13 +1050,16 @@ public static class DexDesk {
   }
 
   /**
-   * Every 2 s: a parked window a display change moved back on screen goes
-   * back; one the user brought to the front themselves (real input, and now
-   * the foreground) is theirs — DEX says so and stops touching it.
+   * Every 2 s, and at once when a window comes to the front or appears: a
+   * parked window that came on screen goes back; one in front goes back too,
+   * and the front back to the user's window — unless the user brought it
+   * forward themselves (TakenByUser), in which case it's theirs: DEX says so
+   * and stops touching it. New windows of a parked app (its dialogs) are
+   * parked with it.
    */
   static void Watch(object _) {
     SetThreadDpiAwarenessContext(PerMonitorAwareV2);
-    if (!Monitor.TryEnter(stateLock)) return;   // an op is running; next tick
+    if (!Monitor.TryEnter(stateLock)) return;   // an op is running; it tidies up after itself, and the next tick looks again
     try {
       SyncTaken();
       var li = new LASTINPUTINFO { cbSize = (uint)Marshal.SizeOf(typeof(LASTINPUTINFO)) };
@@ -957,7 +1070,12 @@ public static class DexDesk {
       foreach (var key in new List<long>(parked.Keys)) {
         var h = new IntPtr(key);
         if (!IsWindow(h)) { parked.Remove(key); continue; }
-        if (key == fg && userActed) {
+        if (key == fg && !TakenByUser(h, userActed)) {
+          // It came forward by itself, or because DEX acted in it: not the user's doing.
+          Park(h);
+          continue;
+        }
+        if (key == fg) {
           takenLaunch[key] = parked[key];
           parked.Remove(key);
           takenOver.Add(key);
@@ -976,8 +1094,224 @@ public static class DexDesk {
         int vx = GetSystemMetrics(76), vw = GetSystemMetrics(78);
         if (r.Left < vx + vw && !IsIconic(h)) Park(h);
       }
+      AdoptNewWindows();
     } catch { /* never let the watcher take the host down */ }
-    finally { Monitor.Exit(stateLock); }
+    finally { parkedCount = parked.Count; Monitor.Exit(stateLock); }
+  }
+
+  // ── Who brought a window forward ───────────────────────────────────────
+  // A parked window is off every screen, so the user can bring it forward only
+  // through the shell (its taskbar button, Alt+Tab, Start), or with "Show me"
+  // in DEX. Apps also bring themselves forward: every Store app as it starts,
+  // and some when a button is pressed. Telling the two apart by "the user did
+  // something lately" alone took a self-activating app for the user's — and
+  // moved it onto their screen, in front of their film. So every foreground
+  // change is recorded as it happens (an out-of-context WinEvent hook: no
+  // effect on anyone's input), with the window it came from and the user's
+  // last input at that moment.
+
+  /** An app that comes forward this soon after DEX acted in it does so because of DEX. */
+  const int DexCauseMs = 1500;
+  /** A click or key press this soon before a window came forward brought it forward. */
+  const int UserLeadMs = 1000;
+
+  class FgChange { public long Hwnd; public uint At; public uint InputAt; public bool Shell; }
+  static readonly object fgLock = new object();
+  static readonly List<FgChange> fgHistory = new List<FgChange>();
+  /** When DEX last acted in each process (Environment.TickCount, the clock input times use). */
+  static readonly Dictionary<uint, int> actedAt = new Dictionary<uint, int>();
+  /** The window the op in progress acts on (Resolve sets it), and whether the op acts at all. */
+  static Win opWin;
+  static bool opActs;
+  /** Top-level windows the last sweep saw: one not in it is new. */
+  static HashSet<long> knownTop;
+  /** parked.Count, for the hook thread (which doesn't take stateLock). */
+  static volatile int parkedCount;
+
+  delegate void WinEventProc(IntPtr hook, uint ev, IntPtr hwnd, int obj, int child, uint thread, uint time);
+  [DllImport("user32.dll")] static extern IntPtr SetWinEventHook(uint min, uint max, IntPtr mod, WinEventProc fn, uint pid, uint tid, uint flags);
+  static WinEventProc winEventProc;   // kept alive while hooked
+
+  /** The taskbar, Alt+Tab, Task view and the tray: how a person reaches a window that's on no screen. */
+  static readonly HashSet<string> ShellClasses = new HashSet<string>(StringComparer.Ordinal) {
+    "Shell_TrayWnd", "Shell_SecondaryTrayWnd", "XamlExplorerHostIslandWindow", "MultitaskingViewFrame", "TaskSwitcherWnd",
+    "TaskSwitcherOverlayWnd", "ForegroundStaging", "NotifyIconOverflowWindow", "TopLevelWindowForOverflowXamlIsland",
+  };
+  /** Start and Search are CoreWindows; these processes say it's them. */
+  static readonly HashSet<string> ShellProcesses = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
+    "StartMenuExperienceHost.exe", "SearchHost.exe", "SearchApp.exe", "ShellExperienceHost.exe",
+  };
+
+  static uint LastInput() {
+    var li = new LASTINPUTINFO { cbSize = (uint)Marshal.SizeOf(typeof(LASTINPUTINFO)) };
+    GetLastInputInfo(ref li);
+    return li.dwTime;
+  }
+
+  static bool IsShellSurface(IntPtr h) {
+    if (h == IntPtr.Zero) return false;
+    var cls = new StringBuilder(128); GetClassName(h, cls, 128);
+    if (ShellClasses.Contains(cls.ToString())) return true;
+    if (cls.ToString() != "Windows.UI.Core.CoreWindow") return false;
+    uint pid; GetWindowThreadProcessId(h, out pid);
+    string path = ImagePath(pid);
+    return path != null && ShellProcesses.Contains(System.IO.Path.GetFileName(path));
+  }
+
+  static void StartForegroundWatch() {
+    var t = new Thread(() => {
+      lock (fgLock) fgHistory.Add(new FgChange { Hwnd = GetForegroundWindow().ToInt64(), At = (uint)Environment.TickCount, InputAt = LastInput() });
+      winEventProc = OnWinEvent;
+      // WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS: delivered to this thread's queue.
+      SetWinEventHook(0x0003, 0x0003, IntPtr.Zero, winEventProc, 0, 0, 0x0002);   // EVENT_SYSTEM_FOREGROUND
+      SetWinEventHook(0x8002, 0x8002, IntPtr.Zero, winEventProc, 0, 0, 0x0002);   // EVENT_OBJECT_SHOW
+      MSG msg;
+      while (GetMessage(out msg, IntPtr.Zero, 0, 0) > 0) { }
+    });
+    t.IsBackground = true;
+    t.Start();
+  }
+
+  static void OnWinEvent(IntPtr hook, uint ev, IntPtr hwnd, int obj, int child, uint thread, uint time) {
+    try {
+      if (ev == 0x0003) {
+        var c = new FgChange { Hwnd = hwnd.ToInt64(), At = time, InputAt = LastInput(), Shell = IsShellSurface(hwnd) };
+        lock (fgLock) { fgHistory.Add(c); if (fgHistory.Count > 24) fgHistory.RemoveAt(0); }
+        if (parkedCount > 0) Kick();
+      } else if (obj == 0 && child == 0 && parkedCount > 0 && GetAncestor(hwnd, 2 /* GA_ROOT */) == hwnd) {
+        Kick();   // a new window: perhaps a dialog of a parked app, on the user's screen
+      }
+    } catch { /* never throw into the hook */ }
+  }
+
+  /** Run the watcher now (it drops this if an op holds the state; the op tidies up after itself). */
+  static void Kick() {
+    var w = watcher;
+    if (w == null) return;
+    try { w.Change(60, 2000); } catch (ObjectDisposedException) { }
+  }
+
+  /**
+   * Did the user bring this (parked, now foreground) window forward? Through
+   * the shell: yes. Just after DEX acted in its app: no — DEX did. Otherwise:
+   * only if they clicked or typed just before it came forward.
+   */
+  static bool TakenByUser(IntPtr h, bool userActed) {
+    FgChange c = null, prev = null;
+    lock (fgLock) {
+      for (int i = fgHistory.Count - 1; i >= 0; i--) {
+        if (fgHistory[i].Hwnd != h.ToInt64()) continue;
+        c = fgHistory[i]; prev = i > 0 ? fgHistory[i - 1] : null;
+        break;
+      }
+    }
+    if (c == null) return userActed;            // no record of how it came forward: the old rule
+    if (prev != null && prev.Shell) return true;
+    uint pid; GetWindowThreadProcessId(h, out pid);
+    int acted;
+    if (actedAt.TryGetValue(pid, out acted)) {
+      int since = unchecked((int)(c.At - (uint)acted));
+      if (since > -10000 && since < DexCauseMs) return false;
+    }
+    int lead = unchecked((int)(c.At - c.InputAt));
+    return lead > -250 && lead < UserLeadMs;
+  }
+
+  /** A window of the user's to hand the front back to: on screen, and nothing DEX parked. */
+  static bool UsersWindow(IntPtr w, IntPtr not) {
+    return w != IntPtr.Zero && w != not && IsWindow(w) && IsWindowVisible(w) && !IsIconic(w) && ParkedRootOf(w) == 0 && !IsShellSurface(w);
+  }
+
+  /** The last window the user had in front, other than `not`. */
+  static IntPtr LastUserWindow(IntPtr not) {
+    var list = new List<long>();
+    lock (fgLock) foreach (var c in fgHistory) list.Add(c.Hwnd);
+    for (int i = list.Count - 1; i >= 0; i--) {
+      var w = new IntPtr(list[i]);
+      if (UsersWindow(w, not)) return w;
+    }
+    return IntPtr.Zero;
+  }
+
+  /** The parked window `h` is, or belongs to (an owned window: its dialog); 0 for none. */
+  static long ParkedRootOf(IntPtr h) {
+    for (int i = 0; i < 8 && h != IntPtr.Zero; i++, h = GetWindow(h, GW_OWNER))
+      if (parked.ContainsKey(h.ToInt64())) return h.ToInt64();
+    return 0;
+  }
+
+  /**
+   * After an op: if the app it acted in came to the front — or opened a
+   * window there — park that window and give the front back to the window the
+   * user was in. Returns what was handed back, or null.
+   */
+  static object Contain(Snapshot before) {
+    IntPtr fg = GetForegroundWindow();
+    if (fg == IntPtr.Zero || fg == before.Fg) return null;
+    long root = ParkedRootOf(fg);
+    if (root == 0 || takenOver.Contains(root) || TakenByUser(fg, false)) return null;
+    if (!parked.ContainsKey(fg.ToInt64())) parked[fg.ToInt64()] = parked[root];
+    Park(fg, before.Fg);
+    var d = Describe(fg);
+    if (d != null) d["back"] = GetForegroundWindow() == before.Fg;
+    return d;
+  }
+
+  /** Processes that host many apps' windows: every Store app's frame, File Explorer's windows. */
+  static bool SharedHost(uint pid) {
+    string path = ImagePath(pid);
+    string name = path != null ? System.IO.Path.GetFileName(path) : "";
+    return string.Equals(name, "ApplicationFrameHost.exe", StringComparison.OrdinalIgnoreCase) || string.Equals(name, "explorer.exe", StringComparison.OrdinalIgnoreCase);
+  }
+
+  static bool Adoptable(IntPtr h) {
+    if ((GetWindowLong(h, GWL_EXSTYLE) & WS_EX_TOOLWINDOW) != 0) return false;
+    var cls = new StringBuilder(64); GetClassName(h, cls, 64);
+    // Dialogs and windows with a title bar. Not menus, drop-downs or tooltips:
+    // those close when they lose their place, and Windows keeps them on a screen.
+    return cls.ToString() == "#32770" || (GetWindowLong(h, -16 /* GWL_STYLE */) & 0x00C00000 /* WS_CAPTION */) == 0x00C00000;
+  }
+
+  /**
+   * New windows of an app DEX has parked go off-screen with it: a window it
+   * owns (Save as, a confirmation), or a new window of a process all of whose
+   * windows are DEX's, just after DEX acted in it. Never a window of the
+   * user's: windows already open, or of a process they also have open.
+   */
+  static void AdoptNewWindows() {
+    var seen = new HashSet<long>();
+    var fresh = new List<IntPtr>();
+    var dexPids = new Dictionary<uint, long>();
+    var theirPids = new HashSet<uint>();
+    bool first = knownTop == null;
+    EnumWindows(delegate (IntPtr h, IntPtr l) {
+      if (!IsWindowVisible(h)) return true;
+      long k = h.ToInt64();
+      seen.Add(k);
+      uint pid; GetWindowThreadProcessId(h, out pid);
+      if (parked.ContainsKey(k)) { dexPids[pid] = k; return true; }
+      if (first || knownTop.Contains(k)) { theirPids.Add(pid); return true; }
+      if (!takenOver.Contains(k)) fresh.Add(h);
+      return true;
+    }, IntPtr.Zero);
+    knownTop = seen;
+    int now = Environment.TickCount;
+    // A window the user just opened themselves is theirs, whatever process it's in.
+    bool userJustActed = unchecked(now - (int)LastInput()) < 1000;
+    foreach (var h in fresh) {
+      if (!Adoptable(h)) continue;
+      long root = ParkedRootOf(GetWindow(h, GW_OWNER));
+      if (root == 0 && !userJustActed) {
+        uint pid; GetWindowThreadProcessId(h, out pid);
+        int acted; long r;
+        if (!theirPids.Contains(pid) && dexPids.TryGetValue(pid, out r) && actedAt.TryGetValue(pid, out acted) && unchecked(now - acted) < 5000 && !SharedHost(pid)) root = r;
+      }
+      if (root == 0 || !parked.ContainsKey(root)) continue;
+      parked[h.ToInt64()] = parked[root];
+      RECT rect; GetWindowRect(h, out rect);
+      if (OnScreen(rect) || GetForegroundWindow() == h) Park(h);
+    }
+    parkedCount = parked.Count;
   }
 
   /** Is the user's hand on this window now? (A window they took.) */
