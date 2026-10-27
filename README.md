@@ -2,6 +2,7 @@
 
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/Chethan616/Dex?include_prereleases)](https://github.com/Chethan616/Dex/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Chethan616/Dex/total)](https://github.com/Chethan616/Dex/releases)
 [![Stars](https://img.shields.io/github/stars/Chethan616/Dex?style=social)](https://github.com/Chethan616/Dex/stargazers)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Good first issues](https://img.shields.io/github/issues/Chethan616/Dex/good%20first%20issue)](https://github.com/Chethan616/Dex/labels/good%20first%20issue)
