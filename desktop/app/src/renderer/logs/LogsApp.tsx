@@ -144,6 +144,13 @@ export function LogsApp(): React.ReactElement {
     return unsub;
   }, [sessionId]);
 
+  useEffect(() => {
+    const unsub = window.electronAPI?.on.sessionDeleted?.((id) => {
+      if (id === sessionId) setSessionId(null);
+    });
+    return unsub;
+  }, [sessionId]);
+
   // SessionManager.appendOutput emits `session-output` but NOT `session-updated`,
   // so without this subscription file rows only appear after the next status
   // transition (or a session switch). Listen to the per-event stream and

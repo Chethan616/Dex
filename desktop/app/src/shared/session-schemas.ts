@@ -445,6 +445,7 @@ export type HlEvent = z.infer<typeof HlEventSchema>;
 export const AgentSessionSchema = z.object({
   id: z.string().uuid(),
   prompt: z.string(),
+  title: z.string().optional(),
   status: SessionStatusSchema,
   createdAt: z.number(),
   output: z.array(HlEventSchema),

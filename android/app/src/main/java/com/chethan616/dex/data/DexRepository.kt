@@ -58,6 +58,16 @@ class DexRepository(private val appContext: Context) {
     awaitClose { reg.remove() }
   }
 
+  /**
+   * Persist the Home list order on its desktop's device document. The same
+   * field is watched by that desktop, so a reorder from either app is shared.
+   */
+  suspend fun setSessionOrder(deviceId: String, ids: List<String>) {
+    require(deviceId.startsWith("desktop-")) { "Choose a desktop before arranging sessions." }
+    val unique = ids.asSequence().filter { it.isNotBlank() }.distinct().take(5000).toList()
+    user().collection("devices").document(deviceId).update("sessionOrder", unique).await()
+  }
+
   fun session(id: String): Flow<Session?> = callbackFlow {
     val reg = user().collection("sessions").document(id).addSnapshotListener(listenerThread) { snap, err ->
       if (err != null) { close(err); return@addSnapshotListener }
@@ -496,5 +506,6 @@ private fun DocumentSnapshot.toDevice(): Device {
         MentionSpec(name, it["label"]?.toString() ?: "@$name", it["summary"]?.toString() ?: "")
       }
     } ?: emptyList(),
+    sessionOrder = (get("sessionOrder") as? List<*>)?.mapNotNull { it?.toString() }?.take(5000) ?: emptyList(),
   )
 }

@@ -339,6 +339,8 @@ export class FirebaseBridge {
   private timers = new Map<string, ReturnType<typeof setTimeout>>();
   private heartbeat: ReturnType<typeof setInterval> | null = null;
   private unsubCommands: (() => void) | null = null;
+  private unsubSessionOrder: (() => void) | null = null;
+  private sessionOrderListeners = new Set<(ids: string[]) => void>();
   private status: BridgeState = { state: 'connecting' };
   private listeners = new Set<(s: BridgeState) => void>();
   private hooked = false;
@@ -352,6 +354,45 @@ export class FirebaseBridge {
   onState(cb: (s: BridgeState) => void): () => void {
     this.listeners.add(cb);
     return () => this.listeners.delete(cb);
+  }
+
+  onSessionOrder(cb: (ids: string[]) => void): () => void {
+    this.sessionOrderListeners.add(cb);
+    return () => this.sessionOrderListeners.delete(cb);
+  }
+
+  async getSessionOrder(): Promise<string[]> {
+    if (!this.db || !this.uid) return [];
+    const { doc, getDoc } = await import('firebase/firestore');
+    const snapshot = await getDoc(doc(this.db, this.userDoc('devices', this.deviceId)));
+    const raw = snapshot.data()?.sessionOrder;
+    return Array.isArray(raw) ? raw.filter((id): id is string => typeof id === 'string').slice(0, 5000) : [];
+  }
+
+  async setSessionOrder(ids: readonly string[]): Promise<boolean> {
+    if (!this.db || !this.uid) return false;
+    const unique = [...new Set(ids.filter((id) => typeof id === 'string' && id.length > 0))].slice(0, 5000);
+    const { doc, setDoc } = await import('firebase/firestore');
+    await setDoc(doc(this.db, this.userDoc('devices', this.deviceId)), { sessionOrder: unique }, { merge: true });
+    this.publishSessionOrder(unique);
+    return true;
+  }
+
+  private publishSessionOrder(ids: string[]): void {
+    for (const cb of this.sessionOrderListeners) cb([...ids]);
+  }
+
+  private watchSessionOrder(): void {
+    this.unsubSessionOrder?.();
+    if (!this.db || !this.uid) return;
+    void import('firebase/firestore').then(({ doc, onSnapshot }) => {
+      if (!this.db || !this.uid) return;
+      this.unsubSessionOrder = onSnapshot(doc(this.db, this.userDoc('devices', this.deviceId)), (snapshot) => {
+        const raw = snapshot.data()?.sessionOrder;
+        const ids = Array.isArray(raw) ? raw.filter((id): id is string => typeof id === 'string').slice(0, 5000) : [];
+        this.publishSessionOrder(ids);
+      }, (err) => mainLogger.warn('firebase.bridge.sessionOrder.listenFailed', { error: err.message }));
+    }).catch((err: Error) => mainLogger.warn('firebase.bridge.sessionOrder.listenSetupFailed', { error: err.message }));
   }
 
   private setState(next: BridgeState): void {
@@ -400,6 +441,7 @@ export class FirebaseBridge {
       this.setState({ state: 'online', email: cred.user.email ?? undefined, uid: this.uid });
 
       await this.publishDevice(true);
+      this.watchSessionOrder();
       this.heartbeat ??= setInterval(() => { void this.publishDevice(true); }, HEARTBEAT_MS);
       this.hookSessions();
       this.syncProfile();
@@ -445,6 +487,8 @@ export class FirebaseBridge {
     this.unsubCommands = null;
     this.unsubProfile?.();
     this.unsubProfile = null;
+    this.unsubSessionOrder?.();
+    this.unsubSessionOrder = null;
     if (this.heartbeat) clearInterval(this.heartbeat);
     this.heartbeat = null;
     if (this.uid) await this.publishDevice(false).catch(() => {});

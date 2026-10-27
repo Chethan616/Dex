@@ -34,12 +34,24 @@ data class HomeState(
   val recent: List<Session> get() = sessions.filter { !it.status.isLive && it.pendingConfirmation == null }
 }
 
+private fun manuallyOrdered(sessions: List<Session>, ids: List<String>): List<Session> {
+  if (ids.isEmpty()) return sessions
+  val rank = ids.withIndex().associate { it.value to it.index }
+  return sessions.sortedWith(
+    compareBy<Session> { rank[it.id] ?: -1 }
+      .thenByDescending { it.lastActivityAt },
+  )
+}
+
 class HomeViewModel(private val c: AppContainer) : ViewModel() {
 
   val state: StateFlow<HomeState> = combine(
     c.repo.sessions().onStart { emit(emptyList()) },
     c.repo.desktops().onStart { emit(emptyList()) },
-  ) { sessions, desktops -> HomeState(loading = false, sessions = sessions, desktops = desktops) }
+  ) { sessions, desktops ->
+    val desktop = desktops.firstOrNull { it.isReachable } ?: desktops.firstOrNull()
+    HomeState(loading = false, sessions = manuallyOrdered(sessions, desktop?.sessionOrder.orEmpty()), desktops = desktops)
+  }
     .catch { emit(HomeState(loading = false, error = it.message)) }
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeState())
 
@@ -52,6 +64,13 @@ class HomeViewModel(private val c: AppContainer) : ViewModel() {
       runCatching { c.repo.registerDevice() }
       delay(700) // Firestore is already live; this is the gesture's acknowledgement.
       _refreshing.value = false
+    }
+  }
+
+  fun saveSessionOrder(ids: List<String>) {
+    val desktop = state.value.desktop ?: return
+    viewModelScope.launch {
+      runCatching { c.repo.setSessionOrder(desktop.id, ids) }
     }
   }
 

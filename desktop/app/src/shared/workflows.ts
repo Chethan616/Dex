@@ -366,7 +366,7 @@ const KIND_HINT: Record<StepKind, string> = {
 /** The prompt a run gets: the steps in order, with how to do each kind. */
 export function workflowPrompt(w: Pick<Workflow, 'name' | 'description' | 'steps' | 'trigger'>, by: 'schedule' | 'user'): string {
   const lines = [
-    `Run my workflow “${w.name}”${by === 'schedule' ? ` (it started on its schedule: ${triggerText(w.trigger).toLowerCase()})` : ''}.`,
+    `The application already started one run of “${w.name}”${by === 'schedule' ? ` on its schedule: ${triggerText(w.trigger).toLowerCase()}` : ''}. Complete the steps below in this session. Do not start or run this workflow again.`,
     ...(w.description ? [`What it's for: ${w.description}`] : []),
     '',
     'Do these steps in order:',

@@ -8,6 +8,7 @@ import { parseSaved, type SavedWorkspace } from '../workspace/tabMemory';
 interface SessionRow {
   id: string;
   prompt: string;
+  title: string | null;
   status: string;
   created_at: number;
   error: string | null;
@@ -36,6 +37,7 @@ export class SessionDb {
     insertSession: Database.Statement;
     updateStatus: Database.Statement;
     updatePrompt: Database.Statement;
+    updateTitle: Database.Statement;
     updateCreatedAt: Database.Statement;
     updatePrimarySite: Database.Statement;
     updateNavigation: Database.Statement;
@@ -100,6 +102,7 @@ export class SessionDb {
       updatePrompt: this.db.prepare(
         'UPDATE sessions SET prompt = ?, updated_at = ? WHERE id = ?'
       ),
+      updateTitle: this.db.prepare('UPDATE sessions SET title = ? WHERE id = ?'),
       updateCreatedAt: this.db.prepare(
         'UPDATE sessions SET created_at = ?, updated_at = ? WHERE id = ?'
       ),
@@ -419,6 +422,18 @@ export class SessionDb {
       mainLogger.info('SessionDb.migration.complete', { version: 14 });
     }
 
+    if (this.getVersion() < 15) {
+      mainLogger.info('SessionDb.migration.running', { from: this.getVersion(), to: 15 });
+      this.db.transaction(() => {
+        const cols = this.db.pragma('table_info(sessions)') as Array<{ name: string }>;
+        if (!cols.some((c) => c.name === 'title')) {
+          this.db.exec('ALTER TABLE sessions ADD COLUMN title TEXT');
+        }
+        this.setVersion(15);
+      })();
+      mainLogger.info('SessionDb.migration.complete', { version: 15 });
+    }
+
     const final = this.getVersion();
     if (final !== DB_SCHEMA_VERSION) {
       const msg = `SessionDb migration did not reach expected version. Got ${final}, expected ${DB_SCHEMA_VERSION}.`;
@@ -581,6 +596,16 @@ export class SessionDb {
       this.stmts.updatePrompt.run(prompt, now, id);
     } catch (err) {
       mainLogger.error('SessionDb.updateSessionPrompt.failed', { id, error: (err as Error).message });
+      throw err;
+    }
+  }
+
+  updateSessionTitle(id: string, title: string): void {
+    try {
+      const result = this.stmts.updateTitle.run(title, id);
+      if (result.changes === 0) throw new Error(`Session not found: ${id}`);
+    } catch (err) {
+      mainLogger.error('SessionDb.updateSessionTitle.failed', { id, error: (err as Error).message });
       throw err;
     }
   }

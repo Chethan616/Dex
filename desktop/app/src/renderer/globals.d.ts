@@ -43,6 +43,7 @@ interface ElectronSessionAPI {
   steer: (id: string, message: string) => Promise<{ queued?: boolean; error?: string }>;
   dismiss: (id: string) => Promise<void>;
   delete: (id: string) => Promise<void>;
+  rename: (id: string, title: string) => Promise<void>;
   downloadOutput: (filePath: string) => Promise<{ opened: boolean }>;
   revealOutput: (filePath: string) => Promise<{ revealed: boolean }>;
   /** The bytes of a file this task recorded or opened as a document. */
@@ -209,6 +210,7 @@ interface ElectronChromeImportAPI {
 interface ElectronOnAPI {
   selectSession?: (cb: (sessionId: string) => void) => () => void;
   sessionUpdated: (cb: (session: import('./hub/types').AgentSession) => void) => () => void;
+  sessionDeleted: (cb: (id: string) => void) => () => void;
   sessionBrowserGone: (cb: (id: string) => void) => () => void;
   sessionOutput: (cb: (id: string, event: import('./hub/types').HlEvent) => void) => () => void;
   sessionOutputTerm: (cb: (id: string, bytes: string) => void) => () => void;
@@ -718,10 +720,13 @@ type PhoneBridgeState =
 interface ElectronSettingsBridgeAPI {
   status: () => Promise<PhoneBridgeState>;
   restart: () => Promise<void>;
+  getSessionOrder: () => Promise<string[]>;
+  setSessionOrder: (ids: string[]) => Promise<boolean>;
   signIn: (email: string, password: string, create: boolean) => Promise<{ ok: boolean; error?: string }>;
   resetPassword: (email: string) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
   onState: (cb: (state: PhoneBridgeState) => void) => () => void;
+  onSessionOrder: (cb: (ids: string[]) => void) => () => void;
 }
 
 interface ElectronSettingsAccountsAPI {

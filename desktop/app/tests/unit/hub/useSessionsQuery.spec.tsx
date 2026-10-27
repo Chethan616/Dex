@@ -35,9 +35,11 @@ function baseSession(overrides?: Partial<AgentSession>): AgentSession {
 function installElectronApi(initial: AgentSession[]): {
   fireSessionUpdated: (session: AgentSession) => void;
   fireSessionOutput: (id: string, event: HlEvent) => void;
+  fireSessionDeleted: (id: string) => void;
 } {
   let updatedCb: ((session: AgentSession) => void) | null = null;
   let outputCb: ((id: string, event: HlEvent) => void) | null = null;
+  let deletedCb: ((id: string) => void) | null = null;
 
   Object.defineProperty(window, 'electronAPI', {
     configurable: true,
@@ -52,6 +54,10 @@ function installElectronApi(initial: AgentSession[]): {
           outputCb = cb;
           return () => { outputCb = null; };
         },
+        sessionDeleted: (cb: (id: string) => void) => {
+          deletedCb = cb;
+          return () => { deletedCb = null; };
+        },
       },
     },
   });
@@ -59,6 +65,7 @@ function installElectronApi(initial: AgentSession[]): {
   return {
     fireSessionUpdated: (session) => updatedCb?.(session),
     fireSessionOutput: (id, event) => outputCb?.(id, event),
+    fireSessionDeleted: (id) => deletedCb?.(id),
   };
 }
 
@@ -172,6 +179,18 @@ describe('useSessionsQuery live output wiring', () => {
     const after = qc.getQueryData<AgentSession[]>(SESSIONS_KEY);
     expect(after?.length).toBe(1);
     expect(after?.[0].output).toEqual([]);
+  });
+
+  it('removes a deleted session and ignores late updates for it', async () => {
+    const { fireSessionDeleted, fireSessionUpdated } = installElectronApi([baseSession()]);
+    const { qc } = renderProbe();
+    await waitForData(qc);
+
+    await fire(() => fireSessionDeleted('s1'));
+    expect(qc.getQueryData<AgentSession[]>(SESSIONS_KEY)).toEqual([]);
+
+    await fire(() => fireSessionUpdated(baseSession({ status: 'idle' })));
+    expect(qc.getQueryData<AgentSession[]>(SESSIONS_KEY)).toEqual([]);
   });
 
   // The actual bug behind a dex-canvas document, a dex-find result, or a

@@ -18,6 +18,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,8 +41,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Computer
+import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Mail
 import androidx.compose.material.icons.rounded.Mic
@@ -50,11 +54,13 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FloatingActionButtonMenu
 import androidx.compose.material3.FloatingActionButtonMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LoadingIndicator
@@ -71,11 +77,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -97,6 +105,9 @@ import com.chethan616.dex.ui.components.springDrag
 import com.chethan616.dex.ui.components.springPress
 import com.chethan616.dex.ui.components.squishOnPress
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material3.MaterialShapes
@@ -260,6 +271,7 @@ fun HomeScreen(
     onSuggestion = { openComposer(it) },
     onVoice = ::startVoice,
     onAnswer = { s, ok -> vm.answer(s, ok) },
+    onSaveSessionOrder = vm::saveSessionOrder,
     promptBar = { m ->
       PromptBar(
         modifier = m,
@@ -310,15 +322,64 @@ internal fun HomeContent(
   onSuggestion: (String) -> Unit,
   onVoice: () -> Unit,
   onAnswer: (Session, Boolean) -> Unit,
+  onSaveSessionOrder: (List<String>) -> Unit,
   promptBar: @Composable (Modifier) -> Unit,
 ) {
   val haptics = LocalHaptics.current
   var fabExpanded by rememberSaveable { mutableStateOf(false) }
+  var reorderMode by rememberSaveable { mutableStateOf(false) }
+  var selectedRecentIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+  var draggedSessionId by remember { mutableStateOf<String?>(null) }
+  var dropTargetId by remember { mutableStateOf<String?>(null) }
+  var dropBeforeTarget by remember { mutableStateOf(true) }
+  val recentRowBounds = remember { mutableStateMapOf<String, Rect>() }
   BackHandler(fabExpanded) { fabExpanded = false }
   // As the menu fans out, a light tick for each item that pops in.
   LaunchedEffect(fabExpanded) {
     if (fabExpanded) repeat(4) { delay(55); haptics.tick() }
   }
+
+  fun updateDropTarget(globalY: Float) {
+    val dragged = draggedSessionId ?: return
+    val target = recentRowBounds.entries
+      .filter { it.key != dragged }
+      .minByOrNull { (_, bounds) -> kotlin.math.abs(bounds.center.y - globalY) }
+    dropTargetId = target?.key
+    dropBeforeTarget = target?.value?.let { globalY < it.center.y } ?: true
+  }
+
+  fun finishSessionReorder() {
+    val targetId = dropTargetId
+    val draggedId = draggedSessionId
+    if (targetId == null || draggedId == null) {
+      draggedSessionId = null
+      dropTargetId = null
+      return
+    }
+    val current = state.recent
+    val selected = if (draggedId in selectedRecentIds) selectedRecentIds else setOf(draggedId)
+    val moved = current.filter { it.id in selected }
+    val movingIds = moved.mapTo(mutableSetOf()) { it.id }
+    val rest = current.filterNot { it.id in movingIds }.toMutableList()
+    val targetIndex = rest.indexOfFirst { it.id == targetId }
+    if (moved.isNotEmpty() && targetIndex >= 0) {
+      val insertion = (targetIndex + if (dropBeforeTarget) 0 else 1).coerceIn(0, rest.size)
+      rest.addAll(insertion, moved)
+      val reorderedRecentIds = rest.map { it.id }
+      val recentIds = current.mapTo(hashSetOf()) { it.id }
+      var recentIndex = 0
+      val nextFullOrder = state.sessions.map { session ->
+        if (session.id in recentIds) reorderedRecentIds[recentIndex++] else session.id
+      }
+      val visibleIds = nextFullOrder.toHashSet()
+      val keepOlderDesktopSessions = state.desktop?.sessionOrder.orEmpty().filterNot { it in visibleIds }
+      onSaveSessionOrder(nextFullOrder + keepOlderDesktopSessions)
+      haptics.tick()
+    }
+    draggedSessionId = null
+    dropTargetId = null
+  }
+
   Scaffold(
     floatingActionButton = {
       FloatingActionButtonMenu(
@@ -435,11 +496,50 @@ internal fun HomeContent(
           }
         }
         if (state.recent.isNotEmpty()) {
-          item(key = "h-recent") { Box(Modifier.padding(top = GAP)) { SectionTitle("Recent", null) } }
+          item(key = "h-recent") {
+            Row(
+              Modifier.fillMaxWidth().padding(top = GAP),
+              verticalAlignment = Alignment.CenterVertically,
+            ) {
+              Box(Modifier.weight(1f)) { SectionTitle("Recent", null) }
+              if (reorderMode) {
+                Text("${selectedRecentIds.size} selected", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.size(6.dp))
+                FilledTonalIconButton(
+                  onClick = { haptics.confirm(); reorderMode = false; selectedRecentIds = emptySet() },
+                  modifier = Modifier.size(34.dp),
+                ) { Icon(Icons.Rounded.Check, contentDescription = "Done arranging sessions", modifier = Modifier.size(18.dp)) }
+              } else {
+                FilledTonalIconButton(
+                  onClick = { haptics.click(); reorderMode = true; selectedRecentIds = emptySet() },
+                  modifier = Modifier.size(34.dp),
+                ) { Icon(Icons.Rounded.DragHandle, contentDescription = "Select multiple recent sessions to arrange", modifier = Modifier.size(18.dp)) }
+              }
+            }
+          }
           // One grouped card: tight 3 dp seams, big outer corners.
           itemsIndexed(state.recent, key = { _, s -> "c-" + s.id }) { i, s ->
             Box(Modifier.padding(top = if (i == 0) GAP else 3.dp)) {
-              SessionRow(s, i, state.recent.size) { haptics.tick(); onOpenSession(s.id) }
+              SessionRow(
+                session = s,
+                index = i,
+                count = state.recent.size,
+                reorderMode = reorderMode,
+                selected = s.id in selectedRecentIds,
+                onToggleSelection = { id ->
+                  selectedRecentIds = if (id in selectedRecentIds) selectedRecentIds - id else selectedRecentIds + id
+                  haptics.tick()
+                },
+                onBoundsChanged = { id, bounds -> recentRowBounds[id] = bounds },
+                onDragStart = { id, globalY ->
+                  draggedSessionId = id
+                  updateDropTarget(globalY)
+                  haptics.click()
+                },
+                onDragMove = ::updateDropTarget,
+                onDragEnd = ::finishSessionReorder,
+                onClick = { haptics.tick(); onOpenSession(s.id) },
+              )
             }
           }
         }
@@ -665,6 +765,13 @@ private fun SessionRow(
   session: Session,
   index: Int,
   count: Int,
+  reorderMode: Boolean,
+  selected: Boolean,
+  onToggleSelection: (String) -> Unit,
+  onBoundsChanged: (String, Rect) -> Unit,
+  onDragStart: (String, Float) -> Unit,
+  onDragMove: (Float) -> Unit,
+  onDragEnd: () -> Unit,
   onClick: () -> Unit,
 ) {
   val scheme = MaterialTheme.colorScheme
@@ -682,8 +789,31 @@ private fun SessionRow(
   val spot = com.chethan616.dex.ui.avatar.rememberFlightSpot()
   val type = botTypeFor(session.engine, session.id)
   val mood = rememberBotMood(session)
-  Surface(onClick = { flight?.toChat(session.id, type, mood, spot.coords); onClick() }, shape = shape, color = scheme.surfaceContainerLow, interactionSource = press, modifier = Modifier.fillMaxWidth().springPress(press, 0.97f)) {
+  var dragHandleTop by remember(session.id) { mutableStateOf(0f) }
+  val rowModifier = Modifier
+    .fillMaxWidth()
+    .springPress(press, 0.97f)
+    .then(if (reorderMode && selected) Modifier.border(1.dp, scheme.primary.copy(alpha = 0.4f), shape) else Modifier)
+    .onGloballyPositioned { onBoundsChanged(session.id, it.boundsInWindow()) }
+  Surface(
+    onClick = {
+      if (reorderMode) onToggleSelection(session.id)
+      else { flight?.toChat(session.id, type, mood, spot.coords); onClick() }
+    },
+    shape = shape,
+    color = if (reorderMode && selected) scheme.secondaryContainer.copy(alpha = 0.76f) else scheme.surfaceContainerLow,
+    interactionSource = press,
+    modifier = rowModifier,
+  ) {
     Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+      if (reorderMode) {
+        Checkbox(
+          checked = selected,
+          onCheckedChange = { onToggleSelection(session.id) },
+          modifier = Modifier.size(38.dp),
+        )
+        Spacer(Modifier.size(6.dp))
+      }
       // Still: a list of breathing bots would redraw every frame. It flies
       // up into the chat's top bar when you open it (BotFlight).
       BotAvatar(
@@ -716,6 +846,31 @@ private fun SessionRow(
           Spacer(Modifier.height(4.dp))
           if (failed) Box(Modifier.size(8.dp).background(scheme.error, CircleShape)) else StatusDot(session.status)
         }
+      }
+      Spacer(Modifier.size(4.dp))
+      Box(
+        Modifier
+          .size(40.dp)
+          .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+          .onGloballyPositioned { dragHandleTop = it.positionInWindow().y }
+          .pointerInput(session.id, reorderMode, selected) {
+            detectDragGesturesAfterLongPress(
+              onDragStart = { offset -> onDragStart(session.id, dragHandleTop + offset.y) },
+              onDrag = { change, _ ->
+                change.consume()
+                onDragMove(dragHandleTop + change.position.y)
+              },
+              onDragEnd = onDragEnd,
+              onDragCancel = onDragEnd,
+            )
+          },
+        contentAlignment = Alignment.Center,
+      ) {
+        Icon(
+          Icons.Rounded.DragHandle,
+          contentDescription = if (reorderMode && selected) "Drag selected sessions" else "Drag session to reorder",
+          tint = if (reorderMode && selected) scheme.primary else scheme.onSurfaceVariant,
+        )
       }
     }
   }

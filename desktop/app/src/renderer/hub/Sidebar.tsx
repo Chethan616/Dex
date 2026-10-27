@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AgentSession, SessionStatus } from './types';
 import { orderSessionsForSidebar } from './sessionOrdering';
 import { closeAppPopup, openAnchoredAppPopup } from '../shared/appPopup';
@@ -26,7 +26,7 @@ interface SidebarSession extends AgentSession {
   lastActivityAt?: number;
 }
 
-export type SidebarRowAction = 'rerun' | 'stop' | 'pause' | 'resume' | 'delete' | 'pin' | 'unpin';
+export type SidebarRowAction = 'rerun' | 'stop' | 'pause' | 'resume' | 'delete' | 'pin' | 'unpin' | 'rename';
 
 export type SidebarMode = 'side' | 'top';
 
@@ -36,6 +36,10 @@ interface SidebarProps {
   onSelect?: (id: string) => void;
   onNewAgent?: () => void;
   onRowAction?: (id: string, action: SidebarRowAction) => void;
+  onBulkDelete?: (ids: string[]) => void;
+  onRename?: (id: string, title: string) => Promise<void>;
+  manualOrderIds?: readonly string[];
+  onReorder?: (ids: string[], targetId: string) => void;
   pinnedIds?: ReadonlySet<string>;
   mode?: SidebarMode;
 }
@@ -146,29 +150,86 @@ function MoreIcon(): React.ReactElement {
   );
 }
 
+function SearchIcon(): React.ReactElement {
+  return <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.4" /><path d="m10.5 10.5 3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>;
+}
+
+function SelectModeIcon(): React.ReactElement {
+  return <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2.2" stroke="currentColor" strokeWidth="1.3" /><path d="m4.6 8.1 2.2 2.1 4.6-4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+
+function SelectAllIcon({ checked }: { checked: boolean }): React.ReactElement {
+  return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="1.6" y="1.6" width="12.8" height="12.8" rx="2.4" stroke="currentColor" strokeWidth="1.2" /><path d={checked ? 'm4.2 8.1 2.3 2.3 5.2-5.1' : 'M4.5 8h7'} stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+
+function CheckSquareIcon({ checked }: { checked: boolean }): React.ReactElement {
+  return <svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden="true"><rect x="2.2" y="2.2" width="13.6" height="13.6" rx="3" stroke="currentColor" strokeWidth="1.25" />{checked && <path d="m5.2 9.1 2.3 2.3 5.3-5.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />}</svg>;
+}
+
+function TrashIcon(): React.ReactElement {
+  return <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 4.3h10M6.1 4.3V2.7h3.8v1.6m2.2 0-.5 9H4.4l-.5-9M6.6 6.7v4.6m2.8-4.6v4.6" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+
+function CloseIcon(): React.ReactElement {
+  return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 4 8 8m0-8-8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>;
+}
+
+function DragHandleIcon(): React.ReactElement {
+  return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="5" cy="4" r="1" fill="currentColor"/><circle cx="11" cy="4" r="1" fill="currentColor"/><circle cx="5" cy="8" r="1" fill="currentColor"/><circle cx="11" cy="8" r="1" fill="currentColor"/><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="11" cy="12" r="1" fill="currentColor"/></svg>;
+}
+
+function sessionDisplayTitle(session: SidebarSession): string {
+  if (session.title) return session.title;
+  const named = /\b(?:called|named)\s+(?:“([^”]{1,100})”|‘([^’]{1,100})’|"([^"]{1,100})"|'([^']{1,100})')/i.exec(session.prompt);
+  return named?.slice(1).find(Boolean) ?? taskTitle(session.prompt);
+}
+
 function SessionRowImpl({
   s,
   selected,
   onSelect,
   onAction,
+  onRename,
   pinned = false,
+  selectionMode = false,
+  multiSelected = false,
+  onStartReorder,
+  onDropReorder,
+  onToggleSelection,
 }: {
   s: SidebarSession;
   selected: boolean;
   onSelect?: (id: string) => void;
   onAction?: (id: string, action: SidebarRowAction) => void;
+  onRename?: (id: string) => void;
   pinned?: boolean;
+  selectionMode?: boolean;
+  multiSelected?: boolean;
+  onStartReorder?: (id: string) => string[];
+  onDropReorder?: (targetId: string) => void;
+  onToggleSelection?: (id: string) => void;
 }): React.ReactElement {
   const dot = STATUS_DOT[s.status];
   const favicon = faviconUrl(s.primarySite);
   const last = s.lastActivityAt ?? s.createdAt;
   const [popupId, setPopupId] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const singleDragArmedRef = useRef(false);
 
   const isRunning = s.status === 'running' || s.status === 'stuck';
   const isPaused = s.status === 'paused';
   const handleAction = (action: SidebarRowAction): void => {
+    if (action === 'rename') {
+      onRename?.(s.id);
+      return;
+    }
     onAction?.(s.id, action);
+  };
+  const handleRowClick = (): void => {
+    if (selectionMode) onToggleSelection?.(s.id);
+    else onSelect?.(s.id);
   };
   const toggleMenu = async (): Promise<void> => {
     const button = menuButtonRef.current;
@@ -186,6 +247,7 @@ function SessionRowImpl({
         items: [
           { id: 'rerun', label: 'Re-run' },
           { id: pinned ? 'unpin' : 'pin', label: pinned ? 'Unpin' : 'Pin' },
+          { id: 'rename', label: 'Rename' },
           ...(isPaused ? [{ id: 'resume', label: 'Resume' }] : []),
           ...(isRunning ? [{ id: 'pause', label: 'Pause' }] : []),
           ...((isRunning || isPaused) ? [{ id: 'stop', label: 'Stop', tone: 'danger' as const }] : []),
@@ -208,17 +270,66 @@ function SessionRowImpl({
     >
       <button
         type="button"
-        className={`sidebar__row has-tooltip${selected ? ' sidebar__row--active' : ''}`}
-        onClick={() => onSelect?.(s.id)}
-        onMouseDown={preventMouseFocus}
+        className={`sidebar__row has-tooltip${selected ? ' sidebar__row--active' : ''}${selectionMode ? ' sidebar__row--select-mode' : ''}${multiSelected ? ' sidebar__row--multi-selected' : ''}${dragOver ? ' sidebar__row--drag-over' : ''}${dragging ? ' sidebar__row--dragging' : ''}`}
+        onClick={handleRowClick}
+        onMouseDown={(event) => {
+          const startedFromHandle = event.target instanceof Element && Boolean(event.target.closest('.sidebar__drag-handle'));
+          singleDragArmedRef.current = !selectionMode && startedFromHandle;
+          if (!selectionMode && !startedFromHandle) preventMouseFocus(event);
+        }}
+        draggable={!selectionMode || multiSelected}
+        onDragStart={(event) => {
+          if ((selectionMode && !multiSelected) || (!selectionMode && !singleDragArmedRef.current)) {
+            event.preventDefault();
+            return;
+          }
+          singleDragArmedRef.current = false;
+          const ids = onStartReorder?.(s.id) ?? [s.id];
+          event.dataTransfer.effectAllowed = 'move';
+          event.dataTransfer.setData('text/plain', ids.join('\n'));
+          setDragging(true);
+        }}
+        onDragEnd={() => { singleDragArmedRef.current = false; setDragging(false); setDragOver(false); }}
+        onDragOver={(event) => {
+          if (!onDropReorder) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(event) => {
+          event.preventDefault();
+          singleDragArmedRef.current = false;
+          setDragOver(false);
+          setDragging(false);
+          onDropReorder?.(s.id);
+        }}
         tabIndex={-1}
-        data-tooltip={taskTitle(s.prompt)}
+        aria-pressed={selectionMode ? multiSelected : selected}
+        data-tooltip={sessionDisplayTitle(s)}
       >
-        <span className="sidebar__row-icon">
-          <RowIcon session={s} favicon={favicon} size={18} fallbackClass="sidebar__row-icon-fallback" />
-          <span className="sidebar__row-dot" style={{ background: dot.color }} aria-label={dot.label} />
-        </span>
-        <span className="sidebar__row-title">{taskTitle(s.prompt)}</span>
+        {selectionMode ? (
+          <>
+            <span className={`sidebar__select-check${multiSelected ? ' sidebar__select-check--checked' : ''}`}><CheckSquareIcon checked={multiSelected} /></span>
+            {multiSelected && <span className="sidebar__drag-handle" aria-label="Drag selected sessions" title="Drag selected sessions"><DragHandleIcon /></span>}
+          </>
+        ) : (
+          <span className="sidebar__row-icon">
+            <RowIcon session={s} favicon={favicon} size={18} fallbackClass="sidebar__row-icon-fallback" />
+            <span className="sidebar__row-dot" style={{ background: dot.color }} aria-label={dot.label} />
+          </span>
+        )}
+        <span className="sidebar__row-title">{sessionDisplayTitle(s)}</span>
+        {!selectionMode && onDropReorder && (
+          <span
+            className="sidebar__drag-handle sidebar__drag-handle--single"
+            aria-label="Drag session to reorder"
+            title="Drag to reorder"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <DragHandleIcon />
+          </span>
+        )}
         {pinned && (
           <span className="sidebar__row-pin" aria-label="Pinned" title="Pinned">
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
@@ -269,6 +380,7 @@ function sameRowSession(a: SidebarSession, b: SidebarSession): boolean {
     a.id === b.id &&
     a.status === b.status &&
     a.prompt === b.prompt &&
+    a.title === b.title &&
     a.primarySite === b.primarySite &&
     a.lastActivityAt === b.lastActivityAt &&
     a.engine === b.engine &&
@@ -279,6 +391,8 @@ function sameRowSession(a: SidebarSession, b: SidebarSession): boolean {
 const SessionRow = React.memo(SessionRowImpl, (prev, next) =>
   prev.selected === next.selected
   && prev.pinned === next.pinned
+  && prev.selectionMode === next.selectionMode
+  && prev.multiSelected === next.multiSelected
   && sameRowSession(prev.s, next.s),
 );
 
@@ -312,7 +426,7 @@ function TabChipImpl({
       onClick={() => onSelect?.(s.id)}
       onMouseDown={preventMouseFocus}
       tabIndex={-1}
-      data-tooltip={taskTitle(s.prompt)}
+      data-tooltip={sessionDisplayTitle(s)}
       data-status={s.status}
       data-bucket={bucket}
     >
@@ -321,20 +435,132 @@ function TabChipImpl({
         <RowIcon session={s} favicon={favicon} size={14} fallbackClass="tabstrip__chip-icon-fallback" />
         <span className="tabstrip__chip-dot" style={{ background: dot.color }} aria-label={dot.label} />
       </span>
-      <span className="tabstrip__chip-title">{taskTitle(s.prompt)}</span>
+      <span className="tabstrip__chip-title">{sessionDisplayTitle(s)}</span>
     </button>
   );
 }
 
-export function Sidebar({ sessions, selectedId, onSelect, onNewAgent, onRowAction, pinnedIds, mode = 'side' }: SidebarProps): React.ReactElement {
-  const data = sessions ?? MOCK_SIDEBAR_SESSIONS;
+export function Sidebar({ sessions, selectedId, onSelect, onNewAgent, onRowAction, onBulkDelete, onRename, manualOrderIds = [], onReorder, pinnedIds, mode = 'side' }: SidebarProps): React.ReactElement {
+  const data = useMemo(() => {
+    const byId = new Map<string, SidebarSession>();
+    for (const session of sessions ?? MOCK_SIDEBAR_SESSIONS) byId.set(session.id, session);
+    return [...byId.values()];
+  }, [sessions]);
 
   const pinned = useMemo(() => pinnedIds ?? new Set<string>(), [pinnedIds]);
-  const orderedSessions = useMemo(() => orderSessionsForSidebar(data, pinned), [data, pinned]);
+  const orderedSessions = useMemo(() => orderSessionsForSidebar(data, pinned, manualOrderIds), [data, pinned, manualOrderIds]);
+  const orderedSessionsRef = useRef(orderedSessions);
+  orderedSessionsRef.current = orderedSessions;
   const runningCount = useMemo(
     () => orderedSessions.filter((s) => s.status === 'running').length,
     [orderedSessions],
   );
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const selectedIdsRef = useRef(selectedIds);
+  selectedIdsRef.current = selectedIds;
+  const pinnedIdsRef = useRef(pinned);
+  pinnedIdsRef.current = pinned;
+  const draggedIdsRef = useRef<string[]>([]);
+  const [confirmDeleteIds, setConfirmDeleteIds] = useState<string[] | null>(null);
+  const [renameSessionId, setRenameSessionId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState('');
+  const [renameError, setRenameError] = useState('');
+  const renameInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const liveIds = new Set(data.map((session) => session.id));
+    setSelectedIds((prev) => {
+      const next = new Set([...prev].filter((id) => liveIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [data]);
+  const filteredSessions = useMemo(() => {
+    const needle = searchTerm.trim().toLocaleLowerCase();
+    if (!needle) return orderedSessions;
+    return orderedSessions.filter((session) => [
+      sessionDisplayTitle(session),
+      session.prompt,
+      session.status,
+      session.engine ?? '',
+      session.id,
+    ].some((value) => value.toLocaleLowerCase().includes(needle)));
+  }, [orderedSessions, searchTerm]);
+  const allVisibleSelected = filteredSessions.length > 0 && filteredSessions.every((session) => selectedIds.has(session.id));
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+  const startReorder = useCallback((id: string): string[] => {
+    const selected = selectedIdsRef.current;
+    const ids = selectionMode && selected.has(id)
+      ? orderedSessionsRef.current.filter((session) => selected.has(session.id)).map((session) => session.id)
+      : [id];
+    draggedIdsRef.current = ids;
+    return ids;
+  }, [selectionMode]);
+  const dropReorder = useCallback((targetId: string) => {
+    const ids = draggedIdsRef.current;
+    draggedIdsRef.current = [];
+    if (ids.length > 0 && !ids.includes(targetId)) onReorder?.(ids, targetId);
+  }, [onReorder]);
+  const beginRename = useCallback((id: string) => {
+    const session = orderedSessionsRef.current.find((candidate) => candidate.id === id);
+    if (!session) return;
+    setRenameDraft(sessionDisplayTitle(session));
+    setRenameError('');
+    setRenameSessionId(id);
+  }, []);
+  const closeRename = useCallback(() => {
+    setRenameSessionId(null);
+    setRenameError('');
+  }, []);
+  const saveRename = useCallback(async () => {
+    if (!renameSessionId || !onRename) return;
+    const title = renameDraft.trim();
+    if (!title) {
+      setRenameError('Enter a session name.');
+      return;
+    }
+    try {
+      await onRename(renameSessionId, title);
+      closeRename();
+    } catch (error) {
+      setRenameError(error instanceof Error ? error.message : 'Could not rename this session.');
+    }
+  }, [closeRename, onRename, renameDraft, renameSessionId]);
+  const toggleSearch = useCallback(() => {
+    if (searchOpen) setSearchTerm('');
+    setSearchOpen(!searchOpen);
+  }, [searchOpen]);
+  const toggleSelectionMode = useCallback(() => {
+    setSelectionMode((active) => {
+      if (active) {
+        setSelectedIds(new Set());
+        setConfirmDeleteIds(null);
+      }
+      return !active;
+    });
+  }, []);
+  const toggleAllVisible = (): void => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) filteredSessions.forEach((session) => next.delete(session.id));
+      else filteredSessions.forEach((session) => next.add(session.id));
+      return next;
+    });
+  };
+  const confirmBulkDelete = (): void => {
+    if (!confirmDeleteIds?.length) return;
+    onBulkDelete?.(confirmDeleteIds);
+    setConfirmDeleteIds(null);
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+  };
 
   if (mode === 'top') {
     return (
@@ -383,30 +609,155 @@ export function Sidebar({ sessions, selectedId, onSelect, onNewAgent, onRowActio
             {orderedSessions.length}
           </span>
         )}
+        <div className="sidebar__header-actions">
+          <button
+            type="button"
+            className={`sidebar__icon-btn has-tooltip${searchOpen ? ' sidebar__icon-btn--active' : ''}`}
+            onClick={toggleSearch}
+            tabIndex={-1}
+            aria-label={searchOpen ? 'Close session search' : 'Search sessions'}
+            aria-pressed={searchOpen}
+            data-tooltip={searchOpen ? 'Close search' : 'Search sessions'}
+          >
+            <SearchIcon />
+          </button>
+          <button
+            type="button"
+            className={`sidebar__icon-btn has-tooltip${selectionMode ? ' sidebar__icon-btn--active' : ''}`}
+            onClick={toggleSelectionMode}
+            tabIndex={-1}
+            aria-label={selectionMode ? 'Exit multi-select' : 'Select multiple sessions'}
+            aria-pressed={selectionMode}
+            data-tooltip={selectionMode ? 'Done selecting' : 'Select sessions'}
+          >
+            {selectionMode ? <CloseIcon /> : <SelectModeIcon />}
+          </button>
+        </div>
       </div>
 
+      {searchOpen && (
+        <label className="sidebar__search-row">
+          <SearchIcon />
+          <input
+            autoFocus
+            type="search"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            onKeyDown={(event) => { if (event.key === 'Escape') toggleSearch(); }}
+            placeholder="Find a session"
+            aria-label="Find a session"
+          />
+          {searchTerm && (
+            <button type="button" onClick={() => setSearchTerm('')} aria-label="Clear search">
+              <CloseIcon />
+            </button>
+          )}
+        </label>
+      )}
+
+      {selectionMode && (
+        <div className="sidebar__selection-bar" role="toolbar" aria-label="Session selection actions">
+          <span className="sidebar__selection-count" aria-live="polite">{selectedIds.size} selected</span>
+          {selectedIds.size > 0 && <span className="sidebar__selection-hint">Drag to reorder</span>}
+          <button
+            type="button"
+            className="sidebar__icon-btn has-tooltip"
+            onClick={toggleAllVisible}
+            tabIndex={-1}
+            disabled={filteredSessions.length === 0}
+            aria-label={allVisibleSelected ? 'Deselect all visible sessions' : 'Select all visible sessions'}
+            data-tooltip={allVisibleSelected ? 'Deselect visible' : 'Select visible'}
+          >
+            <SelectAllIcon checked={allVisibleSelected} />
+          </button>
+          <button
+            type="button"
+            className="sidebar__icon-btn sidebar__icon-btn--danger has-tooltip"
+            onClick={() => setConfirmDeleteIds([...selectedIds])}
+            tabIndex={-1}
+            disabled={selectedIds.size === 0}
+            aria-label={`Delete ${selectedIds.size} selected sessions`}
+            data-tooltip="Delete selected"
+          >
+            <TrashIcon />
+          </button>
+        </div>
+      )}
+
       <div className="sidebar__groups">
-        {orderedSessions.length === 0 ? (
+        {filteredSessions.length === 0 ? (
           // An empty panel with a + in the corner leaves the user to work out
           // that the + is the way in. Say it.
           <div className="sidebar__empty">
-            <span className="sidebar__empty-title">No agents yet</span>
-            <span className="sidebar__empty-hint">
-              Describe a task on the right, or press
-              {' '}
-              <kbd className="sidebar__kbd">+</kbd>
-              {' '}
-              to start one.
-            </span>
+            <span className="sidebar__empty-title">{orderedSessions.length === 0 ? 'No agents yet' : 'No sessions found'}</span>
+            {orderedSessions.length === 0 ? (
+              <span className="sidebar__empty-hint">
+                Describe a task on the right, or press <kbd className="sidebar__kbd">+</kbd> to start one.
+              </span>
+            ) : (
+              <button type="button" className="sidebar__clear-search" onClick={() => setSearchTerm('')}>Clear search</button>
+            )}
           </div>
         ) : (
           <div className="sidebar__group-body">
-            {orderedSessions.map((s) => (
-              <SessionRow key={s.id} s={s} selected={s.id === selectedId} onSelect={onSelect} onAction={onRowAction} pinned={pinned.has(s.id)} />
+            {filteredSessions.map((s) => (
+              <SessionRow
+                key={s.id}
+                s={s}
+                selected={s.id === selectedId}
+                onSelect={onSelect}
+                onAction={onRowAction}
+                onRename={beginRename}
+                pinned={pinned.has(s.id)}
+                selectionMode={selectionMode}
+                multiSelected={selectedIds.has(s.id)}
+                onStartReorder={startReorder}
+                onDropReorder={dropReorder}
+                onToggleSelection={toggleSelected}
+              />
             ))}
           </div>
         )}
       </div>
+
+      {confirmDeleteIds && (
+        <div className="sidebar__dialog-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) setConfirmDeleteIds(null); }}>
+          <section className="sidebar__dialog" role="alertdialog" aria-modal="true" aria-labelledby="sidebar-delete-title" aria-describedby="sidebar-delete-copy">
+            <h2 id="sidebar-delete-title">Delete {confirmDeleteIds.length} {confirmDeleteIds.length === 1 ? 'session' : 'sessions'}?</h2>
+            <p id="sidebar-delete-copy">Their chat history and session files will be removed.</p>
+            <div className="sidebar__dialog-actions">
+              <button type="button" onClick={() => setConfirmDeleteIds(null)}>Cancel</button>
+              <button type="button" className="sidebar__dialog-delete" onClick={confirmBulkDelete}>Delete</button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {renameSessionId && (
+        <div className="sidebar__dialog-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) closeRename(); }}>
+          <section className="sidebar__dialog" role="dialog" aria-modal="true" aria-labelledby="sidebar-rename-title">
+            <h2 id="sidebar-rename-title">Rename session</h2>
+            <input
+              ref={renameInputRef}
+              autoFocus
+              className="sidebar__rename-input"
+              value={renameDraft}
+              maxLength={120}
+              onChange={(event) => { setRenameDraft(event.target.value); setRenameError(''); }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') { event.preventDefault(); void saveRename(); }
+                if (event.key === 'Escape') closeRename();
+              }}
+              aria-label="Session name"
+            />
+            {renameError && <p className="sidebar__dialog-error" role="alert">{renameError}</p>}
+            <div className="sidebar__dialog-actions">
+              <button type="button" onClick={closeRename}>Cancel</button>
+              <button type="button" className="sidebar__dialog-save" onClick={() => void saveRename()}>Save name</button>
+            </div>
+          </section>
+        </div>
+      )}
 
     </aside>
   );

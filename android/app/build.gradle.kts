@@ -36,8 +36,8 @@ android {
     applicationId = "com.chethan616.dex"
     minSdk = 26
     targetSdk = 36
-    versionCode = 44
-    versionName = "2.3.0"
+    versionCode = 45
+    versionName = "2.3.1"
     buildConfigField("boolean", "HAS_FIREBASE", hasFirebaseConfig.toString())
   }
 

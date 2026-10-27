@@ -1097,7 +1097,7 @@ function AgentPaneImpl({ session, focused, onRerun, onResume, onPause, onFollowU
           <span className={`pane__dot pane__dot--${session.status}`} />
         </span>
         <div className="pane__title-group">
-          <span className="pane__prompt">{taskTitle(session.prompt)}</span>
+          <span className="pane__prompt">{session.title ?? taskTitle(session.prompt)}</span>
           {session.engine === 'codex' && (
             <img className="pane__engine-icon" src={openaiLogo} alt="Codex" title="Codex" />
           )}

@@ -613,7 +613,7 @@ export function ChatView({ session, tabUrls = [], engineName, engineIcon, onFoll
         <Minibar
           avatar={<AgentAvatar sessionId={sessionId} engineId={session.engine} status={session.status} mood={mood} size={28} />}
           sessionId={sessionId}
-          title={taskTitle(session.prompt)}
+          title={session.title ?? taskTitle(session.prompt)}
           engineName={engineName}
           engineIcon={engineIcon}
           model={friendlyModel(session.model) ?? undefined}

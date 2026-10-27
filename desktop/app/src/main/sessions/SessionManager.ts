@@ -78,6 +78,7 @@ export class SessionManager extends EventEmitter {
       const session: AgentSession = {
         id: row.id,
         prompt: row.prompt,
+        title: row.title ?? undefined,
         status: row.status as SessionStatus,
         createdAt: row.created_at,
         output: [],
@@ -804,6 +805,16 @@ export class SessionManager extends EventEmitter {
 
   getClaudeSessionId(id: string): string | undefined {
     return this.getEngineSessionId(id);
+  }
+
+  setSessionTitle(id: string, title: string): void {
+    const session = this.sessions.get(id);
+    if (!session) throw new Error(`Session not found: ${id}`);
+    session.title = title;
+    // Do not update the activity timestamp: a rename must not reorder the
+    // sidebar or move the conversation currently open in the main pane.
+    this.db.updateSessionTitle(id, title);
+    this.emitEvent('session-updated', { ...session });
   }
 
   /** Record the engine id chosen for this session. Also stamps

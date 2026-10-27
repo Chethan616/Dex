@@ -1390,6 +1390,16 @@ app.whenReady().then(async () => {
       shellWindow,
     });
   });
+  sessionManager.onEvent('session-deleted', (id) => {
+    notifiedStarted.delete(id);
+    notifiedStuck.delete(id);
+    shellWindow?.webContents.send('session-deleted', id);
+    const logsWin = getLogsWindow();
+    if (logsWin && !logsWin.isDestroyed()) {
+      logsWin.webContents.send('session-deleted', id);
+    }
+    sendToPill('session-deleted', id);
+  });
   sessionManager.onEvent('session-output', (id, line) => {
     shellWindow?.webContents.send('session-output', id, line);
     sendToPill('session-output', { id, line });
@@ -2880,6 +2890,13 @@ app.whenReady().then(async () => {
     return id;
   });
 
+  ipcMain.handle('sessions:rename', (_event, payload: { id?: unknown; title?: unknown }) => {
+    const id = assertString(payload?.id, 'id', 100);
+    const title = assertString(payload?.title, 'title', 120).trim();
+    if (!title) throw new Error('A session name is required.');
+    sessionManager.setSessionTitle(id, title);
+  });
+
   // Workflows from the hub: the cards' View (the live copy, when it still
   // exists) and Run now, and `/workflow` typed in a task's composer.
   ipcMain.handle('workflows:get', (_event, id: unknown) => workflowStore.get(assertString(id, 'id', 40)));
@@ -3078,7 +3095,7 @@ app.whenReady().then(async () => {
     browserPool.destroy(validatedId, shellWindow ?? undefined);
   });
 
-  ipcMain.handle('sessions:delete', (_event, id: string) => {
+  ipcMain.handle('sessions:delete', async (_event, id: string) => {
     const validatedId = assertString(id, 'id', 100);
     mainLogger.info('main.sessions:delete', { id: validatedId });
     queuedFollowUps.delete(validatedId);
@@ -3093,6 +3110,21 @@ app.whenReady().then(async () => {
     docsRestored.delete(validatedId);
     sessionManager.deleteSession(validatedId);
     approvalPolicy.clearSession(validatedId);
+    // User-created files are stored under outputs/<session id>. Remove only
+    // this session's directory after its database record and cascaded rows are
+    // gone; the resolved-parent check prevents an id from escaping outputs/.
+    const outputsRoot = path.resolve(harnessDir(), 'outputs');
+    const sessionOutputs = path.resolve(outputsRoot, validatedId);
+    if (path.dirname(sessionOutputs) === outputsRoot) {
+      try {
+        await fs.promises.rm(sessionOutputs, { recursive: true, force: true });
+      } catch (err) {
+        mainLogger.warn('main.sessions:delete.output-cleanup-failed', {
+          id: validatedId,
+          error: (err as Error).message,
+        });
+      }
+    }
   });
 
   /**
@@ -3391,7 +3423,11 @@ app.whenReady().then(async () => {
   // stale/forged id from a closed card can't resolve a different session's
   // wait.
   // Set once the phone bridge is created below; lets other handlers poke it.
-  let phoneBridge: { refreshDevice(): void } | null = null;
+  let phoneBridge: {
+    refreshDevice(): void;
+    getSessionOrder(): Promise<string[]>;
+    setSessionOrder(ids: readonly string[]): Promise<boolean>;
+  } | null = null;
 
   ipcMain.handle('dex:confirm-answer', (_event, sessionId: string, id: string, approved: boolean, lifetime?: unknown) => {
     const validatedSessionId = assertString(sessionId, 'sessionId', 100);
@@ -3512,9 +3548,20 @@ app.whenReady().then(async () => {
         if (!win.isDestroyed()) win.webContents.send('bridge:state', state);
       }
     };
+    const pushSessionOrder = (ids: string[]) => {
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) win.webContents.send('bridge:session-order', ids);
+      }
+    };
     bridge.onState(pushState);
+    bridge.onSessionOrder(pushSessionOrder);
     ipcMain.handle('bridge:status', () => bridge.state);
     ipcMain.handle('bridge:restart', () => bridge.start());
+    ipcMain.handle('bridge:session-order:get', () => bridge.getSessionOrder());
+    ipcMain.handle('bridge:session-order:set', (_e, raw: unknown) => {
+      if (!Array.isArray(raw)) throw new Error('Session order must be a list.');
+      return bridge.setSessionOrder(raw.slice(0, 5000).map((id, index) => assertString(id, `sessionOrder[${index}]`, 100)));
+    });
     ipcMain.handle('bridge:sign-in', (_e, email: unknown, password: unknown, create: unknown) =>
       bridge.signIn(assertString(email, 'email', 320), assertString(password, 'password', 256), create === true));
     ipcMain.handle('bridge:reset-password', (_e, email: unknown) => bridge.resetPassword(assertString(email, 'email', 320)));

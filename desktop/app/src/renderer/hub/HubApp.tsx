@@ -9,7 +9,7 @@ import { SettingsPane } from './SettingsPane';
 import { useVimKeys } from './useVimKeys';
 import { useSessionsQuery, useUpdateSession } from './useSessionsQuery';
 import { MemoryIndicator } from './MemoryIndicator';
-import { Sidebar } from './Sidebar';
+import { Sidebar, type SidebarRowAction } from './Sidebar';
 import { MOCK_SESSIONS } from './mock-data';
 import type { AgentSession, HlEvent } from './types';
 import type { ActionId } from './keybindings';
@@ -111,6 +111,7 @@ const HubViewToggle = React.memo(function HubViewToggle({
 });
 
 const PINNED_STORAGE_KEY = 'hub.pinnedSessions';
+const SESSION_ORDER_STORAGE_KEY = 'hub.sessionOrder';
 
 /**
  * Pinned rows are a per-machine view preference rather than session state, so
@@ -132,8 +133,24 @@ function savePinnedIds(ids: ReadonlySet<string>): void {
   try { localStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify([...ids])); } catch { /* ignore */ }
 }
 
+function loadSessionOrder(): string[] {
+  try {
+    const raw = localStorage.getItem(SESSION_ORDER_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? [...new Set(parsed.filter((id): id is string => typeof id === 'string'))] : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveSessionOrder(ids: readonly string[]): void {
+  try { localStorage.setItem(SESSION_ORDER_STORAGE_KEY, JSON.stringify(ids)); } catch { /* ignore */ }
+}
+
 export function HubApp(): React.ReactElement {
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => loadPinnedIds());
+  const [manualOrderIds, setManualOrderIds] = useState<string[]>(() => loadSessionOrder());
 
   const isMock = import.meta.env.VITE_MOCK_MODE === '1';
   const [mockSessions, setMockSessions] = useState<AgentSession[]>(isMock ? MOCK_SESSIONS : []);
@@ -161,6 +178,22 @@ export function HubApp(): React.ReactElement {
     });
   }, []);
 
+  useEffect(() => {
+    const bridge = window.electronAPI?.settings?.bridge;
+    if (!bridge) return;
+    let mounted = true;
+    const applyRemoteOrder = (ids: string[]): void => {
+      if (!mounted || ids.length === 0) return;
+      const unique = [...new Set(ids)].slice(0, 5000);
+      manualOrderIdsRef.current = unique;
+      setManualOrderIds(unique);
+      saveSessionOrder(unique);
+    };
+    const unsubscribe = bridge.onSessionOrder(applyRemoteOrder);
+    void bridge.getSessionOrder().then(applyRemoteOrder).catch(() => {});
+    return () => { mounted = false; unsubscribe(); };
+  }, []);
+
   // Always open on the Dashboard (Home), regardless of which view was left
   // showing last session. Restoring the previous view meant launching
   // straight into Grid — a screen that immediately mounts every session's
@@ -180,7 +213,25 @@ export function HubApp(): React.ReactElement {
   const [extensionsPanel, setExtensionsPanel] = useState<ExtensionsView | null>(null);
   const [settingsIntent, setSettingsIntent] = useState<SettingsOpenIntent | null>(null);
   const settingsRequestIdRef = useRef(0);
-  const [focusIndex, setFocusIndex] = useState(0);
+  // Keep the selected conversation by id. Sidebar rows are memoized and the
+  // session list can change order while they stay mounted, so an index can
+  // silently start pointing at a different conversation after a refetch.
+  // `undefined` means use the first available session by default; `null` is
+  // an explicit cleared selection (Escape).
+  const [focusedSessionId, setFocusedSessionId] = useState<string | null | undefined>(undefined);
+  const focusIndex = focusedSessionId === undefined
+    ? (sessions.length > 0 ? 0 : -1)
+    : focusedSessionId === null
+      ? -1
+      : sessions.findIndex((session) => session.id === focusedSessionId);
+  const sessionsRef = useRef(sessions);
+  sessionsRef.current = sessions;
+  const focusedSessionIdRef = useRef(focusedSessionId);
+  focusedSessionIdRef.current = focusedSessionId;
+  const pinnedIdsRef = useRef(pinnedIds);
+  pinnedIdsRef.current = pinnedIds;
+  const manualOrderIdsRef = useRef(manualOrderIds);
+  manualOrderIdsRef.current = manualOrderIds;
   const [zoomFactor, setZoomFactor] = useState(1.0);
   // Grid is permanently 1x1 (gridColumns = 1), but gridPage is real state —
   // it's what selects WHICH session is currently rendered. We repurpose it
@@ -283,7 +334,7 @@ export function HubApp(): React.ReactElement {
     });
   }, [allSessions]);
 
-  const orderedSessions = useMemo(() => orderSessionsForSidebar(sessions), [sessions]);
+  const orderedSessions = useMemo(() => orderSessionsForSidebar(sessions, pinnedIds, manualOrderIds), [sessions, pinnedIds, manualOrderIds]);
 
   const vimHandlers = useMemo<Partial<Record<ActionId, () => void>>>(() => ({
     'nav.down': () => {
@@ -293,7 +344,7 @@ export function HubApp(): React.ReactElement {
       const nextVis = Math.min((currVis < 0 ? 0 : currVis + 1), visible.length - 1);
       const nextGlobal = sessions.findIndex((s) => s.id === visible[nextVis].id);
       console.log('[VimKeys] nav.down', { from: focusIndex, to: nextGlobal, visIdx: nextVis });
-      setFocusIndex(nextGlobal);
+      setFocusedSessionId(sessions[nextGlobal]?.id ?? null);
     },
     'nav.up': () => {
       const visible = orderedSessions;
@@ -302,20 +353,20 @@ export function HubApp(): React.ReactElement {
       const nextVis = Math.max((currVis < 0 ? 0 : currVis - 1), 0);
       const nextGlobal = sessions.findIndex((s) => s.id === visible[nextVis].id);
       console.log('[VimKeys] nav.up', { from: focusIndex, to: nextGlobal, visIdx: nextVis });
-      setFocusIndex(nextGlobal);
+      setFocusedSessionId(sessions[nextGlobal]?.id ?? null);
     },
     'nav.top': () => {
       const visible = orderedSessions;
       if (!visible.length) return;
       const nextGlobal = sessions.findIndex((s) => s.id === visible[0].id);
-      setFocusIndex(nextGlobal);
+      setFocusedSessionId(sessions[nextGlobal]?.id ?? null);
     },
     'nav.bottom': () => {
       const visible = orderedSessions;
       if (!visible.length) return;
       const lastVis = visible.length - 1;
       const nextGlobal = sessions.findIndex((s) => s.id === visible[lastVis].id);
-      setFocusIndex(nextGlobal);
+      setFocusedSessionId(sessions[nextGlobal]?.id ?? null);
     },
     'nav.open': () => {
       console.log('[VimKeys] open session', sessions[focusIndex]?.id);
@@ -331,7 +382,8 @@ export function HubApp(): React.ReactElement {
       if (!s) return;
       console.log('[VimKeys] dismiss session', s.id);
       window.electronAPI?.sessions.dismiss(s.id).catch((err) => console.error('[VimKeys] dismiss failed', err));
-      setFocusIndex((i) => Math.min(i, sessions.length - 2));
+      const nextIndex = Math.min(focusIndex, sessions.length - 2);
+      setFocusedSessionId(sessions[nextIndex]?.id ?? null);
     },
     // grid.nextPage / grid.prevPage removed — single-pane layout, no paging.
     'action.cancel': () => {
@@ -364,7 +416,7 @@ export function HubApp(): React.ReactElement {
         if (viewMode !== 'settings') showBrowserViews();
         return;
       }
-      setFocusIndex(-1);
+      setFocusedSessionId(null);
     },
   }), [sessions, orderedSessions, focusIndex, helpOpen, viewMode, setViewMode, openSettingsPage, showBrowserViews]);
 
@@ -449,13 +501,60 @@ export function HubApp(): React.ReactElement {
 
   // Grid density auto-clamp removed — grid is always 1x1.
 
+  const previousViewModeRef = useRef<ViewMode>(viewMode);
   useEffect(() => {
+    const previousMode = previousViewModeRef.current;
+    previousViewModeRef.current = viewMode;
+    // Each AgentPane owns the browser view for its session. Detach everything
+    // only when leaving Grid; doing this on gridPage changes raced the newly
+    // mounted pane's attach and left sidebar-selected sessions blank.
+    if (isMock || previousMode !== 'grid' || viewMode === 'grid') return;
     const api = window.electronAPI;
-    if (!api || isMock) return;
-    sessions.forEach((s) => {
-      api.sessions.viewDetach(s.id).catch(() => {});
+    if (!api) return;
+    sessions.forEach((session) => {
+      api.sessions.viewDetach(session.id).catch(() => {});
     });
-  }, [viewMode, gridColumns, gridPage]);
+  }, [isMock, sessions, viewMode]);
+
+  useEffect(() => {
+    const onDeleted = window.electronAPI?.on?.sessionDeleted;
+    if (!onDeleted) return;
+    return onDeleted((id) => {
+      setDeletingIds((prev) => {
+        if (!prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+
+      // Deletions can also come from another app surface. Keep the current
+      // conversation stable, and move to a nearby one only if it was deleted.
+      const current = sessionsRef.current;
+      const currentFocus = focusedSessionIdRef.current;
+      const deletedIndex = current.findIndex((session) => session.id === id);
+      const nextOrder = manualOrderIdsRef.current.filter((sessionId) => sessionId !== id);
+      if (nextOrder.length !== manualOrderIdsRef.current.length) {
+        manualOrderIdsRef.current = nextOrder;
+        setManualOrderIds(nextOrder);
+        saveSessionOrder(nextOrder);
+        void window.electronAPI?.settings?.bridge?.setSessionOrder(nextOrder).catch(() => {});
+      }
+      setPinnedIds((prev) => {
+        if (!prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.delete(id);
+        savePinnedIds(next);
+        return next;
+      });
+      const wasDefaultSelection = currentFocus === undefined && deletedIndex === 0;
+      if (currentFocus !== id && !wasDefaultSelection) return;
+      const remaining = current.filter((session) => session.id !== id);
+      const fallbackIndex = Math.min(Math.max(deletedIndex, 0), remaining.length - 1);
+      const fallback = remaining[fallbackIndex];
+      setFocusedSessionId(fallback?.id ?? null);
+      setGridPage(fallback ? fallbackIndex : 0);
+    });
+  }, []);
 
   // Logs overlay is anchored to the AgentPane, which only renders in 'grid'
   // view. Hide it whenever the user switches away so it doesn't float over
@@ -465,34 +564,15 @@ export function HubApp(): React.ReactElement {
     window.electronAPI?.logs?.close?.().catch(() => {});
   }, [viewMode]);
 
-  const pendingFocusIdRef = useRef<string | null>(null);
+  const initialFocusAssignedRef = useRef(false);
 
   useEffect(() => {
-    const pendingId = pendingFocusIdRef.current;
-    if (!pendingId) return;
-    const globalIdx = sessions.findIndex((s) => s.id === pendingId);
-    if (globalIdx < 0) return;
-    console.log('[HubApp] focusing pending new session', { pendingId, globalIdx });
-    setFocusIndex(globalIdx);
-    pendingFocusIdRef.current = null;
+    if (initialFocusAssignedRef.current || sessions.length === 0) return;
+    initialFocusAssignedRef.current = true;
+    // Choose the initial conversation once. Later background-created or
+    // reordered sessions must never steal focus from the one the user opened.
+    setFocusedSessionId((current) => current === undefined ? sessions[0].id : current);
   }, [sessions]);
-
-  const knownIdsRef = useRef<Set<string> | null>(null);
-  useEffect(() => {
-    if (knownIdsRef.current === null) {
-      knownIdsRef.current = new Set(sessions.map((s) => s.id));
-      console.log('[HubApp] initialize knownIds', { count: knownIdsRef.current.size });
-      return;
-    }
-    const known = knownIdsRef.current;
-    const newSession = sessions.find((s) => !known.has(s.id));
-    knownIdsRef.current = new Set(sessions.map((s) => s.id));
-    if (!newSession) return;
-    const globalIdx = sessions.findIndex((s) => s.id === newSession.id);
-    console.log('[HubApp] new session detected -> focus', { id: newSession.id, globalIdx });
-    setViewMode('grid');
-    setFocusIndex(globalIdx);
-  }, [sessions, setViewMode]);
 
   useEffect(() => {
     const visible = sessions;
@@ -522,7 +602,7 @@ export function HubApp(): React.ReactElement {
         output: [{ type: 'thinking', text: `Analyzing the task: "${prompt}". Let me break this down and determine the best approach.` }],
       };
       console.log('[HubApp] createSession (mock)', { id, prompt });
-      pendingFocusIdRef.current = id;
+      setFocusedSessionId(id);
       setViewMode('grid');
       setSessions((prev) => [...prev, newSession]);
 
@@ -556,7 +636,10 @@ export function HubApp(): React.ReactElement {
           : prompt,
       );
       console.log('[HubApp] session created', { id });
-      pendingFocusIdRef.current = id;
+      // Select the explicit user-created session by ID immediately. Waiting
+      // for a later list/event update could miss the new row if it arrived
+      // before the create call resolved, leaving the previous chat in front.
+      setFocusedSessionId(id);
       setViewMode('grid');
       await api.sessions.start(id);
       console.log('[HubApp] session started', { id });
@@ -618,11 +701,144 @@ export function HubApp(): React.ReactElement {
     }
   }, [isMock]);
 
+  const handleDeleteSessions = useCallback((ids: string[]) => {
+    const uniqueIds = [...new Set(ids)];
+    if (uniqueIds.length === 0) return;
+    const pinnedBeforeDelete = uniqueIds.filter((id) => pinnedIdsRef.current.has(id));
+    const api = window.electronAPI;
+    if (!isMock && !api) return;
+
+    const deleting = new Set(uniqueIds);
+    const current = sessionsRef.current;
+    const currentFocus = focusedSessionIdRef.current;
+    const activeId = currentFocus === undefined ? current[0]?.id : currentFocus;
+    const activeIndex = activeId ? current.findIndex((session) => session.id === activeId) : -1;
+    if (activeId && deleting.has(activeId)) {
+      const remaining = current.filter((session) => !deleting.has(session.id));
+      const fallbackIndex = Math.min(Math.max(activeIndex, 0), remaining.length - 1);
+      const fallback = remaining[fallbackIndex];
+      setFocusedSessionId(fallback?.id ?? null);
+      setGridPage(fallback ? fallbackIndex : 0);
+    }
+
+    setPinnedIds((prev) => {
+      const next = new Set(prev);
+      uniqueIds.forEach((id) => next.delete(id));
+      if (next.size === prev.size) return prev;
+      savePinnedIds(next);
+      return next;
+    });
+    setDeletingIds((prev) => new Set([...prev, ...uniqueIds]));
+
+    if (isMock) {
+      setMockSessions((prev) => prev.filter((session) => !deleting.has(session.id)));
+      setDeletingIds((prev) => {
+        const next = new Set(prev);
+        uniqueIds.forEach((id) => next.delete(id));
+        return next;
+      });
+      return;
+    }
+
+    uniqueIds.forEach((id) => {
+      void api!.sessions.delete(id).catch((err) => {
+        // Restore only the row whose deletion failed; successful deletions are
+        // removed by the session-deleted event from the main process.
+        console.error('[HubApp] delete failed', { id, err });
+        setDeletingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+        if (pinnedBeforeDelete.includes(id)) {
+          setPinnedIds((prev) => {
+            if (prev.has(id)) return prev;
+            const next = new Set(prev);
+            next.add(id);
+            savePinnedIds(next);
+            return next;
+          });
+        }
+      });
+    });
+  }, [isMock]);
+
+  const handleSidebarRowAction = useCallback((id: string, action: SidebarRowAction) => {
+    console.log('[HubApp] sidebar row action', { id, action });
+    switch (action) {
+      case 'rerun':
+        window.electronAPI?.sessions.rerun(id).catch((err) => console.error('[HubApp] rerun failed', err));
+        break;
+      case 'stop':
+        window.electronAPI?.sessions.cancel(id).catch(() => {});
+        break;
+      case 'pause':
+        void handlePause(id);
+        break;
+      case 'resume':
+        void handleResume(id);
+        break;
+      case 'pin':
+      case 'unpin':
+        // Pinning only changes sidebar order. Session focus is stored by id,
+        // so reordering can never redirect the active conversation.
+        setPinnedIds((prev) => {
+          const next = new Set(prev);
+          if (action === 'pin') next.add(id); else next.delete(id);
+          savePinnedIds(next);
+          return next;
+        });
+        break;
+      case 'delete':
+        handleDeleteSessions([id]);
+        break;
+      case 'rename':
+        break;
+    }
+  }, [handleDeleteSessions, handlePause, handleResume]);
+
+  const handleRenameSession = useCallback(async (id: string, title: string) => {
+    if (isMock) {
+      setMockSessions((prev) => prev.map((session) => (session.id === id ? { ...session, title } : session)));
+      return;
+    }
+    const api = window.electronAPI;
+    if (!api) throw new Error('The session service is unavailable.');
+    await api.sessions.rename(id, title);
+  }, [isMock]);
+
   const handleSelectSession = useCallback((id: string) => {
-    const idx = sessions.findIndex((s) => s.id === id);
-    if (idx >= 0) setFocusIndex(idx);
+    setFocusedSessionId(id);
     console.log('[HubApp] selectSession', { id });
-  }, [sessions]);
+  }, []);
+
+  // Pass a stable callback to memoized Sidebar rows. It only records the
+  // tapped id and opens Grid, so a row retained across renders never carries
+  // an old session array or view mode in its click handler.
+  const handleSidebarSelect = useCallback((id: string) => {
+    handleSelectSession(id);
+    setViewMode('grid');
+  }, [handleSelectSession, setViewMode]);
+
+  const handleSidebarReorder = useCallback((draggedIds: string[], targetId: string) => {
+    const current = orderSessionsForSidebar(sessionsRef.current, pinnedIdsRef.current, manualOrderIdsRef.current);
+    const movingIds = new Set(draggedIds);
+    if (movingIds.size === 0 || movingIds.has(targetId)) return;
+    const moving = current.filter((session) => movingIds.has(session.id));
+    const rest = current.filter((session) => !movingIds.has(session.id));
+    const targetIndex = rest.findIndex((session) => session.id === targetId);
+    if (targetIndex < 0) return;
+    rest.splice(targetIndex, 0, ...moving);
+    const currentIds = new Set(current.map((session) => session.id));
+    const preserveUnlisted = manualOrderIdsRef.current.filter((id) => !currentIds.has(id));
+    const next = rest.map((session) => session.id).concat(preserveUnlisted);
+    manualOrderIdsRef.current = next;
+    setManualOrderIds(next);
+    saveSessionOrder(next);
+    void window.electronAPI?.settings?.bridge?.setSessionOrder(next).catch((err: unknown) => {
+      console.warn('[HubApp] session order sync failed', err);
+    });
+  }, []);
 
   // Main wants a task in front (a notification, the tray, a store page it
   // opened from Settings): to the grid, on that task, with no panel over it.
@@ -643,7 +859,7 @@ export function HubApp(): React.ReactElement {
     const firstOnPage = visible[clamped * gridPageSize];
     if (firstOnPage) {
       const globalIdx = sessions.findIndex((s) => s.id === firstOnPage.id);
-      if (globalIdx >= 0) setFocusIndex(globalIdx);
+      if (globalIdx >= 0) setFocusedSessionId(firstOnPage.id);
     }
     setGridPage(clamped);
   }, [gridTotalPages, gridPageSize, sessions]);
@@ -703,62 +919,14 @@ export function HubApp(): React.ReactElement {
         mode={tabsPosition}
         sessions={sessions}
         selectedId={viewMode === 'grid' ? selectedSessionId : null}
-        onSelect={(id) => {
-          handleSelectSession(id);
-          if (viewMode !== 'grid') setViewMode('grid');
-        }}
+        onSelect={handleSidebarSelect}
         onNewAgent={() => openPill()}
         pinnedIds={pinnedIds}
-        onRowAction={(id, action) => {
-          console.log('[HubApp] sidebar row action', { id, action });
-          switch (action) {
-            case 'rerun':
-              window.electronAPI?.sessions.rerun(id).catch((err) => console.error('[HubApp] rerun failed', err));
-              break;
-            case 'stop':
-              window.electronAPI?.sessions.cancel(id).catch(() => {});
-              break;
-            case 'pause':
-              handlePause(id);
-              break;
-            case 'resume':
-              handleResume(id);
-              break;
-            case 'pin':
-            case 'unpin':
-              setPinnedIds((prev) => {
-                const next = new Set(prev);
-                if (action === 'pin') next.add(id); else next.delete(id);
-                savePinnedIds(next);
-                return next;
-              });
-              break;
-            case 'delete': {
-              // Drop the pin too, so a deleted id cannot linger in the
-              // persisted set and silently pin a future session that reuses it.
-              setPinnedIds((prev) => {
-                if (!prev.has(id)) return prev;
-                const next = new Set(prev);
-                next.delete(id);
-                savePinnedIds(next);
-                return next;
-              });
-              setDeletingIds((prev) => new Set(prev).add(id));
-              const restore = (): void => setDeletingIds((prev) => {
-                const next = new Set(prev);
-                next.delete(id);
-                return next;
-              });
-              window.electronAPI?.sessions.delete(id)
-                .catch((err) => {
-                  // Put the row back rather than silently pretending it went.
-                  console.error('[HubApp] delete failed', err);
-                  restore();
-                });
-              break;
-            }
-          }
-        }}
+        manualOrderIds={manualOrderIds}
+        onRowAction={handleSidebarRowAction}
+        onBulkDelete={handleDeleteSessions}
+        onRename={handleRenameSession}
+        onReorder={handleSidebarReorder}
       />
       )}
       <div className="hub-main">
@@ -791,7 +959,12 @@ export function HubApp(): React.ReactElement {
           const totalPages = Math.max(1, Math.ceil(visibleSessions.length / pageSize));
           const safePage = Math.min(gridPage, totalPages - 1);
           const pageStart = safePage * pageSize;
-          const pageSessions = visibleSessions.slice(pageStart, pageStart + pageSize);
+          const focusedSession = focusIndex >= 0 ? visibleSessions[focusIndex] : undefined;
+          const pageSessions = focusedSession
+            ? [focusedSession]
+            : focusedSessionId === null
+              ? visibleSessions.slice(pageStart, pageStart + pageSize)
+              : [];
           if (visibleSessions.length === 0) {
             const shortcut = shortcutFor('action.createPane');
             return (

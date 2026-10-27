@@ -68,6 +68,7 @@ export interface ArtifactItem {
 export interface AgentSession {
   id: string;
   prompt: string;
+  title?: string;
   status: SessionStatus;
   createdAt: number;
   output: HlEvent[];

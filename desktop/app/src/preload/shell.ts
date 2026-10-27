@@ -336,6 +336,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     bridge: {
       status: (): Promise<unknown> => ipcRenderer.invoke('bridge:status'),
       restart: (): Promise<void> => ipcRenderer.invoke('bridge:restart'),
+    getSessionOrder: (): Promise<string[]> => ipcRenderer.invoke('bridge:session-order:get'),
+    setSessionOrder: (ids: string[]): Promise<boolean> => ipcRenderer.invoke('bridge:session-order:set', ids),
       signIn: (email: string, password: string, create: boolean): Promise<unknown> => ipcRenderer.invoke('bridge:sign-in', email, password, create),
       resetPassword: (email: string): Promise<unknown> => ipcRenderer.invoke('bridge:reset-password', email),
       signOut: (): Promise<void> => ipcRenderer.invoke('bridge:sign-out'),
@@ -343,6 +345,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
         const handler = (_evt: unknown, payload: unknown) => cb(payload);
         ipcRenderer.on('bridge:state', handler);
         return () => ipcRenderer.removeListener('bridge:state', handler);
+      },
+      onSessionOrder: (cb: (ids: string[]) => void): (() => void) => {
+        const handler = (_evt: unknown, raw: unknown) => {
+          if (Array.isArray(raw) && raw.every((id) => typeof id === 'string')) cb(raw as string[]);
+        };
+        ipcRenderer.on('bridge:session-order', handler);
+        return () => ipcRenderer.removeListener('bridge:session-order', handler);
       },
     },
     /** The Marketplace's hosted connectors (shared/connectorCatalog.ts). */
@@ -458,6 +467,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('sessions:steer', { id, message }),
     dismiss: (id: string): Promise<void> => ipcRenderer.invoke('sessions:dismiss', id),
     delete: (id: string): Promise<void> => ipcRenderer.invoke('sessions:delete', id),
+    rename: (id: string, title: string): Promise<void> => ipcRenderer.invoke('sessions:rename', { id, title }),
     downloadOutput: (filePath: string): Promise<{ opened: boolean }> =>
       ipcRenderer.invoke('sessions:download-output', filePath),
     revealOutput: (filePath: string): Promise<{ revealed: boolean }> =>
@@ -639,6 +649,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
       };
       ipcRenderer.on('session-updated', handler);
       return () => ipcRenderer.removeListener('session-updated', handler);
+    },
+    sessionDeleted: (cb: (id: string) => void): (() => void) => {
+      const handler = (_event: unknown, id: unknown) => {
+        if (typeof id === 'string') cb(id);
+      };
+      ipcRenderer.on('session-deleted', handler);
+      return () => ipcRenderer.removeListener('session-deleted', handler);
     },
     sessionBrowserGone: (cb: (id: string) => void): (() => void) => {
       const handler = (_event: unknown, id: string) => {

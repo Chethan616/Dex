@@ -165,6 +165,8 @@ data class Device(
   /** What its `/` and `@` menus offer (empty from a DEX that doesn't say: the phone's own list is used). */
   val commands: List<CommandSpec> = emptyList(),
   val mentions: List<MentionSpec> = emptyList(),
+  /** Shared manual session order for this desktop, edited from either app. */
+  val sessionOrder: List<String> = emptyList(),
 ) {
   /** The desktop heartbeats every minute; three missed beats means gone. */
   val isReachable: Boolean

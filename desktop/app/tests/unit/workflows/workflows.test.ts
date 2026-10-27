@@ -111,7 +111,7 @@ describe('when a routine runs', () => {
 
   it('gives a run its steps in order, with how to do each kind', () => {
     const p = workflowPrompt(wf({ steps: [{ id: 's1', kind: 'web', title: 'Check the weather', detail: 'Hyderabad' }, { id: 's2', kind: 'ask', title: 'Book a cab?' }] }), 'schedule');
-    expect(p).toMatch(/^Run my workflow “Morning routine” \(it started on its schedule: every day at 7:30 am\)/);
+    expect(p).toMatch(/^The application already started one run of “Morning routine” on its schedule: every day at 7:30 am\./);
     expect(p).toMatch(/1\. Check the weather — Hyderabad \(the web: an MCP connector first/);
     expect(p).toMatch(/2\. Book a cab\? \(ask the user with dex-ui/);
   });
