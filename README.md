@@ -88,45 +88,98 @@ background Blender while the PC stayed free. The views above are the same
 
 ## What DEX can do
 
-- **Use the web like you do.** Each task gets its own workspace: real browser
-  tabs that you and DEX share (you can click around while it works), the
-  documents it makes, and a chat. A small *DEX* cursor shows where it clicks.
-- **Work your accounts properly.** 50+ connectors — Google (Gmail, Calendar,
-  Drive, Docs, Sheets, Meet), GitHub, Notion, Jira, Linear,
-  Slack, Canva, Dropbox, Stripe, PubMed and more — each one a single sign-in in
-  your browser. DEX uses the service's API instead of clicking through its
-  website: faster, cheaper and it doesn't break when a page changes.
+### On the web
+- **A real browser, shared with you.** Each task gets its own workspace: real
+  Chromium tabs that you and DEX share (you can click around while it works),
+  the documents it makes, and a chat. A small *DEX* cursor shows where it
+  clicks. It uses the sites you're already signed in to.
+- **Your browser extensions come along.** DEX can use the Chrome extensions you
+  install in it (an ad blocker, a translator, a coupon finder). Password
+  managers and crypto wallets are always off limits.
 - **Travel without the tab chaos.** Flights come from Kiwi.com and hotels from
-  trivago, straight into cards you can tap — no sign-in, nothing to set up.
-- **Drive Windows itself.** DEX works your apps and settings in the
-  background without taking your mouse: play music, check what's wrong with
-  the Wi-Fi, fix it (with undo). If it ever has to borrow your mouse, it lets
-  go the moment you move.
-- **Run routines.** Say "every morning" or "every Sunday" and DEX saves it as
-  a routine, runs it on its schedule, and shows it as a step-by-step graph.
-  Type `/workflow` to see them all.
-- **Make and open files.** PDFs, Word, Excel, CSV, Markdown, code, images,
-  video and 3D models open right inside the task, and reload as DEX edits them.
-  It can even build 3D scenes in Blender.
-- **Reach it from anywhere.**
-  - **Phone app (Android):** start tasks, follow them live in a status-bar
-    live update, approve steps and open the files it made.
-  - **WhatsApp:** text yourself `@DEX book a table for 4 tonight`.
-  - **Telegram:** your own private DEX bot, set up in a minute.
+  trivago, straight into cards you can tap. No sign-in, nothing to set up.
+
+### In your accounts
+- **50+ connectors, one sign-in each.** Google (Gmail, Calendar, Drive, Docs,
+  Sheets, Meet), GitHub, Notion, Jira, Linear, Slack, Canva, Dropbox, Stripe,
+  PubMed and more. DEX uses the service's API instead of clicking through its
+  website: faster, cheaper, and it doesn't break when a page changes.
+- **An inbox you can clear from one card.** DEX reads your messages, plots them
+  by urgency and importance, and drafts replies you send with *Yes*, *No* or
+  *Specify*.
+
+### On Windows itself
+- **Your apps, in the background.** DEX works Windows apps and settings through
+  UI Automation, off-screen, without taking your mouse or keyboard: Notepad,
+  Calculator, Settings, Office, Spotify and anything else with a window. An app
+  that jumps to the front gets put back, and anything you bring up yourself is
+  yours until you hand it back.
+- **Fix the PC, with undo.** Ask why the Wi-Fi keeps dropping, why the touchpad
+  stopped, or which driver is broken. DEX reads the network, devices, drivers
+  and event logs, and every change it makes to the PC has an *Undo* button.
+- **Files and documents.** It finds files by name or by what's inside them,
+  and makes PDFs, Word, Excel, CSV, Markdown, code, images, video and 3D
+  models. They open right inside the task and reload as DEX edits them.
+- **3D from a sentence.** DEX models, lights and renders scenes in its own
+  background Blender (see the shrine above).
+
+### Around the clock
+- **Routines.** Say "every morning" or "every Sunday" and DEX saves it as a
+  routine, runs it on schedule, and shows it as a step-by-step graph. Type
+  `/workflow` to see them all.
+- **A memory that knows you.** DEX remembers what you tell it about yourself
+  (optionally imported from ChatGPT or Claude) and recalls only what a task
+  needs. You can see and search all of it as a graph.
+- **Answers you can act on.** Results come back as cards, charts, tables,
+  date pickers and buttons, not walls of text.
+
+### From anywhere
+- **Phone app (Android):** start tasks, follow them live in a status-bar live
+  update, approve steps and open the files it made.
+- **WhatsApp:** text yourself `@DEX book a table for 4 tonight`.
+- **Telegram:** your own private DEX bot, set up in a minute.
 
 ## Why DEX
 
 - **It runs on your PC,** with your logins and your files. There's no cloud
   browser and no one else's computer in the middle.
+- **It doesn't take over your PC.** Most computer-use agents need the screen,
+  the mouse and the keyboard to themselves. DEX works in the background, so
+  you can keep watching a film while it fills in a spreadsheet.
 - **Bring your own brain.** Sign in to **Claude Code** or **Codex** with the plan
-  you already have, or use **BrowserCode** with your own key for Kimi, Qwen
-  or MiniMax.
+  you already have, or use **BrowserCode** with your own key for Kimi, Qwen or
+  MiniMax. Switch engines per task.
 - **You stay in control.** Choose how much it may do on its own: *Ask for
   approval*, *Approve for me* (routine steps run, risky ones ask) or *Full
   access*. Password fields are masked from the agent, tokens live in the
   Windows Credential Manager, and it never touches your password manager,
   Windows Security or terminals. See [SECURITY.md](SECURITY.md).
 - **Open source,** under Apache-2.0. Read it, change it, ship it.
+
+### How DEX compares
+
+| | **DEX** | Cloud computer-use agents | Chat assistants |
+|---|---|---|---|
+| Where the work happens | Your own PC and browser | A virtual machine on the vendor's servers | In the chat |
+| Your signed-in sites and local files | Yes, already there | Sign in again inside the VM; upload files | Upload files |
+| Windows desktop apps and settings | Yes, in the background | No | No |
+| Uses your PC while you keep using it | Yes | n/a | n/a |
+| Service APIs (Gmail, GitHub, Notion…) | 50+ connectors | Some | Some |
+| Undo for changes to the PC | Yes | n/a | n/a |
+| Start tasks from phone, WhatsApp, Telegram | Yes | Vendor's own app | Vendor's own app |
+| Model | Claude, GPT (Codex), Kimi, Qwen, MiniMax | The vendor's | The vendor's |
+| Source code | Open (Apache-2.0) | Closed | Mostly closed |
+| Price | Free; you pay for your model plan | Subscription | Subscription |
+
+## Benchmark
+
+On [DEX-Bench](benchmarks/dex-bench), our OSWorld-style suite of 24 everyday
+Windows tasks (web shops and forms, files, Word and Excel documents, Notepad,
+Calculator and File Explorer, multi-app jobs, and two impossible tasks it must
+refuse), each scored by a script that reads the end state, DEX with Claude Code
+on Opus 5.5 passed **24 of 24**, with a median of 39 seconds and 4 steps a task.
+The tasks, checkers and raw results are in the repo, so you can run it
+yourself.
 
 ## Get started
 
@@ -141,6 +194,35 @@ Then type a task. A good first one: *"What's on my calendar this week? Find a fr
 <p align="center">
   <img src="docs/images/readme/desktop-dashboard.png" alt="The dashboard: what's running, what's waiting for you, and everything DEX finished">
 </p>
+
+## FAQ
+
+**Is it free?** DEX is. The engine you pick costs what its plan costs: a Claude
+or ChatGPT subscription you already have, or an API key.
+
+**Does it need my PC on?** Yes. DEX works on your PC, so tasks you send from
+the phone, WhatsApp or Telegram run when the PC is on and DEX is open.
+
+**Can it mess up my computer?** It asks before anything risky unless you tell
+it not to, changes to Windows settings come with *Undo*, and it can't reach
+your password manager, Windows Security or your terminals.
+
+**Will it fight me for the mouse?** No. Windows apps are driven in the
+background. In the rare case a step needs the real mouse, DEX lets go the
+moment you move it.
+
+**Which model is best?** Claude Code on Opus is what the benchmark above used.
+Codex and the BrowserCode models work too, and you can switch per task.
+
+**macOS, Linux, iPhone?** Not yet. The agent core is cross-platform; the
+Windows control and the installer aren't. Help is welcome (below).
+
+## Roadmap
+
+- Code-signed Windows installer, and DEX on WinGet and Chocolatey.
+- More keyless sources for travel, food and transport.
+- Public runs on Windows Agent Arena and OSWorld ([prompts](benchmarks/waa)).
+- macOS and Linux ports, and an iPhone app.
 
 ## Help build it
 
