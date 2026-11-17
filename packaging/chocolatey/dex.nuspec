@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
   <metadata>
     <id>dex</id>
-    <version>2.3.2</version>
+    <version>2.3.3</version>
     <packageSourceUrl>https://github.com/Chethan616/Dex/tree/main/packaging/chocolatey</packageSourceUrl>
     <owners>Chethan616</owners>
     <title>DEX</title>
@@ -22,7 +22,7 @@
 It drives Windows applications through UI Automation in the background instead of taking over the screen, uses a real Chromium browser over the DevTools Protocol with a per-task isolated tab, and connects to 50+ services through OAuth. It runs with your own Claude Code or Codex plan, or your own API key, on your own machine - there is no DEX-operated server.
 
 Project home: https://github.com/Chethan616/Dex</description>
-    <releaseNotes>https://github.com/Chethan616/Dex/releases/tag/v2.3.2</releaseNotes>
+    <releaseNotes>https://github.com/Chethan616/Dex/releases/tag/v2.3.3</releaseNotes>
   </metadata>
   <files>
     <file src="tools\**" target="tools" />
