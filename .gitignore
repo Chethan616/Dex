@@ -77,3 +77,8 @@ desktop/app/.vite/
 
 # Firebase client configs belong in android/app/ (ignored there); never at the root
 /google-services.json
+
+# Distribution: proof screenshots and built packages stay local
+packaging/proof/
+packaging/proof-shots/
+packaging/**/*.nupkg
