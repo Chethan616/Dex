@@ -35,7 +35,13 @@ export class Host {
   start() {
     if (this.ready) return this.ready;
     const { command, args, env, log, onEvent } = this.spec;
-    const child = spawn(command, args, { env: { ...process.env, ...env }, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
+    // This server runs as dex.exe with ELECTRON_RUN_AS_NODE=1. Every app the
+    // host launches inherits the host's environment, and an Electron app
+    // (VS Code, Discord, Slack, Obsidian…) that sees that variable starts as a
+    // bare Node process with no window. It stops here.
+    const childEnv = { ...process.env, ...env };
+    delete childEnv.ELECTRON_RUN_AS_NODE;
+    const child = spawn(command, args, { env: childEnv, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
     this.child = child;
     this.ready = new Promise((resolve, reject) => {
       const startup = setTimeout(() => reject(new Error("DEX's Windows helper didn't start within 60 s.")), 60_000);
