@@ -329,11 +329,18 @@ const config: ForgeConfig = {
     new FusesPlugin({
       version: FuseVersion.V1,
 
-      // KEEP FALSE — security hardening. Prevents ELECTRON_RUN_AS_NODE env var
-      // from turning the Electron binary into a raw Node.js process. If true,
-      // any attacker who can set env vars gets arbitrary code execution as the
-      // app user.
-      [FuseV1Options.RunAsNode]: false,
+      // KEEP TRUE. DEX's own MCP servers (mcp-servers/: Windows, Reddit, Google,
+      // Microsoft, Discord, Blender, the hosted-connector proxy) run as
+      // `dex.exe <server.mjs>` with ELECTRON_RUN_AS_NODE=1, both from DEX
+      // (mcp/catalog.ts launchSpec) and from Claude Code / Codex / BrowserCode
+      // (engines/services.ts). With this fuse off, an installed DEX ignored the
+      // variable and started a second full app instead, so none of those
+      // servers ever ran outside a dev build: issue #7 (no app_launch on
+      // 2.3.1). Dev runs don't apply fuses, which is why it went unnoticed.
+      // VS Code and Cursor ship with it on for the same reason. The cost: a
+      // process that can already run programs as this user can run Node
+      // through dex.exe, which it could do with any Node anyway.
+      [FuseV1Options.RunAsNode]: true,
 
       // KEEP TRUE — encrypts cookies at rest using the OS keychain-backed key.
       // The browser stores session cookies for authenticated sites; encryption

@@ -50,7 +50,7 @@ Local attacker can inspect renderer, extract OAuth tokens, call any IPC handler.
 
 ## Info (positive confirmations)
 
-- **I1** — All 6 Electron fuses correctly set in `forge.config.ts:204-242` (RunAsNode=false, CookieEncryption=true, NodeOptions=false, NodeCliInspectArgs=false, AsarIntegrityValidation=true, OnlyLoadAppFromAsar=true).
+- **I1** — All 6 Electron fuses correctly set in `forge.config.ts:204-242` (RunAsNode=true since 2.3.2 — the built-in MCP servers run as `dex.exe` with ELECTRON_RUN_AS_NODE; CookieEncryption=true, NodeOptions=false, NodeCliInspectArgs=false, AsarIntegrityValidation=true, OnlyLoadAppFromAsar=true).
 - **I2** — No hardcoded secrets. `.env` gitignored at root + `app/`. API keys masked in all log paths.
 - **I3** — Python sandbox: 109/109 tests pass (post-S2 RCE fix, path-traversal fix, thread-zombie DoS fix all present).
 

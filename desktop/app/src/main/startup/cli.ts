@@ -184,10 +184,11 @@ export function resolveDevtoolsPortOptIn(
  * Sync probe: is `port` already bound on localhost?
  *
  * Uses OS-native listing tools (`lsof` on POSIX, `netstat` on Windows)
- * because we MUST NOT spawn `process.execPath` here — Electron Forge's
- * `RunAsNode: false` fuse blocks `ELECTRON_RUN_AS_NODE` in packaged
- * builds, so spawning the Electron binary launches the full app
- * (recursive window storm) instead of running our inline script.
+ * because we MUST NOT spawn `process.execPath` here. This runs before the
+ * single-instance lock matters, and a dex.exe started without
+ * ELECTRON_RUN_AS_NODE launches the full app (recursive window storm).
+ * (The RunAsNode fuse is on since 2.3.2, for the built-in MCP servers;
+ * a native tool is still the cheaper probe.)
  *
  * Probe candidates use absolute paths first (Electron's PATH at launch
  * is often missing /usr/sbin where lsof lives). If no candidate is

@@ -694,7 +694,14 @@ export function OnboardingApp() {
     return () => { cancelled = true; };
   }, []);
 
+  // Look at the browsers' profile lists only once the user reaches that step,
+  // not the moment the window opens: nobody asked yet, and a fresh install
+  // that reads every browser's data folder at first launch is what malware
+  // scanners (WinGet's validation among them) watch for.
+  const profilesRequested = useRef(false);
   useEffect(() => {
+    if (step !== 'profile' || profilesRequested.current) return;
+    profilesRequested.current = true;
     window.onboardingAPI.detectChromeProfiles().then((p) => {
       setProfiles(p);
       setLoadingProfiles(false);
@@ -702,7 +709,7 @@ export function OnboardingApp() {
       console.error('[onboarding] detectProfiles failed', err);
       setLoadingProfiles(false);
     });
-  }, []);
+  }, [step]);
 
   const handleImportProfile = useCallback(async (profileId: string) => {
     setImporting(profileId);
